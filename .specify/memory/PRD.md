@@ -1,0 +1,556 @@
+# Orbit v1 Product Requirements: Intent Envelope and Diary
+
+**Product**: Orbit — local-first personal memory layer for mobile
+**Version**: 1.0 (Phase 1)
+**Feature Branch**: `002-intent-envelope-and-diary`
+**Created**: 2026-04-16
+**Status**: Draft
+**Governing document**: `.specify/memory/constitution.md`
+
+> **Relationship to spec 001:** This PRD supersedes the v0 functional scope in
+> `specs/001-core-capture-overlay/spec.md`. The bubble overlay service,
+> clipboard focus state machine, and bubble drag/edge-snap behavior from 001
+> are KEPT AS-IS as foundational primitives. This PRD REPLACES 001's "Capture
+> Sheet + Save/Discard + Logcat" flow with the Intent Envelope and Diary
+> model. The rename from "Capsule" to "Orbit" is separate work tracked at the
+> repository root.
+
+---
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 — Capture With Intent (Priority: P1)
+
+As a user who just copied a URL, phrase, or image reference from somewhere on
+my phone, I tap the floating Orbit bubble (or it observes silently, depending
+on the capture path). Within two seconds I see a small chip row offering four
+intent options — *Want it*, *Reference*, *For someone*, *Interesting* — so I
+can tell Orbit why I saved this. I tap one chip and the capture is filed. If
+I do nothing within the two seconds, the chip row disappears and the capture
+is filed under *Ambiguous*, to be sorted later from the Diary. If the capture
+is unambiguous (e.g., a single URL from a shopping app where I already have
+two similar saves), Orbit silently wraps it with a confident intent and never
+shows me a chip row at all.
+
+**Why this priority**: The intent question — *why did I save this?* — is what
+separates Orbit from a screenshot folder. Without intent, every other feature
+is rebuilding the graveyard. With intent, every capture becomes a retrievable
+memory.
+
+**Independent Test**: Copy a URL in Chrome, tap the bubble, confirm the
+four-chip row appears within 2s of tap, tap *Want it*, and verify (via the
+Diary in Story 2) that the envelope appears under *Want it*.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user has copied text to the clipboard, **When** the user
+   taps the floating bubble, **Then** within 2 seconds a chip row appears
+   with exactly four intent options (*Want it*, *Reference*, *For someone*,
+   *Interesting*) over a short preview of the captured content.
+2. **Given** the chip row is visible, **When** the user taps one of the four
+   chips, **Then** the chip row dismisses, the envelope is sealed with the
+   chosen intent, and a brief confirmation toast appears.
+3. **Given** the chip row is visible, **When** the user does nothing for 2
+   seconds, **Then** the chip row auto-dismisses and the envelope is sealed
+   with intent *Ambiguous*.
+4. **Given** the user has copied a URL from a shopping app where the user
+   has recently saved similar URLs with the same intent, **When** the user
+   taps the bubble, **Then** no chip row appears, the envelope is silently
+   sealed with the predicted intent, and only a brief confirmation toast
+   is shown.
+5. **Given** the user has just captured an envelope, **When** the user taps
+   the confirmation toast within 10 seconds, **Then** the envelope is
+   discarded before it reaches the Diary.
+
+---
+
+### User Story 2 — Daily Diary (Priority: P1)
+
+As a user who has been capturing throughout the day, I open the Orbit app and
+land directly on today's page of the Diary. At the top is a short paragraph
+that describes in plain language what I captured today — not a list, but a
+summary, like *"You spent the morning in work email, captured two articles on
+caching from Reddit around 2pm, and saved three restaurants from Instagram
+tonight."* Below the paragraph are my captures for the day, grouped into
+threads where Orbit recognizes related items, each card showing which app the
+capture came from, my activity state (still, walking, in vehicle), and the
+time. I can swipe left to see yesterday, swipe right to go forward. I never
+see a generic "list of screenshots." I see *my day*.
+
+**Why this priority**: The Diary is the return surface. Without it, captures
+disappear the moment they happen, and Orbit fails its core promise that
+captures resurface when actionable. The Diary is the daily moment a user
+experiences the product.
+
+**Independent Test**: After capturing 5+ items across different apps and
+times on the same day, open Orbit. Confirm today's page loads within 1
+second, the day-header paragraph references at least 3 of the captured
+items, and at least one thread groups related captures together.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user has captured at least one envelope today, **When** the
+   user opens the Orbit app, **Then** the Diary opens to today's page with
+   a day-header paragraph and the day's envelopes grouped by thread below.
+2. **Given** the Diary is showing today, **When** the user swipes horizontally,
+   **Then** the previous or next day's page loads within 500ms with its own
+   day-header paragraph.
+3. **Given** the user is viewing a day's page with multiple envelopes, **When**
+   the user looks at an envelope card, **Then** the card shows the originating
+   app name, the activity state at capture, and the capture time in a small
+   context label.
+4. **Given** two envelopes were captured within 30 minutes of each other from
+   the same app and share visible content similarity, **When** the user views
+   the Diary, **Then** they appear grouped under a single thread card.
+5. **Given** a day had no captures, **When** the user swipes to that day,
+   **Then** the page shows an empty-day message rather than a blank screen.
+
+---
+
+### User Story 3 — URL Continuation (Priority: P1)
+
+As a user who captured a link on the go — say, an article URL from Reddit
+while walking — I open the Diary that evening. The envelope for that URL
+already shows the article's title, a two-sentence summary, and the source
+domain. I did not do any of this work; Orbit fetched the page in the
+background on my home wifi, extracted the readable article, and summarized
+it with on-device AI, all while I went about my day.
+
+**Why this priority**: Continuations are what turn captures from archived
+bookmarks into usable memory. A raw URL in a list is noise; a URL with a
+summary I can scan in 3 seconds is something I actually use. Without
+continuations, the Diary becomes another digital graveyard.
+
+**Independent Test**: Capture a URL on cellular, put the device on charger
+at home wifi, wait up to 2 minutes, open the Diary. Confirm the envelope
+shows the article title, domain, and a 2-3 sentence summary.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user captures an envelope containing a URL, **When** the
+   device later reaches a charger+wifi state, **Then** the envelope is
+   enriched with the URL's title, source domain, excerpt, and a 2-3
+   sentence summary, visible on the envelope's Diary card.
+2. **Given** a URL fetch fails (network error, 404, non-HTML content),
+   **When** the user views the envelope in the Diary, **Then** the card
+   shows the raw URL with an "Enrichment unavailable" indicator and the
+   reason.
+3. **Given** an envelope is a screenshot containing a visible URL, **When**
+   the device reaches a charger+wifi state, **Then** the URL is extracted
+   from the image and the same enrichment flow runs, with the result
+   attached to the screenshot envelope.
+4. **Given** an envelope's URL is at a non-HTTPS address, **When** the
+   continuation system evaluates it, **Then** no network fetch is
+   performed and the envelope shows "Enrichment unavailable: non-secure URL".
+
+---
+
+### User Story 4 — Ambient Screenshot Capture (Priority: P2)
+
+As a user who takes a lot of screenshots throughout the day, I do not want
+to be interrupted every time I screenshot. Orbit observes my screenshots
+folder silently and creates an ambiguous envelope for each one. When I open
+the Diary that evening, my screenshots are already there, ready for me to
+assign intent with a tap if I want to.
+
+**Why this priority**: Screenshots are the largest source of graveyard
+buildup on Android, and interrupting a user mid-screenshot is hostile.
+Ambient observation makes the graveyard-prevention happen automatically.
+Deferred to P2 because clipboard capture alone delivers a working product;
+screenshots expand coverage.
+
+**Independent Test**: Take 3 screenshots using the device screenshot shortcut.
+Do not open Orbit. Open Orbit later and confirm 3 new *Ambiguous* envelopes
+exist for today, each with the screenshot preview, app-of-origin, and
+capture time.
+
+**Acceptance Scenarios**:
+
+1. **Given** the Orbit service is running, **When** the user takes a
+   screenshot via the device shortcut, **Then** within 5 seconds an
+   envelope is created with intent *Ambiguous* and the screenshot as its
+   content. The user sees no prompt.
+2. **Given** an ambiguous screenshot envelope exists, **When** the user
+   taps the envelope card in the Diary, **Then** an intent chip row is
+   presented so the user can assign intent retroactively.
+3. **Given** the user screenshots an image with no foreground-app context
+   (e.g., lock screen), **When** the envelope is created, **Then** the
+   context label reads "Unknown source" rather than misattributing.
+
+---
+
+### User Story 5 — Contextual Envelope Labels (Priority: P2)
+
+As a user scanning my Diary a week later, I see on each envelope card a
+small context label: "from Instagram · still · 11:47pm" or "from Chrome ·
+walking · 2:14pm Tuesday." These three pieces of context — source app,
+activity state, time — tell me the story of *when in my life* I saved this,
+which is often enough to remember *why* I saved it without reading the
+envelope itself.
+
+**Why this priority**: Context labels turn the Diary from a list of items
+into a readable narrative of the user's captured week. Without them, the
+Diary is still useful (Story 2) but much less memorable. P2 because the
+Diary works without them; they compound the value.
+
+**Independent Test**: Capture one envelope while in Instagram while still,
+and one envelope while in Chrome while walking. Confirm the Diary cards
+show correct app + activity + time for each.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user captures an envelope while using a known app, **When**
+   the user later views the envelope in the Diary, **Then** the card shows
+   the categorized app name (e.g., "Instagram") in the context label.
+2. **Given** the user captures an envelope while in a recognized activity
+   state (still, walking, running, in vehicle), **When** the user views
+   the envelope in the Diary, **Then** the card shows the activity state
+   in the context label.
+3. **Given** the user has not granted usage-stats or activity-recognition
+   permissions, **When** the user views envelopes in the Diary, **Then**
+   the context labels show only the capture time, and the app gracefully
+   degrades without errors.
+
+---
+
+### User Story 6 — Audit Log (Priority: P2)
+
+As a user who was told Orbit is local-first and does not send my data
+anywhere, I want to verify that claim for myself. I open Settings → *What
+Orbit did today* and see a human-readable log: every envelope created,
+every on-device AI inference run, every public URL fetched (and nothing
+else). The log is local-only, readable, timestamped, and plain.
+
+**Why this priority**: Trust is not marketing; trust is auditable. A user
+who cannot verify the local-first claim has no reason to believe it. P2
+because the app is functional without it, but the trust moat is weakened.
+
+**Independent Test**: Use the app for an hour, then open *What Orbit did
+today*. Confirm the count of log entries matches the actions taken, and
+that no network fetches appear except for URL hydrations the user knows
+about.
+
+**Acceptance Scenarios**:
+
+1. **Given** the user has used the app today, **When** the user opens
+   *What Orbit did today*, **Then** a chronological list appears showing
+   every envelope created, every AI summary generated, every URL fetched,
+   in plain language with timestamps.
+2. **Given** the user taps a log entry, **When** the expanded view shows,
+   **Then** it describes in plain English what that action did and what
+   data was involved — no opaque technical codes.
+3. **Given** a user-content transmission were to ever occur, **When** the
+   user opens the audit log, **Then** it would be visible and flagged.
+   (This scenario must never trigger in a shipped build; it exists as a
+   contract for the log's completeness.)
+
+---
+
+### User Story 7 — Onboarding With Informed Consent (Priority: P3)
+
+As a new user installing Orbit for the first time, I am walked through four
+permission requests — overlay, notifications, usage access, activity
+recognition — each with a plain-language explanation of what Orbit uses it
+for and what I lose if I decline. Declining any optional permission does
+not block the app; it gracefully degrades. I reach a working state in under
+5 minutes.
+
+**Why this priority**: Polish. The app technically works without refined
+onboarding, but first-impression trust is earned here. P3 because MVP can
+ship with a functional-but-rough onboarding.
+
+**Independent Test**: Fresh install on a test device. Time the onboarding.
+Decline usage-access permission and confirm the app still captures and
+shows the Diary, just with less context.
+
+**Acceptance Scenarios**:
+
+1. **Given** a fresh install, **When** the user opens the app, **Then** the
+   onboarding flow presents each of the four permissions in sequence with
+   a one-sentence plain-language purpose statement.
+2. **Given** the user declines usage-access or activity-recognition, **When**
+   onboarding completes, **Then** the app still launches, captures still
+   work, and an unobtrusive banner in Settings offers to re-request the
+   declined permissions later.
+3. **Given** the user declines the overlay or notifications permission,
+   **When** onboarding continues, **Then** the user is informed that these
+   two are required for the core capture loop and given a single chance to
+   re-request them, before being routed to a "reduced capability" mode.
+
+---
+
+### Edge Cases
+
+- **Offline capture, extended offline device**: A capture occurs while the
+  device is offline and stays offline for days. The envelope is created and
+  stored locally; URL continuations sit in a queue indefinitely and execute
+  when network and charger-wifi conditions are met. The envelope never
+  blocks on the network.
+- **Gemini Nano unavailable**: The envelope is still created and persisted
+  with raw content; AI-dependent features (summary, day-header paragraph)
+  show a fallback message and do not block the Diary from rendering.
+- **Non-HTTPS redirect**: A captured URL redirects to a non-HTTPS address.
+  The continuation refuses to follow the redirect and marks enrichment
+  unavailable (per FR-015).
+- **Out of local storage**: Orbit surfaces a persistent banner in the Diary
+  explaining the issue and offers a one-tap path to the OS storage settings.
+  New captures pause until space is reclaimed; no silent capture loss.
+- **Permission revoked post-onboarding**: The user revokes usage access
+  while the service is running. The service detects the revocation on the
+  next capture, gracefully degrades context labels, and surfaces a Settings
+  banner without crashing.
+- **Rapid captures**: Two captures occur within 100ms of each other (e.g.,
+  rapid clipboard changes). Each is treated as a distinct envelope unless
+  content is byte-identical, in which case the second is deduplicated.
+- **Non-English locale**: Nano-generated text uses the system locale if
+  supported; otherwise English. The day-header and summaries indicate
+  their generation language.
+
+---
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: System MUST capture user intent within 2 seconds of a save
+  event by presenting a chip row with four options: *Want it*, *Reference*,
+  *For someone*, *Interesting*.
+- **FR-002**: System MUST seal every capture into an **IntentEnvelope**
+  that includes the captured content, the user's chosen (or inferred)
+  intent, and context captured at the moment of save.
+- **FR-003**: System MUST auto-dismiss the intent chip row after 2 seconds
+  of user inactivity, sealing the envelope with intent *Ambiguous*.
+- **FR-004**: System MUST, for captures that meet a high-confidence
+  predicate, silently seal the envelope with a predicted intent and show
+  only a brief confirmation — never a chip row.
+- **FR-005**: System MUST attach to every envelope: the timestamp of
+  capture, the categorized originating app (from the project's app-
+  category dictionary), and the user's device activity state.
+- **FR-006**: System MUST observe the device screenshots folder and create
+  an envelope for each new screenshot, without user prompt, with intent
+  *Ambiguous*.
+- **FR-007**: System MUST allow the user to reassign intent on any
+  *Ambiguous* envelope from the Diary by tapping the envelope card.
+- **FR-008**: System MUST provide a 10-second undo window on every capture,
+  surfaced via a confirmation toast, after which the envelope is sealed.
+- **FR-009**: System MUST persist all envelopes in encrypted local storage
+  that is not accessible to other apps on the device.
+- **FR-010**: System MUST present a Daily Diary as the primary app surface,
+  one day per horizontally swipeable page, showing all envelopes captured
+  on that day grouped into threads of related captures.
+- **FR-011**: System MUST generate a plain-language day-header paragraph
+  for each day's Diary page, summarizing the day's captures using on-
+  device AI only.
+- **FR-012**: System MUST display on every envelope card in the Diary a
+  context label showing the categorized originating app, the activity
+  state at capture, and the capture time.
+- **FR-013**: System MUST, for envelopes containing or referring to a
+  public HTTPS URL, enrich the envelope in the background with the URL's
+  title, domain, excerpt, and a 2-3 sentence summary.
+- **FR-014**: System MUST extract URLs from screenshot envelopes via on-
+  device text recognition and trigger the same URL enrichment flow.
+- **FR-015**: System MUST refuse to fetch non-HTTPS URLs and MUST strip
+  cookies, referer headers, and any user-identifying information from
+  every outbound network request.
+- **FR-016**: System MUST NEVER transmit captured content, state signals,
+  or any derived inferences (summaries, tags, embeddings) to remote
+  servers. The only permitted outbound network calls are fetches of
+  public URLs the user has explicitly captured.
+- **FR-017**: System MUST structurally separate processes with network
+  access from processes with access to user content, such that a single
+  process cannot both read the corpus and reach the network.
+- **FR-018**: System MUST record an audit log entry, visible to the user
+  in plain language, for every envelope creation, every on-device AI
+  inference, and every outbound network fetch.
+- **FR-019**: System MUST request exactly four permissions during
+  onboarding — overlay, notifications, usage access, activity recognition
+  — each with a plain-language justification.
+- **FR-020**: System MUST gracefully degrade if usage access or activity
+  recognition are declined: captures still work, the Diary still renders,
+  and context labels show only the information the user has permitted.
+- **FR-021**: System MUST treat declining the overlay or notifications
+  permission as blocking for the core capture loop, offer one re-request,
+  and route to a read-only reduced mode thereafter.
+- **FR-022**: System MUST allow the user to archive or delete any envelope
+  from the Diary at any time, with a confirmation step, and reflect the
+  removal in the audit log.
+- **FR-023**: System MUST record intent assignments as append-only —
+  intent can be superseded but not rewritten, and every supersession
+  creates an audit log entry.
+- **FR-024**: System MUST provide a one-tap export of all envelopes and
+  their content in an open, human-readable format, on user request.
+- **FR-025**: System MUST preserve all existing spec 001 capabilities —
+  the overlay bubble service, clipboard focus state machine, bubble drag
+  and edge-snap, service survival guarantees, and battery-optimization
+  guidance — without regression.
+
+### Key Entities
+
+- **IntentEnvelope**: The sealed atomic unit of an Orbit save. Contains
+  the captured content (text, image, or both), the intent label, the
+  context snapshot (time, app, activity), the creation timestamp, a
+  supersession chain of intent changes, and a link to any continuations.
+- **Continuation**: A deferred background operation attached to an
+  envelope, such as URL hydration. Has a type, a run condition
+  (charger+wifi, device idle), a status
+  (pending/running/succeeded/failed), and a result.
+- **ContinuationResult**: The output of a successful continuation — for
+  URL hydration, this is the title, domain, excerpt, and summary. Stored
+  separately from the envelope so an envelope can have zero, one, or many
+  enrichments over time.
+- **AuditLogEntry**: A user-readable record of a system action. Has a
+  timestamp, an action type (envelope_created, inference_run,
+  network_fetch, envelope_archived, intent_superseded), a plain-language
+  description, and the envelope (if any) it relates to.
+- **DayPage**: The Diary's rendering unit for a single calendar day. Has
+  a generated header paragraph, an ordered list of threads, and a
+  fallback state for empty days.
+- **Thread**: A group of envelopes on the same day that share an app, a
+  topic, or near-simultaneous capture time, rendered as a single card in
+  the Diary with expansion into individual envelopes.
+
+---
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: A user can go from deciding to save something to having it
+  filed in Orbit in under 3 seconds.
+- **SC-002**: At least 60% of captures proceed silently (no chip row
+  shown) as high-confidence silent-wraps within 14 days of regular use.
+- **SC-003**: At least 90% of URL-containing envelopes have a summary
+  visible on their Diary card the next time the user opens the Diary
+  (assuming at least one charger+wifi window elapsed).
+- **SC-004**: The Diary loads today's page in under 1 second and scrolls
+  horizontally between days in under 500ms, for users with up to 1,000
+  envelopes.
+- **SC-005**: Users rate the day-header paragraph as accurately reflecting
+  their day's captures in at least 85% of random samples.
+- **SC-006**: Zero user-content transmissions occur outside of explicitly
+  user-captured public-URL hydrations — verifiable by the audit log.
+- **SC-007**: A first-time user experiences the full capture → diary
+  return loop within 5 minutes of first opening the app.
+- **SC-008**: Users locate a specific past capture in the Diary in under
+  30 seconds at least 90% of the time.
+- **SC-009**: In a 14-day dogfood of the primary user, captures average
+  at least 5 per day and Diary opens average at least 3 per week, with
+  no single day of zero opens.
+- **SC-010**: A user who declines usage-access and activity-recognition
+  still experiences every core feature (capture, diary, URL enrichment)
+  with only context labels degraded.
+- **SC-011**: The app retains at least 80% of 14-day-active users through
+  day 28, measured via local-only engagement counters.
+
+---
+
+## Assumptions
+
+- The target device runs Android 13 (API 33) or higher.
+- Gemini Nano is available on the target device via AICore; devices
+  without Nano experience a thinner Diary (no day-header paragraphs, no
+  URL summaries) but every other feature works.
+- The user grants overlay and notifications permissions during onboarding.
+  Declining either routes to a reduced read-only mode.
+- The user captures via clipboard (bubble tap) and/or screenshots in v1.
+  Share-sheet and voice capture are deferred to Phase 2.
+- All Phase 1 content classification, summarization, and topic tagging
+  runs on-device. No cloud AI is used anywhere in Orbit v1.
+- No user accounts, sync, or remote backup in v1. The user's corpus is
+  entirely on-device and survives only on that device (explicit export
+  is the only portability).
+- The project constitution (`.specify/memory/constitution.md`) and its 8
+  principles are authoritative. Any conflict between this PRD and the
+  constitution is resolved in favor of the constitution.
+- Ripe Nudges, state-aware returns, calendar integration, Health Connect,
+  and place-aware features are explicitly out of scope for v1 per the
+  constitution's Phase 1 scope section.
+- The existing spec 001-core-capture-overlay primitives remain in the
+  codebase and are extended — not rewritten — by this PRD.
+
+---
+
+## Post-v1 Roadmap (informational — not in v1 scope)
+
+This section summarizes the shape of post-v1 work so that v1
+architectural decisions accommodate it. **Nothing here is v1 scope.**
+The v1 build remains local-only per Principle I and the Phase 1 Scope
+section of the constitution. Full specs for each item below live in the
+numbered spec directories as they are drafted.
+
+### Three-tier storage model
+
+Orbit's storage model across all phases has exactly three tiers. Every
+capability Orbit ships must work correctly at Tier 0, and Tiers 1 and 2
+are purely additive.
+
+- **Tier 0 — Local only (v1, always the default, always available).**
+  SQLCipher-encrypted Room database on device, Android Keystore-wrapped
+  passphrase, no network. Full envelope corpus, continuations, audit
+  log, and state snapshots. Device is the sole source of truth. This
+  tier never turns off.
+- **Tier 1 — BYOC (Bring Your Own Cloud, v1.2).** User provisions their
+  own Postgres (Supabase/Neon/self-hosted) or Firestore project under
+  their own account and pastes the connection string (or connects via
+  OAuth where supported) into Orbit. Orbit mirrors an opt-in subset of
+  data (envelope text, embeddings, knowledge graph, continuation
+  results — audit log is always excluded) to that user-owned database.
+  User pays their own cloud bill, owns all data, can export or delete
+  at any moment. Local remains the source of truth; cloud is
+  derived/enrichment.
+- **Tier 2 — Orbit Cloud managed (v2.0+, only if demand justifies).**
+  Orbit automates provisioning of Tier 1 infrastructure via OAuth
+  partnerships (Supabase/Neon). Orbit performs ops, users pay a
+  management fee. Crucially, the storage account remains legally owned
+  by the user — Orbit has admin access, not a copy. Revocation by the
+  user at any moment leaves them with all their data and Orbit with
+  none. This is constitutionally forbidden to become multi-tenant
+  Orbit-owned storage.
+
+### Post-v1 feature roadmap
+
+Each item below is a distinct feature branch. None blocks v1; all
+depend on v1 having shipped and stabilized.
+
+- **003 — Orbit Actions (v1.1).** Structured extraction from captured
+  text (flight confirmations → calendar events; task lists → to-do
+  items; weekly diary digest). All extraction is Nano-first with BYOK
+  LLM upgrade (principle IX). Every action requires explicit user
+  confirmation before writing to external apps.
+- **004 — Ask Orbit (v1.2).** Natural-language chat over the envelope
+  corpus. On-device embeddings (Gemini Nano embedding endpoint) +
+  local k-NN nearest-neighbor search + Nano-powered RAG synthesis.
+  Optional BYOK cloud upgrade for richer synthesis and larger context
+  windows.
+- **005 — Cloud Boost / BYOK LLM (v1.1).** Per-capability toggles
+  routing specific Nano calls to a user-configured cloud provider via
+  the `:net` process. Keystore-wrapped key storage. Cloud routing is
+  audited per call. Falls back to Nano with zero feature loss if
+  disabled.
+- **006 — BYOC Cloud Storage (v1.2).** Paste-a-connection-string or
+  OAuth-connect flow for user-owned Postgres/Firestore mirror. Opt-in
+  per data category. Local remains source of truth. Audit log stays
+  local forever.
+- **007 — Knowledge Graph (v1.3).** Entity extraction (people,
+  projects, topics, URLs, places) and relationship edges across
+  envelopes. Runs on local SQLite (self-joins) or cloud Postgres (pg
+  recursive CTE) depending on storage tier. Powers multi-hop Ask Orbit
+  queries ("what projects is Alice involved in?").
+
+### v1 abstractions required by the roadmap
+
+Two lightweight abstractions are introduced in v1 (not as user-visible
+features) so that v1.1+ work is additive rather than a refactor:
+
+- **`LlmProvider` interface** in `com.capsule.app.ai` with
+  `NanoLlmProvider` as the sole v1 implementation. Every Nano call in
+  v1 routes through this interface. v1.1 adds `ByokLlmProvider` without
+  touching call sites. Every result carries a `LlmProvenance` field
+  (`LOCAL_NANO` or `CLOUD(provider, model)`) for audit purposes.
+- **`EnvelopeStorageBackend` interface** behind `EnvelopeRepositoryImpl`
+  with `LocalRoomBackend` as the sole v1 implementation. v1.2 adds a
+  `LocalRoomPlusCloudMirrorBackend` without touching the AIDL surface
+  or callers.
+
+These are documented in `specs/002-intent-envelope-and-diary/tasks.md`
+as foundational tasks in Phase 2.

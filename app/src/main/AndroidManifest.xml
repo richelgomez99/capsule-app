@@ -21,6 +21,10 @@
     <!-- Exact alarm for OEM kill recovery -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <queries>
+        <package android:name="androidx.test.services" />
+    </queries>
+
     <application
         android:name=".CapsuleApplication"
         android:allowBackup="true"

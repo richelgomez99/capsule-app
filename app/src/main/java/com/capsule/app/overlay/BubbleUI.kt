@@ -1,11 +1,13 @@
 package com.capsule.app.overlay
 
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,8 +17,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
+
+/**
+ * Drag threshold in pixels. Movement below this is considered a tap.
+ * Using a generous threshold to distinguish tap from drag reliably.
+ */
+private const val DRAG_THRESHOLD_PX = 10f
 
 @Composable
 fun BubbleUI(
@@ -33,30 +44,46 @@ fun BubbleUI(
         contentAlignment = Alignment.Center
     ) {
         FloatingActionButton(
-            onClick = {
-                if (!isDragging) onTap()
-            },
+            onClick = { /* Handled via pointerInput below to distinguish tap vs drag */ },
             modifier = Modifier
                 .size(56.dp)
                 .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                            onDragStart()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(dragAmount.x.toInt(), dragAmount.y.toInt())
-                        },
-                        onDragEnd = {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var totalDrag = Offset.Zero
+                        var dragStarted = false
+
+                        do {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+
+                            if (change.pressed) {
+                                val delta = change.positionChange()
+                                totalDrag += delta
+
+                                // Check if drag threshold exceeded
+                                if (!dragStarted && (abs(totalDrag.x) > DRAG_THRESHOLD_PX || abs(totalDrag.y) > DRAG_THRESHOLD_PX)) {
+                                    dragStarted = true
+                                    isDragging = true
+                                    onDragStart()
+                                }
+
+                                if (dragStarted) {
+                                    change.consume()
+                                    onDrag(delta.x.toInt(), delta.y.toInt())
+                                }
+                            }
+                        } while (event.changes.any { it.pressed })
+
+                        // Pointer released
+                        if (dragStarted) {
                             isDragging = false
                             onDragEnd()
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            onDragEnd()
+                        } else {
+                            // It was a tap (no significant movement)
+                            onTap()
                         }
-                    )
+                    }
                 },
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer

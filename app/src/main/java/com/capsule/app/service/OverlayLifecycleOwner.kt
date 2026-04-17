@@ -28,6 +28,10 @@ class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateReg
         get() = savedStateRegistryController.savedStateRegistry
 
     fun onCreate() {
+        // performAttach() is required BEFORE performRestore() on API 33+.
+        // Without this, ViewModelProvider(owner) can silently drop saved state
+        // and SavedStateRegistry.isRestored stays false forever.
+        savedStateRegistryController.performAttach()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }

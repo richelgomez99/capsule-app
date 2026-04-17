@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +42,7 @@ class ServiceHealthMonitor(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val scope = CoroutineScope(Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var degradedJob: Job? = null
 
     private val _health = MutableStateFlow(readPersistedHealth())
@@ -80,6 +82,26 @@ class ServiceHealthMonitor(context: Context) {
             status = ServiceHealthStatus.KILLED,
             lastKillTimestamp = now
         )
+    }
+
+    /**
+     * Called when the user explicitly stops the service via toggle. Distinct from
+     * onServiceKilled() in that this is not a restart trigger — we don't record
+     * last_kill_ts, so the next onServiceStarted() will count as a clean start,
+     * not a DEGRADED restart.
+     */
+    fun onServiceStopped() {
+        degradedJob?.cancel()
+        _health.value = _health.value.copy(status = ServiceHealthStatus.KILLED)
+    }
+
+    /**
+     * Cancel the internal scope. Call from the service's onDestroy() to prevent
+     * a coroutine leak if scheduleDegradedToActive() is still pending.
+     */
+    fun dispose() {
+        degradedJob?.cancel()
+        scope.cancel()
     }
 
     private fun scheduleDegradedToActive() {
