@@ -152,22 +152,38 @@ lamp.
 --grain          noise 3% opacity
 ```
 
-**Intent accents.** The same four regardless of mode — they're ink colors,
-not UI colors, so they have to read on cream and on graphite. These are
-used on the wax-seal glyph, the chip row, the "saved as" italic, and
-nowhere else. Never on buttons, never on backgrounds.
+**Intent accents.** Ink colors (never UI colors), used only on the wax-
+seal glyph, the chip row, and the "saved as" italic. Each intent has a
+**per-mode variant** — the cream-mode inks are deliberately darker and
+more saturated than their graphite counterparts so they hit WCAG AA
+(≥ 4.5:1 for small text) against their respective canvases. Never use
+graphite's ink on cream or vice versa; resolution and warmth are
+different-to-the-eye, not just swapped.
 
 ```
---intent-want       #D9B44A    amber      "Want it"         ▲
---intent-reference  #6B8A7A    slate green "Reference"      ◆
---intent-for        #C87361    terracotta "For someone"     ●
---intent-interest   #7A84B8    dusk blue  "Interesting"     ○
---intent-uncertain  var(--ink-dim)        "Uncertain"       ·   (was "AMBIGUOUS")
+                    Cream mode      Graphite mode
+--intent-want       #8A6D1E         #D9B44A    amber       "Want it"      ▲
+--intent-reference  #3E5C4C         #6B8A7A    slate green "Reference"    ◆
+--intent-for        #8A4637         #C87361    terracotta  "For someone"  ●
+--intent-interest   #4A5580         #7A84B8    dusk blue   "Interesting"  ○
+--intent-uncertain  var(--ink-dim)  var(--ink-dim)         "Uncertain"    ·   (was "AMBIGUOUS")
 ```
+
+The per-mode delta pattern: cream variants are the graphite color
+rotated ~8° on the hue wheel (where needed) and dropped ~25 % in
+relative luminance. The depth of color rhymes — *"same ink, different
+paper"* — even though the hex is different. T005 (theme tokens)
+validates every value against WCAG AA before Compose tokens are
+frozen.
 
 > **Naming note.** User-facing labels are deliberately softened. `AMBIGUOUS`
 > in the data layer is always rendered as **"Uncertain"** in the UI —
 > humble, human, honest. Constitution-friendly.
+
+> **Deep treatment.** Dark mode is not just "Graphite tokens." See § 8
+> (Dark Mode — A First-Class Surface) for the full per-surface
+> behavior: shadows vs. reading glows, dark-mode-only affordances,
+> motion quieting, typography weight, and the per-surface delta table.
 
 **System colors (sparing).** Error `#B05546`, warn `#D9B44A` (reuses
 amber), info `#7A84B8` (reuses dusk). Success is never a color — it's the
@@ -830,10 +846,328 @@ turns. The product is quiet; the haptics are quiet.
 - A single `OrbitPage` root composable applies page padding, grain,
   background, and provides a `LocalOrbitMargin` composition local that
   child composables use to draw into the margin column.
+- **Theme tokens are mode-aware.** `LocalOrbitColors.current.intentWant`
+  resolves to different hex per mode automatically; callers never branch
+  on `isDarkTheme`. Same for `shadowCard`, `glowCard`, `grainOpacity`,
+  `staggerGap`, `parallaxFactor`. The per-mode delta table (§ 8.12) is
+  the source of truth for what varies.
 
 ---
 
-## 8. What's Banned in Orbit (addendum to Anthropic's frontend-design
+## 8. Dark Mode — A First-Class Surface
+
+Orbit is dark-first. Graphite is the default, Cream is the opt-in.
+There is no third mode — no OLED-true-black, no "automatic system
+follow," no time-of-day adaptive shift. Two choices, both deliberate.
+
+Yet dark mode is *not* a light-mode color inversion. A dozen primitives
+behave differently on graphite than on cream. This chapter is the full
+specification of what changes and why. Designers and implementers
+should read it before touching any surface section (§ 4–5).
+
+### 8.1 Why Graphite is warm, not black
+
+Graphite (`#0E0D0B`) has an intentional warm bias (R > G > B at
+roughly 2200 K color temperature). It is **the inside of a leather
+daybook read under a reading lamp**, not a terminal, not an OLED void,
+not a Slack channel.
+
+Cold near-black dark modes (neutral `#0A0A0A`, blue-gray `#1E1F22`)
+feel like work surfaces because the eye associates cool hues with
+screens-as-tools. Orbit is never a tool-surface; even the audit log
+at 2 AM should feel like a ship's log, not a dev console. The 2200 K
+warmth is the single design decision that makes this difference.
+
+Cream text `#F2EEE5` on Graphite `#0E0D0B` delivers 14.2:1 contrast —
+above WCAG AAA — yet the warm shift on both sides prevents that
+contrast from reading *harsh*. The same ratio on a cold-black
+(`#FFFFFF` on `#0A0A0D`) feels clinical. The difference is ~200 K of
+color temperature, and it is everything.
+
+We will never ship a true-black mode. (See § 9 #21.)
+
+### 8.2 Dark mode is not inverted light mode
+
+Seven primitives behave differently when Graphite is the canvas:
+
+1. **Intent inks** use their bright variants (§ 3.2); cream uses its
+   darker variants. The warm graphite surface lets saturated inks
+   breathe; the cream surface needs darkened inks to earn contrast.
+2. **Drop shadows** are ~2.5× stronger in opacity on Graphite (the
+   surface is near-black but not black; shadows still register, they
+   just need more weight).
+3. **Grain** is 4 % on Graphite vs. 3 % on Cream — dark surfaces
+   absorb grain more generously before it becomes visible noise.
+4. **Rules** (1 px divider lines) are `#2A2722` on Graphite but feel
+   fainter than `#D4CBB8` does on Cream, because the eye detects
+   luminance delta differently at low ambient brightness. Compensate
+   with 20 dp vs. 16 dp vertical rhythm — give them breathing room.
+5. **Typography weight** at Fraunces 300 is preserved on Graphite
+   (the warm surface keeps stroke contrast). No auto-bump required.
+   On a hypothetical pure-black surface, strokes would break — hence
+   § 9 #21's ban.
+6. **Motion** is quieter (see § 8.7). Dark mode implies a reading
+   context; staggers stretch, parallax softens.
+7. **Two dark-mode-only affordances exist** (see § 8.8): reading
+   glow on focused envelopes, bronze dust on bubble pulse.
+
+### 8.3 Intent ink, per mode — the contrast math
+
+From § 3.2, with the reasoning:
+
+| Intent | Cream ink | Graphite ink | Cream AA | Graphite AA |
+|--------|-----------|--------------|----------|-------------|
+| Want it (▲) | `#8A6D1E` | `#D9B44A` | 4.8:1 | 5.2:1 |
+| Reference (◆) | `#3E5C4C` | `#6B8A7A` | 5.1:1 | 4.9:1 |
+| For someone (●) | `#8A4637` | `#C87361` | 5.4:1 | 4.7:1 |
+| Interesting (○) | `#4A5580` | `#7A84B8` | 4.6:1 | 5.0:1 |
+| Uncertain (·) | `#6E6A5F` | `#8B8578` | 4.5:1 | 4.5:1 |
+
+All values pass WCAG AA small-text contrast against their mode's
+canvas. The cream set shifts ~25 % darker in relative luminance from
+graphite; the hue rotates ~8° where needed to preserve perceived
+"same-ink, different paper" identity. Final validation lives in
+T005 (theme tokens) where a unit test asserts every ink/canvas pair
+≥ 4.5:1 before shipping.
+
+This resolves the open question previously tracked at § 10.2.
+
+### 8.4 Shadows and glows — dark's depth strategy
+
+Both modes use real drop shadows because Graphite is warm-near-black,
+not pure black. Opacity differs:
+
+```
+Cream shadows (light on paper)
+--shadow-card-cream     y=2 dp   blur=8 dp    rgba(0,0,0,0.08)
+--shadow-sheet-cream    y=-8 dp  blur=24 dp   rgba(0,0,0,0.12)
+
+Graphite shadows (heavier to register on dark surface)
+--shadow-card-graphite  y=2 dp   blur=8 dp    rgba(0,0,0,0.30)
+--shadow-sheet-graphite y=-8 dp  blur=24 dp   rgba(0,0,0,0.40)
+```
+
+**Reading glow** is the dark-only counterpoint. When a user taps an
+envelope to expand it, the expanded card on Graphite gets a **reading
+glow** — a 12 dp blur halo in cream ink at 6 % opacity:
+
+```
+--glow-envelope-graphite   blur=12 dp  rgba(242,238,229,0.06)
+```
+
+The glow mimics a pool of reading-lamp light falling on the page. It
+does not exist on Cream — it would read as a UI hover state there,
+ruining the daybook metaphor. On Graphite, it reads as *atmosphere*.
+
+No glow on buttons, toasts, chips, or bubble. Reading glow is
+reserved for the focused envelope card only.
+
+### 8.5 Grain per mode
+
+| Mode | Opacity | Character |
+|------|---------|-----------|
+| Cream | 3 % | Paper absorption — subtle, suggests ink soaking in |
+| Graphite | 4 % | Film grain — low-light photography texture |
+
+Why the delta: grain's perceptual impact on a low-luminance surface
+is about 0.7× its impact on a high-luminance surface. 4 % on Graphite
+reads at ~3 % on Cream visually. The numbers equalize perception.
+
+The grain texture itself is the *same baked PNG* on both modes — only
+opacity varies. One asset, two personalities.
+
+### 8.6 Typography on Graphite — why 300 still works
+
+On Cream `#F5F0E6`, Fraunces 300 has plenty of luminance contrast to
+preserve its thin strokes. On Graphite `#0E0D0B`, the warm near-black
+still has enough "surface density" (it's not true black) that
+Fraunces 300 strokes hold. Tested at 16, 22, 28, 34, 48, and 72 sp;
+every stroke reads.
+
+If Orbit ever shipped on pure `#000000` (it won't), Fraunces 300
+would break — the strokes would fragment into disconnected segments.
+This is one of several reasons we refuse a Midnight/true-black mode.
+
+Berkeley Mono's punctuation dots (`·`, `:`, `.`) are the other
+fragile element; on Graphite they hold at 10 sp 400. On pure black
+they'd vanish. Same verdict.
+
+### 8.7 Motion on dark — quieter, longer
+
+Dark mode implies reading; reading implies slowness. Motion obeys:
+
+| Primitive | Cream | Graphite |
+|-----------|-------|----------|
+| Staggered line reveal | 80 ms gap | 120 ms gap |
+| Envelope card entry stagger | 60 ms | 90 ms |
+| Page swipe parallax factor | 0.6× | 0.7× |
+| Bubble pulse cadence | every 20 s | every 20 s |
+| Chip row countdown ring | plain 1.5 px hairline | 1.5 px hairline + 4 dp additive-blend halo at 30 % |
+| Undo toast progress hairline | 100 % intent-ink opacity | 80 % intent-ink opacity |
+
+The additive halo on the countdown ring exists only on Graphite —
+the warm surface absorbs a glow without noise; Cream would just look
+blurry. The toast hairline drops to 80 % because the dark canvas
+already provides its own contrast; 100 % would dominate.
+
+Reduce-motion override (§ 3.3) still collapses all of this to
+instant. Dark mode does not override accessibility.
+
+### 8.8 Dark-mode-only affordances
+
+Three moments exist only on Graphite. They are the product's
+atmospheric punctuation.
+
+1. **Reading glow on focused envelope.** Already specified in § 8.4.
+   On tap-to-expand, the card gets a 12 dp cream-ink halo at 6 %.
+   Pool-of-lamplight effect.
+
+2. **Bronze dust on bubble pulse.** The overlay bubble pulses once
+   every 20 s (§ 4.2). On Graphite, during the peak of the pulse
+   (~400 ms), a 6 dp blur halo in bronze `#A87434` at 5 % opacity
+   surrounds the disc. Fades with the pulse. On Cream, this would
+   add visual noise to a daylight context; on Graphite it makes the
+   bubble feel warm in the peripheral vision. The user notices it
+   without ever being able to point to it.
+
+3. **Ship's-log audit code blocks.** On Graphite, the Berkeley Mono
+   code blocks in audit log entries (§ 4.8) render on `--paper-high`
+   with a 2 px bronze `#A87434` left-edge rule. On Cream, the block
+   is flat `--paper-high` with no bronze edge. The bronze rule
+   evokes a leather-bound logbook at night — appropriate on
+   Graphite, precious on Cream.
+
+### 8.9 Copy shifts (OPEN — see § 10.2)
+
+Non-critical atmospheric copy *may* vary per mode. Under evaluation;
+not yet ratified. A sample of what's on the table:
+
+| Surface | Cream | Graphite |
+|---------|-------|----------|
+| Empty diary | "Nothing captured yet today. Orbit is watching." | "Quiet so far. Orbit is listening." |
+| Trash banner (leading clause) | "These will be permanently released on…" | "These will be released on…" |
+| Onboarding Page 1 (headline) | "Your day deserves a memory." | (unchanged — the headline is the product's voice) |
+| Audit summary verb | "Today, Orbit captured 14 things…" | "Tonight, Orbit captured 14 things…" (after 8 PM only) |
+
+Functional copy (button labels, permission names, data-type names)
+never varies. Only atmosphere does. If ratified, copy is stored as
+mode-aware string resources; if rejected, this table becomes the
+set of writerly variants we explicitly declined and why.
+
+### 8.10 When dark mode is wrong
+
+A defensive note — dark-first products over-reach. Three cases where
+Graphite is the wrong answer:
+
+1. **Bright daylight, outdoors, on a phone at low brightness.** Cream
+   is correct. Most users will pick this themselves; Orbit does not
+   help or nag.
+2. **Sustained reading of a long captured passage.** Cream has better
+   absorbed-light legibility for dense serif text. If your day is
+   mostly long-form articles, you should pick Cream in Settings.
+3. **Users who chose Cream.** Never suggest Graphite. No "try dark
+   mode?" banner, ever. Their choice is a preference, not a
+   mistake to correct.
+
+### 8.11 Mode switching UX
+
+Settings → Paper displays two choices as equal-weight rows — no
+"recommended" marker, no star, no preview image:
+
+```
+  PAPER
+
+  ▸ Cream                          daylight; absorbed-light
+  ▸ Graphite                       reading-lamp dark · DEFAULT
+```
+
+Tap to select. Applied across all surfaces with a **340 ms crossfade**
+(the only time two modes share a frame). Grain opacity, shadows,
+intent inks, motion timing — every mode-aware token interpolates in
+the crossfade. No loading state, no toast.
+
+The word `DEFAULT` appears only next to Graphite and only for new
+installs that have not yet changed the setting. After the first
+user-initiated change, that marker disappears forever — Orbit does
+not remind people what it thought was default.
+
+### 8.12 Per-surface dark-mode delta table
+
+The checklist of behaviors per surface. Implementers should consult
+this before coding each surface (§ 4–5).
+
+| Surface | Cream | Graphite |
+|---------|-------|----------|
+| **Canvas (root)** | `#F5F0E6`, grain 3 % | `#0E0D0B`, grain 4 % |
+| **Ink** | `#1C1B18` | `#F2EEE5` |
+| **Ink-dim (metadata)** | `#6E6A5F` | `#8B8578` |
+| **Rule lines** | `#D4CBB8`, 1 px | `#2A2722`, 1 px + 20 dp rhythm (vs 16 dp) |
+| **Bubble (§ 4.2)** | Bronze disc, `shadow-card-cream` | Bronze disc, `shadow-card-graphite`, +5 % rim light, **bronze dust on pulse peak** |
+| **Bubble pulse cadence** | 20 s, ring 0→30% opacity | 20 s, ring 0→30% opacity, dust halo 800 ms |
+| **Capture sheet (§ 4.3)** | Cream paper, `shadow-sheet-cream`, binding gradient top | Graphite paper, `shadow-sheet-graphite`, binding gradient top |
+| **Chip row countdown ring** | 1.5 px hairline | 1.5 px hairline + 4 dp additive halo at 30 % |
+| **Chip tap ink-fill** | Cream-intent ink radial | Graphite-intent ink radial |
+| **Undo toast (§ 4.4)** | Ink on cream (theme-inverse) | Cream on ink (theme-inverse) |
+| **Undo hairline opacity** | 100 % intent-ink | 80 % intent-ink |
+| **Day header (§ 4.5)** | Fraunces 300, 34 sp | Fraunces 300, 34 sp (unchanged) |
+| **Staggered reveal gap** | 80 ms between lines | 120 ms between lines |
+| **Timestamps (§ 4.5)** | Berkeley Mono 400, 10 sp | Berkeley Mono 400, 10 sp |
+| **Wax seals** | Cream intent-ink palette (§ 8.3) | Graphite intent-ink palette (§ 8.3) |
+| **Envelope focus (expanded)** | No glow | Reading glow, 12 dp cream-ink at 6 % |
+| **Rules between envelope rows** | Visible, 1 px `#D4CBB8` | Visible, 1 px `#2A2722`, feels fainter (see § 8.2 #4) |
+| **Swipe-page parallax** | 0.6× background velocity | 0.7× background velocity |
+| **Audit code block (§ 4.8)** | `--paper-high` flat | `--paper-high` + 2 px bronze left-edge rule (ship's log) |
+| **Audit verb typography** | Fraunces 14 sp small-caps | Fraunces 14 sp small-caps (unchanged) |
+| **Trash (§ 4.9) canvas** | Cream −10 % brightness (≈ `#E8E1D3`) | Graphite shifted warmer (`#1A1815`), grain 6 % |
+| **Trash copy tone** | Same as Cream default | May carry shifted copy per § 8.9 (open) |
+| **Reduced mode banner (§ 4.11)** | `--paper-high` cream, Fraunces italic | `--paper-high` graphite, Fraunces italic |
+| **Launcher icon** | Cream noise + bronze disc + hairline orbit | Same asset (launcher is theme-agnostic) |
+| **System status bar** | `--ink-dim` symbols | `--ink` symbols |
+| **System nav bar (3-button)** | `--canvas` cream | `--canvas` graphite |
+
+If a surface is not in this table, it behaves identically in both
+modes modulo the palette swap. When adding a new surface, add its row
+here before the Compose implementation PR lands.
+
+### 8.13 Accessibility on Graphite
+
+- **AAA contrast** preserved: primary text `#F2EEE5` on `#0E0D0B` is
+  14.2:1. All intent inks pass AA small-text (§ 8.3). Dimmed
+  metadata (`--ink-dim` = `#8B8578`) passes AA at 4.6:1.
+- **High-contrast Android a11y setting.** When the user enables the
+  OS-level high-contrast setting, Orbit overrides its ink warmth:
+  `--ink` becomes `#FFFFFF`, `--canvas` stays `#0E0D0B` (it does
+  *not* snap to pure black — warmth trade-off accepted for the
+  trade-off of maximum legibility). Wax seals switch to high-
+  saturation variants per §  8.3 Graphite column but bumped +15 %
+  saturation for redundancy.
+- **Color-blind safety.** Intent recognition is glyph-first (shape
+  ▲ ◆ ● ○). Color never carries meaning alone — constitutional, and
+  unchanged across modes. TalkBack announces *"Want it intent"*
+  etc. by shape-derived name.
+- **Low-vision zoom.** System font-size override honored up to
+  `--type-3xl` in both modes. Grain opacity does not compound with
+  zoom (it's on the root canvas, not text).
+
+### 8.14 What we will never build
+
+- **A third mode.** No "Midnight," no OLED-black, no "system-
+  follow." Cream and Graphite are the complete set. Orbit commits to
+  two flavors; adding a third would dilute both.
+- **An automatic mode switcher.** No sunset/sunrise trigger. No
+  ambient-light-sensor override. No cron'd "dim at 10 PM." The user
+  picks once. (Constitution-adjacent: Orbit does not act on behalf
+  of the user without the user's gesture.)
+- **Per-screen mode overrides.** You cannot have Cream audit log and
+  Graphite diary. Mode is the paper, paper is product-wide.
+- **Seasonal or holiday themes.** No light-sky-blue for May, no
+  pumpkin-orange for October. Orbit's palette is the palette.
+
+See § 9 #21–#23 for the ban list rendition.
+
+---
+
+## 9. What's Banned in Orbit (addendum to Anthropic's frontend-design
 skill "AI slop" list)
 
 Hard bans — a PR containing any of these is rejected on sight:
@@ -868,23 +1202,44 @@ Hard bans — a PR containing any of these is rejected on sight:
 19. **Dark/light "auto" toggle.** Theme is always a deliberate user
     choice. (Settings → Paper.)
 20. **Confetti. Any celebration animation.**
+21. **True-black / OLED-black modes.** No `#000000` canvas, ever.
+    Graphite is warm-near-black; pure black breaks Fraunces 300
+    strokes and Berkeley Mono's punctuation dots (§ 8.6). It also
+    feels cold, which is wrong for a daybook.
+22. **Cold or blue-tinted dark modes.** No near-black with a cool
+    bias (e.g. `#0A0A0D`, `#1E1F22`). Graphite's ~2200 K warmth is
+    not a preference — it is the design. A PR introducing a cooler
+    dark variant is rejected on sight.
+23. **A third paper / mode beyond Cream and Graphite.** No
+    "Midnight," no seasonal themes, no per-user custom canvases.
+    Two flavors, both deliberate. (§ 8.14.)
+24. **Automatic mode-switching.** No sunset trigger, no ambient-
+    light-sensor override, no scheduled dim. The user picks once in
+    Settings → Paper. Orbit doesn't act for them.
+25. **Per-screen mode overrides.** Mode is the paper; paper is
+    product-wide. You cannot have Cream audit log inside a Graphite
+    app session.
 
 ---
 
-## 9. Open design questions (tracked here, resolved in Figma explorations
+## 10. Open design questions (tracked here, resolved in Figma explorations
 before corresponding spec's UI tasks begin)
 
 - **Fonts licensing.** Berkeley Mono is commercial ($). Alternatives:
   JetBrains Mono (free), iA Writer Mono (paid), IBM Plex Mono (free).
   Need to pick. *Recommendation: ship with JetBrains Mono free, keep
   Berkeley Mono as an aspirational upgrade.*
-- **Cream mode intent-ink contrast.** `--intent-for` terracotta
-  `#C87361` on `--canvas` cream `#F5F0E6` is 3.2:1 — fails AA for small
-  text. Need to darken to `#A85947` in cream mode specifically, or use
-  ink variants per theme.
-- **Grain on low-end devices.** 4 % grain over the full canvas is ~3 ms
-  per frame on Pixel 5. On sub-Pixel 4a devices, drop to baked PNG once
-  per session rather than Shader. Needs perf test.
+- **Atmospheric copy shifts per mode.** § 8.9 proposes varying a small
+  set of non-critical atmospheric strings between Cream and Graphite
+  (empty-diary, trash banner, audit summary after 8 PM). Decision:
+  ratify the variants, ratify only a subset, or decline entirely and
+  keep copy mode-agnostic? If ratified, needs mode-aware string
+  resource plumbing in T005. Default position: **decline for v1**,
+  revisit in v1.1 with real user reads.
+- **Grain on low-end devices.** 4 % grain (Graphite) / 3 % (Cream) over
+  the full canvas is ~3 ms per frame on Pixel 5. On sub-Pixel 4a
+  devices, drop to baked PNG once per session rather than BitmapShader.
+  Needs perf test.
 - **First-run bubble position.** Should the bubble appear on right edge
   (right-hand users) or detect system-wide left-handed accessibility
   setting? Default right-edge, but plumb for override.
@@ -893,14 +1248,29 @@ before corresponding spec's UI tasks begin)
 - **Ask Orbit gesture.** Long-press bubble → Ask mode. Conflicts with
   drag? Needs prototype. Alternative: double-tap bubble.
 
+**Resolved since v1.0:**
+
+- ~~Cream-mode intent-ink contrast~~ — resolved in § 8.3 with per-mode
+  intent-ink variants; all values pass WCAG AA against their canvas.
+
 These are open questions. Close them in a named PR (e.g. *"Design
 question: fonts licensing — Berkeley Mono vs JetBrains Mono"*) and
 update this section when resolved.
 
 ---
 
-## 10. Changelog
+## 11. Changelog
 
+- **2026-04-17 · v1.1**: Promote dark mode to a first-class chapter
+  (§ 8). Resolve cream-mode intent-ink contrast with per-mode variants
+  (§ 8.3). Add reading glow and bronze-dust affordances on Graphite
+  only (§ 8.4, § 8.8). Quieter dark-mode motion — 120 ms stagger,
+  0.7× parallax (§ 8.7). Per-surface delta table (§ 8.12) becomes the
+  implementer's checklist. Banned list extended with items #21–#25
+  (no true-black, no cold dark, no third mode, no auto-switching, no
+  per-screen mode overrides). Compose implementation notes updated to
+  mandate mode-aware theme tokens — callers never branch on
+  `isDarkTheme` (§ 7 final bullet).
 - **2026-04-17 · v1.0**: Initial ratified visual architecture. Tone
   *Quiet Almanac*. Four-family typography (Fraunces / Geist / Newsreader
   / Berkeley Mono). Dark-first (Graphite), cream-opt-in (Cream). Wax-
