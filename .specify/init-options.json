@@ -1,9 +1,8 @@
 {
-  "ai": "cursor-agent",
-  "ai_skills": true,
+  "ai": "copilot",
   "branch_numbering": "sequential",
   "here": false,
-  "integration": "cursor-agent",
+  "integration": "copilot",
   "preset": null,
   "script": "sh",
   "speckit_version": "0.7.1"
