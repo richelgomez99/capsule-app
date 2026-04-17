@@ -5,7 +5,10 @@
 **Feature Branch**: `002-intent-envelope-and-diary`
 **Created**: 2026-04-16
 **Status**: Draft
-**Governing document**: `.specify/memory/constitution.md`
+**Governing documents**:
+- `.specify/memory/constitution.md` — the ten principles.
+- `.specify/memory/design.md` — visual architecture (typography, color,
+  motion, every surface). All "UI" references in this PRD defer to it.
 
 > **Relationship to spec 001:** This PRD supersedes the v0 functional scope in
 > `specs/001-core-capture-overlay/spec.md`. The bubble overlay service,

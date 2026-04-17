@@ -6,6 +6,8 @@
 
 **Organization**: Tasks grouped by user story. P1 stories form the MVP. Checkpoints at the end of each story phase.
 
+**Visual source of truth**: `.specify/memory/design.md` — every Compose task below (bubble, capture sheet, chip row, diary, envelope card, settings, audit log, trash, onboarding, reduced mode) cites a section of that document by number. Implementations MUST NOT introduce typography, color, motion, or spacing decisions that are not already in `design.md`; if a decision is missing, update `design.md` first, then the Compose task.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no blocking dependencies)

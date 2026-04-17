@@ -11,6 +11,14 @@ them is wrong, regardless of how useful it seems in isolation.
 **Last Amended**: 2026-04-17
 **Domain**: orbitassistant.com
 
+**Companion documents**:
+
+- `.specify/memory/PRD.md` — product requirements (what Orbit ships in v1
+  and the post-v1 roadmap).
+- `.specify/memory/design.md` — visual architecture: typography, color,
+  motion, spatial composition, every v1–v1.3 surface. The principles
+  below set the *what* and *why*; `design.md` sets the *how it looks*.
+
 ---
 
 ## Core Principles
