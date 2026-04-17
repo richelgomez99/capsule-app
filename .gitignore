@@ -16,3 +16,7 @@ local.properties
 .cursor/mcp-cache/
 .cursor/logs/
 .cursor/history/
+
+# Private working notes (never push)
+.specify/memory/linkedin*.md
+.specify/memory/*private*
