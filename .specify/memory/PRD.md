@@ -6,7 +6,7 @@
 **Created**: 2026-04-16
 **Status**: Draft
 **Governing documents**:
-- `.specify/memory/constitution.md` — the ten principles.
+- `.specify/memory/constitution.md` — the twelve principles.
 - `.specify/memory/design.md` — visual architecture (typography, color,
   motion, every surface). All "UI" references in this PRD defer to it.
 
@@ -481,6 +481,50 @@ The v1 build remains local-only per Principle I and the Phase 1 Scope
 section of the constitution. Full specs for each item below live in the
 numbered spec directories as they are drafted.
 
+### Storage scope — what Orbit stores, where
+
+Orbit stores seven distinct kinds of data. Each has its own tier
+placement, encryption rule, and retention policy. Specs 006 (Orbit
+Cloud), 007 (Knowledge Graph), 008 (Orbit Agent), and 009 (BYOC)
+together implement this inventory.
+
+1. **Captures (envelopes)** — body text, media references, OCR,
+   transcripts, app/surface metadata, timestamps, state snapshots.
+   Tier 0 local SQLCipher (source of truth). Per-user DEK for body
+   and media on Tier 1. Originals stay on device by default; only
+   thumbnails, OCR, and transcripts mirror to cloud unless the user
+   explicitly uploads an original.
+2. **Intent + actions** — intent label, confidence, model provenance,
+   action taken, user feedback (kept/undone/edited/rated), skill
+   invocation traces. Tier 0 + Tier 1. Audit anchor; feedback is the
+   highest-signal training data.
+3. **User profile** — modeled as a KG subgraph where `subject =
+   user_id`. Three layers: (a) declared identity (name, locale,
+   constraints, consented contacts); (b) inferred identity (style,
+   recurring contacts, topic clusters) as bi-temporal triples; (c)
+   corrections and rejections as negative-weight edges. Every fact
+   has a sensitivity tag (`public_to_orbit`, `local_only`,
+   `ephemeral`) and a share scope.
+4. **Agent memory** — short-term session state (JSONB, high churn)
+   for in-flight tasks; long-term patterns stored as KG nodes of
+   type `Pattern` (low churn); plans with explicit state-machine
+   columns; skill registry (installed AppFunctions, schemas,
+   versions, usage stats, user-set defaults).
+5. **Knowledge graph structure** — typed nodes (Person, Place,
+   Project, Topic, Item, Event, State, Skill, Envelope, Pattern),
+   bi-temporal edges (`valid_from`, `valid_to`, `invalidated_at`,
+   `episode_id`), episodes (raw source linkage), user-editable
+   ontology with audit, state-anchors, continuation-lineage edges.
+6. **System/operational** — device registry, OAuth session tokens
+   for Orbit Cloud, sync watermarks, plan/quota/billing, LLM usage
+   meter, experiment flags, GDPR export/delete request state.
+7. **External integrations** (post-v1) — OAuth tokens for
+   user-connected services (calendar, email, messaging): Tier 0
+   **only**, encrypted by Android Keystore, never uploaded.
+   Derived facts (calendar events, contact relationships) flow to
+   cloud as KG episodes only after the on-device `:agent` process
+   applies the consent filter.
+
 ### Three-tier storage model
 
 Orbit's storage model across all phases has exactly three tiers. Every
@@ -489,26 +533,34 @@ are purely additive.
 
 - **Tier 0 — Local only (v1, always the default, always available).**
   SQLCipher-encrypted Room database on device, Android Keystore-wrapped
-  passphrase, no network. Full envelope corpus, continuations, audit
-  log, and state snapshots. Device is the sole source of truth. This
-  tier never turns off.
-- **Tier 1 — BYOC (Bring Your Own Cloud, v1.2).** User provisions their
-  own Postgres (Supabase/Neon/self-hosted) or Firestore project under
-  their own account and pastes the connection string (or connects via
-  OAuth where supported) into Orbit. Orbit mirrors an opt-in subset of
-  data (envelope text, embeddings, knowledge graph, continuation
-  results — audit log is always excluded) to that user-owned database.
-  User pays their own cloud bill, owns all data, can export or delete
-  at any moment. Local remains the source of truth; cloud is
-  derived/enrichment.
-- **Tier 2 — Orbit Cloud managed (v2.0+, only if demand justifies).**
-  Orbit automates provisioning of Tier 1 infrastructure via OAuth
-  partnerships (Supabase/Neon). Orbit performs ops, users pay a
-  management fee. Crucially, the storage account remains legally owned
-  by the user — Orbit has admin access, not a copy. Revocation by the
-  user at any moment leaves them with all their data and Orbit with
-  none. This is constitutionally forbidden to become multi-tenant
-  Orbit-owned storage.
+  passphrase, no network. Source of truth for capture, audit log, and
+  consent ledger. Holds the last-N-days envelope projection for offline
+  diary; holds OAuth tokens for any external integrations. Never
+  turns off. FTS4 powers on-device keyword search in v1; no on-device
+  vector DB in v1 (embeddings are computed locally via MediaPipe and
+  uploaded to Tier 1 for similarity queries).
+- **Tier 1 — Orbit Cloud managed (v1.1+, opt-in, default cloud path).**
+  Orbit-operated managed PostgreSQL with pgvector. Each user gets a
+  dedicated schema (`orbit_<user_id>`) with a dedicated database role;
+  envelope bodies, media, transcripts, and `local_only` profile facts
+  are stored ciphertext with a per-user DEK wrapped by KMS. Holds the
+  full knowledge graph, user profile subgraph, agent long-term
+  memory, and vector indexes. Constitution Principle X Model A;
+  spec 006 is the authoritative contract. Users can export or delete
+  all their cloud data at any moment without Orbit's involvement.
+- **Tier 2 — BYOC sovereign (v1.3, opt-in power-user).** User
+  provisions their own Postgres (Supabase, Neon, self-hosted,
+  Hetzner, etc.) and Orbit writes the same schema as Tier 1 to their
+  database. User holds admin access and pays their own provider
+  bill. Migration in either direction (Tier 1 ↔ Tier 2) is lossless
+  by construction — the schemas match. Constitution Principle X
+  Model B; spec 009 is the authoritative contract.
+
+**What is never stored above Tier 0**, regardless of user preference:
+the audit log, the consent ledger, OAuth tokens for external
+integrations, and any profile fact or KG node/edge tagged
+`local_only`. These are structurally local-only, enforced in the
+`:agent` process consent filter (Principle XI).
 
 ### Post-v1 feature roadmap
 
@@ -517,28 +569,40 @@ depend on v1 having shipped and stabilized.
 
 - **003 — Orbit Actions (v1.1).** Structured extraction from captured
   text (flight confirmations → calendar events; task lists → to-do
-  items; weekly diary digest). All extraction is Nano-first with BYOK
-  LLM upgrade (principle IX). Every action requires explicit user
-  confirmation before writing to external apps.
+  items; weekly diary digest). Actions are invoked as AppFunctions so
+  they compose with the agent (spec 008). All extraction is
+  Nano-first with Orbit-managed LLM proxy or BYOK upgrade (Principle
+  IX). Every action requires explicit user confirmation before
+  writing to external apps. Tools run on-device; derived facts flow
+  to cloud as KG episodes.
 - **004 — Ask Orbit (v1.2).** Natural-language chat over the envelope
-  corpus. On-device embeddings (Gemini Nano embedding endpoint) +
-  local k-NN nearest-neighbor search + Nano-powered RAG synthesis.
-  Optional BYOK cloud upgrade for richer synthesis and larger context
-  windows.
-- **005 — Cloud Boost / BYOK LLM (v1.1).** Per-capability toggles
-  routing specific Nano calls to a user-configured cloud provider via
-  the `:net` process. Keystore-wrapped key storage. Cloud routing is
-  audited per call. Falls back to Nano with zero feature loss if
-  disabled.
-- **006 — BYOC Cloud Storage (v1.2).** Paste-a-connection-string or
-  OAuth-connect flow for user-owned Postgres/Firestore mirror. Opt-in
-  per data category. Local remains source of truth. Audit log stays
-  local forever.
-- **007 — Knowledge Graph (v1.3).** Entity extraction (people,
-  projects, topics, URLs, places) and relationship edges across
-  envelopes. Runs on local SQLite (self-joins) or cloud Postgres (pg
-  recursive CTE) depending on storage tier. Powers multi-hop Ask Orbit
-  queries ("what projects is Alice involved in?").
+  corpus and knowledge graph. Hybrid retrieval (keyword on-device +
+  vector in Tier 1 + KG traversal in Tier 1) + Nano or cloud
+  synthesis through the consent-aware prompt assembly gate (Principle
+  XI).
+- **005 — Cloud Boost / LLM (v1.1).** Orbit-managed LLM proxy as the
+  default cloud-LLM path (no API key required for users within
+  quota). Per-capability BYOK toggles retained for power users.
+  Keystore-wrapped key storage. Every cloud call audited locally.
+  Falls back to Nano with zero feature loss if disabled.
+- **006 — Orbit Cloud Storage (v1.1).** Orbit-hosted managed Postgres
+  (schema-per-tenant, per-user DEK, pgvector). Default cloud storage
+  tier. Replaces the former BYOC-first design. Authoritative contract
+  for Tier 1.
+- **007 — Knowledge Graph (v1.2).** Entity extraction, bi-temporal
+  edges, continuation-lineage edges, state-anchored nodes,
+  user-editable ontology with audit, temporal decay + reinforcement.
+  User profile is modeled as a KG subgraph where `subject = user_id`
+  using the same tables and the same queries.
+- **008 — Orbit Agent (v1.2).** Planner + executor running in a
+  dedicated `:agent` process. Invokes AppFunctions (spec 003) as
+  tools. Holds short-term session memory (Postgres JSONB) and
+  long-term patterns as KG `Pattern` nodes. Assembles prompts
+  on-device through the consent filter (Principle XI). Bubble
+  long-press triggers agent; action outcomes become episodes.
+- **009 — BYOC Sovereign Storage (v1.3).** Paste-connection-string
+  flow for user-owned Postgres. Same schema as spec 006. Lossless
+  migration to/from Tier 1. Authoritative contract for Tier 2.
 
 ### v1 abstractions required by the roadmap
 
@@ -547,13 +611,15 @@ features) so that v1.1+ work is additive rather than a refactor:
 
 - **`LlmProvider` interface** in `com.capsule.app.ai` with
   `NanoLlmProvider` as the sole v1 implementation. Every Nano call in
-  v1 routes through this interface. v1.1 adds `ByokLlmProvider` without
-  touching call sites. Every result carries a `LlmProvenance` field
-  (`LOCAL_NANO` or `CLOUD(provider, model)`) for audit purposes.
+  v1 routes through this interface. v1.1 adds `OrbitManagedLlmProvider`
+  (the managed proxy) and `ByokLlmProvider` without touching call
+  sites. Every result carries a `LlmProvenance` field (`LOCAL_NANO`,
+  `ORBIT_MANAGED(model)`, or `BYOK(provider, model)`) for audit
+  purposes.
 - **`EnvelopeStorageBackend` interface** behind `EnvelopeRepositoryImpl`
-  with `LocalRoomBackend` as the sole v1 implementation. v1.2 adds a
-  `LocalRoomPlusCloudMirrorBackend` without touching the AIDL surface
-  or callers.
+  with `LocalRoomBackend` as the sole v1 implementation. v1.1+ adds
+  `OrbitCloudBackend` (Tier 1) and v1.3 adds `ByocPostgresBackend`
+  (Tier 2) without touching the AIDL surface or callers.
 
 These are documented in `specs/002-intent-envelope-and-diary/tasks.md`
 as foundational tasks in Phase 2.

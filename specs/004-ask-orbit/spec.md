@@ -23,9 +23,9 @@ Ask Orbit has a fallback keyword-search mode for devices without Nano embedding 
 
 ## Relationship to other specs
 
-- **Spec 005 (BYOK LLM)** makes Ask Orbit meaningfully better. Synthesis quality with cloud GPT/Claude/Gemini Flash vs. on-device Nano is a large gap. Per-capability toggle applies.
-- **Spec 006 (BYOC Cloud Storage)** enables Ask Orbit to do **retrieval** from a cloud-hosted index (for users with large corpora whose on-device index is slow) or multi-device retrieval. Local retrieval remains the default.
-- **Spec 007 (Knowledge Graph)** promotes Ask Orbit from single-hop ("what do I know about X") to multi-hop ("which projects is Alice involved in and what did we discuss last week") via graph traversal.
+- **Spec 005 (Orbit-managed LLM + BYOK)** makes Ask Orbit meaningfully better. Synthesis quality with cloud models vs. on-device Nano is a large gap. Per-capability toggle applies, and all cloud prompts pass the Principle XI consent filter.
+- **Spec 006 (Orbit Cloud Storage)** enables Ask Orbit to do **retrieval** over the full corpus (pgvector similarity + keyword + KG traversal) with structural tenant isolation. Local on-device retrieval remains available for offline diary.
+- **Spec 007 (Knowledge Graph)** promotes Ask Orbit from single-hop ("what do I know about X") to multi-hop ("which projects is Alice involved in and what did we discuss last week") via bi-temporal graph traversal, including the user profile subgraph.
 
 ---
 

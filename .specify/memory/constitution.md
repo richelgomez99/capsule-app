@@ -1,14 +1,14 @@
 # Orbit Constitution
 
 Orbit is the local-first personal memory layer for mobile. This document
-encodes the ten principles that govern every decision in the product —
+encodes the twelve principles that govern every decision in the product —
 from architecture to UX to data policy. These principles are non-
 negotiable. A design, feature, or implementation that violates any of
 them is wrong, regardless of how useful it seems in isolation.
 
-**Version**: 2.0.0
+**Version**: 3.0.0
 **Ratified**: 2026-04-16
-**Last Amended**: 2026-04-17
+**Last Amended**: 2026-04-20
 **Domain**: orbitassistant.com
 
 **Companion documents**:
@@ -149,36 +149,147 @@ Every feature Orbit ships must work at full feature coverage with Nano
 alone. Cloud is quality, never scope. An unaudited cloud call is a
 structural bug, not a feature.
 
-### X. User-Sovereign Cloud Storage
+### X. Sovereign Cloud Storage (Orbit-Hosted or User-Hosted)
 
 Orbit MAY mirror envelopes and their derived structures (embeddings,
-knowledge graph, continuation results) to remote storage, but only when
-four conditions hold simultaneously:
+knowledge graph, profile facts, agent memory, continuation results) to
+remote storage under one of two user-chosen models. Both models are
+bound by the same non-negotiable conditions.
+
+**Non-negotiable conditions (apply to both models)**:
 
 1. Local device storage (SQLCipher corpus) remains the source of truth
-   and continues to function if cloud is unreachable, disabled, or
-   deleted. Cloud is never authoritative.
-2. The remote storage account is legally owned by the user, not by
-   Orbit. The user holds admin access to inspect, export, and delete
-   all data at any time without Orbit's involvement or permission.
-3. The user opts in to each data category separately: envelope text,
-   embeddings, knowledge graph nodes, continuation results. The audit
-   log itself is explicitly excluded — it never leaves the device, ever.
-4. Every cloud read and every cloud write produces an audit log entry
-   visible to the user in *What Orbit did today*.
+   for capture and continues to function if cloud is unreachable,
+   disabled, or deleted. Cloud is never authoritative.
+2. The user opts in to each data category separately: envelope text,
+   embeddings, knowledge graph nodes, profile facts, continuation
+   results, agent memory. The **audit log** and the **consent ledger**
+   are explicitly excluded from every cloud model — they never leave
+   the device, ever. These are the receipts; if receipts can be
+   rewritten by a server, the receipts are worthless.
+3. Every cloud read and every cloud write produces an audit log entry
+   visible to the user in *What Orbit did today*, with provider,
+   endpoint, payload digest, and outcome.
+4. The user can trigger a full export (GDPR-grade, machine-readable)
+   and a full delete from settings without Orbit's involvement. Delete
+   propagates to every downstream system within 72 hours and is
+   recorded in the local audit log.
+5. Every derived fact (profile inference, KG edge, agent pattern,
+   continuation suggestion) stored in cloud MUST carry a reference to
+   at least one source episode on-device. Facts without provenance
+   are structurally rejected at write time. (See Principle XII.)
 
-Orbit MAY offer a managed ("Orbit Cloud") tier that automates
-provisioning of user-owned infrastructure via OAuth (e.g., Supabase or
-Neon project created in the user's account during onboarding). The
-legal owner of the account and the data must remain the user. Orbit-
-hosted multi-tenant storage where users are isolated only by row-level
-security is explicitly prohibited: the user must be able to revoke
-Orbit's access at any moment and retain complete access to all their
-data from that moment forward.
+**Model A — Orbit-Hosted Managed Cloud** (default for users who opt in):
 
-The audit log is local-only by construction because the audit log is
-the receipt. If the receipt can be rewritten by a server, the receipt
-is worthless.
+Orbit MAY operate a multi-tenant storage service ("Orbit Cloud") on
+user data, subject to ALL of the following structural isolation and
+encryption guarantees:
+
+- **Schema-per-tenant isolation**: each user's data lives in a
+  dedicated PostgreSQL schema (`orbit_<user_id>`) with a dedicated
+  database role. Cross-tenant joins are structurally impossible, not
+  merely policy-prohibited. Row-level security alone is NOT sufficient
+  isolation.
+- **Per-user data encryption key (DEK)**: envelope bodies, media,
+  transcripts, OCR outputs, and profile facts tagged `local_only` are
+  stored ciphertext-only, encrypted with a per-user DEK that is itself
+  wrapped by a KMS-managed root key. The DEK is never logged, never
+  backed up in plaintext, and rotated on user request.
+- **Consent-scoped fields**: only fields the user has consented to
+  share at the category level are uploaded. Profile facts tagged
+  `local_only` never leave the device under any code path; this is
+  enforced on-device by the `:agent` process (Principle XI), not
+  trusted to the cloud.
+- **No cross-tenant derivatives**: Orbit does not train, fine-tune,
+  aggregate, or derive any model, embedding, or statistic from user
+  data across tenants without explicit opt-in consent recorded in the
+  local consent ledger, per category, per purpose.
+- **Quarterly transparency report**: access counts, KMS key
+  operations, subprocessor list, and breach history published publicly.
+- **Revocation**: the user can at any moment disable Orbit Cloud, after
+  which no new writes are accepted and existing data is exported and
+  purged on the user's timeline. Device operation continues
+  uninterrupted.
+
+**Model B — User-Hosted Sovereign Cloud (BYOC)**:
+
+Orbit MAY write to remote storage legally owned by the user (e.g., a
+Postgres instance at a provider of the user's choosing), subject to:
+
+- The user holds admin access to inspect, export, and delete all data
+  at any time without Orbit's involvement.
+- Connection credentials are stored in Android Keystore on-device and
+  never uploaded.
+- The schema matches Model A so that a user may migrate in either
+  direction without feature loss.
+
+**What is permanently prohibited under both models**:
+
+- Multi-tenant storage where users are isolated only by row-level
+  security without schema-per-tenant separation.
+- Uploading the audit log, the consent ledger, OAuth tokens for
+  external integrations, or any profile fact tagged `local_only`.
+- Server-side assembly of LLM prompts from user data. Prompts are
+  assembled on-device per Principle XI and only the redacted final
+  prompt crosses `:net`.
+- Deriving facts about a user in the cloud without on-device episode
+  provenance attached. See Principle XII.
+
+### XI. Consent-Aware Prompt Assembly
+
+Every prompt that leaves the device — whether to a BYOK LLM, an Orbit-
+managed LLM proxy, or any cloud continuation service — is assembled
+on-device by the `:agent` process and passes through a consent filter
+before reaching `:net`.
+
+The consent filter enforces, at minimum:
+
+1. Profile facts, KG nodes, and KG edges tagged `local_only` are never
+   included in outbound prompts, regardless of how the agent reasons
+   about them internally.
+2. Profile facts and KG structures tagged `ephemeral` are included
+   only within their validity window and are excluded thereafter.
+3. Sensitivity tags (e.g., financial, medical, credentials) redact or
+   exclude matching content per user preference, with the redaction
+   pattern and count recorded to the local audit log.
+4. The final prompt digest, the categories of included content, and
+   the destination provider are recorded to the local audit log
+   before the prompt is handed to `:net`.
+
+The server cannot decide what is safe to include in a prompt because
+the server does not hold the consent ledger. Prompt assembly is a
+device-side responsibility, structurally — not a cloud-side policy.
+
+### XII. Provenance Or It Didn't Happen
+
+Every derived fact stored anywhere in Orbit — a profile inference
+("prefers 24h time"), a KG edge ("works with Sara"), an agent pattern
+("always adds flights to calendar"), a continuation suggestion — MUST
+carry a reference to at least one source episode on-device. Facts
+without provenance are structurally rejected at write time in both
+on-device storage and cloud storage.
+
+An **episode** is the raw, immutable source data that produced a
+derived fact: an envelope, an explicit user statement, a user
+correction, or an external-integration read (e.g., a calendar event
+read through an on-device OAuth token).
+
+Provenance unlocks three guarantees that Orbit makes to the user:
+
+1. **Auditable personalization**: for any claim Orbit makes about the
+   user, the user can ask "why do you think this?" and Orbit answers
+   with the episodes and the derivation path.
+2. **Cascaded deletion**: when a user deletes an envelope, every
+   derived fact that traces back to that envelope is reconsidered.
+   Facts with surviving provenance remain; facts that lose their
+   only provenance are invalidated with `invalidated_at = now()`.
+3. **Correction propagation**: when a user rejects or corrects an
+   inferred fact, the correction creates a negative signal at the
+   provenance chain; similar future inferences are suppressed or
+   down-weighted at the same chain.
+
+A fact that cannot answer "where did this come from?" is a bug, not a
+feature, regardless of how useful it seems.
 
 ---
 
@@ -285,11 +396,83 @@ given sprint is a principle working correctly; removing it requires:
 ### Compliance
 
 Every feature spec, plan, code review, and implementation task must be
-checkable against these ten principles. If a proposed change would
+checkable against these twelve principles. If a proposed change would
 violate a principle, the change is wrong by default; only an explicit
 amendment (per the process above) can make it right.
 
 ### Amendment Log
+
+#### 2026-04-20 — v3.0.0: Rewrite Principle X, add Principles XI and XII (Orbit-Hosted Cloud, Consent-Aware Prompts, Provenance)
+
+**Rationale**: Principle X v2.0.0 required user-owned cloud infrastructure
+(BYOC) as the only permitted cloud model and explicitly prohibited
+Orbit-hosted multi-tenant storage. In practice, requiring every early
+adopter to provision and administer their own Postgres instance is a
+cold-start barrier that prevents the knowledge graph (spec 007) and the
+agent layer (spec 008) from ever earning their reach. Users who want
+the product's higher-order features cannot get them until they become
+part-time DBAs. This is incompatible with Orbit's reach goals.
+
+We therefore permit Orbit to operate a managed cloud (Model A) under
+structural guarantees strong enough that the product remains honest
+about "sovereign": schema-per-tenant isolation (not RLS alone),
+per-user DEKs wrapped by KMS, consent ledger stays on-device, GDPR
+export/delete, no cross-tenant derivatives, quarterly transparency.
+BYOC (former Principle X) is preserved as Model B for power users and
+retargeted to v1.3; the schemas are shared so migration in either
+direction is lossless.
+
+Principle XI (Consent-Aware Prompt Assembly) is added because, with an
+Orbit-hosted backend, the server cannot be trusted to decide what is
+safe to include in a prompt — the server does not hold the consent
+ledger. Prompt assembly must happen on-device, in the `:agent`
+process, with a consent filter gate between `:agent` and `:net`.
+
+Principle XII (Provenance Or It Didn't Happen) is added because the
+knowledge graph, user profile, and agent memory all accumulate derived
+facts about the user. Without mandatory episode provenance, the user
+cannot audit what Orbit believes, cannot reliably delete, and cannot
+reliably correct. Provenance is the mechanism that makes the other
+principles enforceable against derived structures, not just raw
+captures.
+
+**Downstream artifact review**:
+- `.specify/memory/PRD.md` — rewrite three-tier storage section; add
+  "storage scope" inventory (captures, intent/actions, user profile as
+  KG subgraph, agent memory, KG structure, system/ops, external
+  integrations); update post-v1 roadmap.
+- `specs/006-cloud-storage-byok/` — rename to
+  `specs/006-orbit-cloud-storage/` and rewrite for Orbit-hosted
+  Postgres + pgvector + schema-per-tenant + per-user DEK.
+- `specs/009-byoc-sovereign-storage/` — NEW; move former spec 006
+  content here, retarget to v1.3.
+- `specs/007-knowledge-graph/` — rewrite storage strategy; add five
+  unique FRs (intent-typed edges, temporal decay + reinforcement,
+  state-anchored nodes, continuation-lineage edges, user-editable
+  ontology with audit); user profile explicitly modeled as KG
+  subgraph where `subject = user_id`.
+- `specs/005-cloud-boost-byok-llm/` — add Orbit-managed LLM proxy as
+  default path; BYOK preserved; consent-aware prompt assembly
+  requirement added.
+- `specs/008-orbit-agent/` — NEW; `:agent` process; planner/executor
+  using AppFunctions (spec 003); agent memory taxonomy
+  (session/long-term patterns/plans/skill registry); consent filter
+  requirement.
+- `specs/003-orbit-actions/` — add AppFunctions schema registration
+  FR; tool runs on-device, derived facts flow to cloud as episodes.
+- `specs/contracts/orbit-cloud-api-contract.md` — NEW.
+- `specs/contracts/envelope-content-encryption-contract.md` — NEW.
+- `specs/002-intent-envelope-and-diary/tasks.md` — T025c
+  `EnvelopeStorageBackend` contract confirmed unchanged; add note
+  that it now routes to one of `LocalRoomBackend`, `OrbitCloudBackend`,
+  or `ByocPostgresBackend`.
+
+**Semver reasoning**: MAJOR. Principle X changes from "Orbit-hosted
+multi-tenant storage is prohibited" to "Orbit-hosted multi-tenant
+storage is permitted under structural guarantees". This is a change
+to a principle, not a scope addition, and therefore MAJOR per the
+amendment policy. Two new principles (XI, XII) are also added;
+existing principles I–IX are unchanged.
 
 #### 2026-04-17 — v2.0.0: Add Principles IX and X (User-Sovereign Cloud)
 

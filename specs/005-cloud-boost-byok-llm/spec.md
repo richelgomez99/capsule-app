@@ -1,17 +1,35 @@
-# Cloud Boost — BYOK LLM (v1.1)
+# Cloud Boost — Orbit-Managed LLM + BYOK (v1.1)
 
 **Status**: DRAFT — targets v1.1
-**Depends on**: spec 002 complete (LlmProvider abstraction from tasks 002/T025a–T025b)
-**Governing document**: `.specify/memory/constitution.md` — implements Principle IX
+**Depends on**: spec 002 complete (LlmProvider abstraction from tasks 002/T025a–T025b); spec 006 (Orbit Cloud identity + quota backend for Orbit-managed proxy)
+**Governing document**: `.specify/memory/constitution.md` — implements Principles IX, X, XI
 **Created**: 2026-04-17
+**Last amended**: 2026-04-20 (added Orbit-managed LLM proxy as default cloud path and consent-aware prompt assembly per constitution v3.0.0)
 
 ---
 
 ## Summary
 
-Cloud Boost is Orbit's user-sovereign escape hatch from on-device LLM quality limits. A user who explicitly chooses to trade some privacy for higher LLM quality brings their own API key for a cloud provider of their choice, toggles routing for specific capabilities, and from that point forward those capabilities route through the user's own cloud account — with every call auditable and a one-tap return to on-device-only at any time.
+Cloud Boost has two modes, both opt-in per user and per capability:
 
-This feature is **opt-in per user and opt-in per capability**. Defaults never change. Users who never touch the Cloud Boost settings page see zero behavior change from v1.
+1. **Orbit-managed LLM proxy (default cloud path).** Users with Orbit
+   Cloud (spec 006) enabled can route capabilities through
+   Orbit-operated LLM endpoints without supplying an API key. Orbit
+   pays for the inference and meters usage against the user's plan;
+   the user never sees a vendor key. Prompts are assembled on-device
+   through the Principle XI consent filter before crossing into
+   `:net`, so the managed proxy never receives `local_only` facts or
+   unredacted sensitive content.
+
+2. **BYOK (power-user path).** A user who prefers to run on their own
+   vendor account pastes an API key (Gemini, OpenAI, Anthropic,
+   OpenRouter, or any OpenAI-compatible endpoint). From that moment
+   the chosen capability routes through the user's own cloud account
+   at the user's cost, with every call auditable and a one-tap return
+   to on-device.
+
+Defaults never change. Users who never touch the Cloud Boost settings
+page see zero behaviour change from v1.
 
 ---
 
@@ -75,17 +93,35 @@ As a user whose cloud provider is down or whose API key has expired, I want the 
 
 ---
 
-## Functional Requirements (initial)
+## Functional Requirements
 
-- **FR-005-001**: System MUST store provider keys encrypted via Android Keystore-wrapped `EncryptedSharedPreferences` scoped to the `:net` process.
-- **FR-005-002**: Keys MUST NEVER leave the `:net` process over any IPC or binder boundary; `:ml` never sees the key, `:ui` never sees the key.
+### Key and provider handling (BYOK)
+
+- **FR-005-001**: System MUST store BYOK provider keys encrypted via Android Keystore-wrapped `EncryptedSharedPreferences` scoped to the `:net` process.
+- **FR-005-002**: BYOK keys MUST NEVER leave the `:net` process over any IPC or binder boundary; `:ml` never sees the key, `:ui` never sees the key, `:agent` never sees the key.
 - **FR-005-003**: System MUST expose a `ByokLlmProvider` implementation of the `LlmProvider` interface (002 T025a) that routes each method through a new `:net` binder entrypoint `INetworkGateway.callUserLlm(provider, prompt, capability)`.
-- **FR-005-004**: System MUST gate each capability with an independent user toggle persisted in SharedPreferences; the default for every toggle is `LOCAL_NANO`.
-- **FR-005-005**: System MUST validate any new/changed key via a low-cost round trip before persisting, presenting the full request body to the user on that round trip so they see what leaves the device.
-- **FR-005-006**: System MUST populate the audit log `llmProvider`, `llmModel`, `promptDigestSha256`, `tokenCount` columns (002 T025e) on every cloud call.
-- **FR-005-007**: System MUST display a first-use warning modal the first time any capability is flipped to Cloud.
-- **FR-005-008**: System MUST provide a single "Disable all cloud" kill switch in Settings that flips every capability toggle back to Nano and clears all provider keys with a confirmation.
-- **FR-005-009**: Cloud call failures MUST fall back to Nano with the fallback recorded in the audit log; 3 consecutive cloud failures for the same provider MUST surface a Settings banner.
+- **FR-005-005**: System MUST validate any new/changed BYOK key via a low-cost round trip before persisting, presenting the full request body to the user on that round trip so they see what leaves the device.
+
+### Orbit-managed LLM proxy
+
+- **FR-005-010**: System MUST expose an `OrbitManagedLlmProvider` implementation of `LlmProvider` (002 T025a) that routes each method through a `:net` binder entrypoint `INetworkGateway.callOrbitLlm(model, prompt, capability)`. Available only when Orbit Cloud (spec 006) is enabled and the user is signed in.
+- **FR-005-011**: Orbit-managed calls MUST authenticate with the user's Orbit identity token (not an API key). Tokens live in `:net` only and are never exposed to `:ml`, `:ui`, or `:agent`.
+- **FR-005-012**: Orbit MUST meter managed-proxy usage against the user's plan (recorded in `usage_meter`, spec 006) and return structured quota-exceeded errors that trigger graceful fallback (FR-005-009).
+- **FR-005-013**: Orbit MUST NOT retain prompt content or model outputs beyond what is required for real-time inference. No training on user prompts. Transparency report (spec 006 FR-006-017) MUST include aggregate managed-proxy call counts.
+
+### Consent-aware prompt assembly (Principle XI)
+
+- **FR-005-014**: Every prompt destined for any cloud LLM (Orbit-managed or BYOK) MUST be assembled in the `:agent` process (spec 008) and pass the four-point consent filter before crossing the `:net` boundary: strip all `local_only` facts; verify consent freshness for the sensitivity tier; check sensitivity against the chosen provider's policy; verify necessity (prompt is minimally scoped to the capability's need).
+- **FR-005-015**: The consent filter MUST be a hard gate. A failed check returns the prompt to the planner with a reason code; no cloud call is made with an unfiltered prompt.
+- **FR-005-016**: Audit rows for cloud calls MUST include a `consent_filter_hash` covering the filter policy version and the set of redactions applied, so auditors can reconstruct why a given prompt was or was not allowed.
+
+### Toggles, defaults, audit, fallback
+
+- **FR-005-004**: System MUST gate each capability with an independent user toggle persisted in SharedPreferences; the default for every toggle is `LOCAL_NANO`. Available routes per capability: `LOCAL_NANO | ORBIT_MANAGED | BYOK(provider)`.
+- **FR-005-006**: System MUST populate the audit log `llmProvider`, `llmModel`, `promptDigestSha256`, `tokenCount` columns (002 T025e) on every cloud call. `llmProvider` values include `local_nano`, `orbit_managed`, and BYOK vendor names.
+- **FR-005-007**: System MUST display a first-use warning modal the first time any capability is flipped to `ORBIT_MANAGED` or BYOK. The modal distinguishes Orbit-managed (Orbit's inference, your identity, metered) vs BYOK (your vendor, your key, your bill).
+- **FR-005-008**: System MUST provide a single "Disable all cloud" kill switch in Settings that flips every capability toggle back to `LOCAL_NANO` and clears all BYOK keys with a confirmation.
+- **FR-005-009**: Cloud call failures (managed or BYOK) MUST fall back to Nano with the fallback recorded in the audit log; 3 consecutive failures for the same provider MUST surface a Settings banner.
 
 ---
 

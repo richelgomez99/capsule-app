@@ -43,8 +43,15 @@ This feature is the first time Orbit *writes to external apps* on the user's beh
 - **FR-003-002**: System MUST display proposed actions as inline cards under the envelope in the Diary with a clear preview of the values being filled (title, date, time, location) and a one-tap confirmation.
 - **FR-003-003**: System MUST NEVER write to any external app without a user tap on a confirmation affordance.
 - **FR-003-004**: System MUST generate a weekly digest every Sunday at a user-configurable time, as a single new envelope of type `DIGEST` appearing at the top of that Sunday's Diary page.
-- **FR-003-005**: System MUST route action extraction through the `LlmProvider` interface (002 T025a), allowing BYOK cloud upgrade per spec 005.
+- **FR-003-005**: System MUST route action extraction through the `LlmProvider` interface (002 T025a), allowing Orbit-managed proxy or BYOK cloud upgrade per spec 005.
 - **FR-003-006**: System MUST log every suggested action, every confirmation, and every dismissal to the audit log.
+
+### AppFunctions integration (tools for the agent, spec 008)
+
+- **FR-003-007 (AppFunctions schema registration)**: Every action kind (calendar insert, to-do add, digest post, share) MUST be registered as an Android AppFunction with a JSON schema describing its arguments, its side effects, its reversibility, and its required sensitivity scope. Registered schemas are persisted in the `skills` table (spec 006) with `app_package='com.capsule.app'`.
+- **FR-003-008 (`ACTION_EXECUTE` as AppFunction invocation)**: System MUST add `ContinuationType.ACTION_EXECUTE` whose sole effect is invoking a registered AppFunction by `function_id` with validated arguments. Invocations run on-device inside the `:capture` process and never touch the network. Per Principle XII, each invocation MUST emit an `episode` (spec 006) with `source_kind='agent_action'` linking the invocation to its plan and outcome; only that derived episode (and the resulting KG outcome edge) flows to Orbit Cloud — never the raw function arguments.
+- **FR-003-009 (`AppFunctionSkill` entity with usage stats)**: System MUST model each installed AppFunction as a skill row in `skills` and record every invocation in `skill_usage` (spec 006) with outcome, latency, and linked episode. The Orbit Agent (spec 008) consumes these stats as planner heuristics (prefer skills with high success rates, default to user-confirmed skills).
+- **FR-003-010 (tool-local, facts-flow-to-cloud rule)**: AppFunction execution MUST run entirely on-device. Function arguments, return values, and any artefacts the function creates locally MUST NOT be uploaded. Only the derived facts appropriate to share (episode metadata, outcome edge in the KG, confirmation state) flow to cloud, and only after passing the `:agent` consent filter (Principle XI).
 
 ---
 

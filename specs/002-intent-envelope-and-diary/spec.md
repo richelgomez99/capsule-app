@@ -394,10 +394,12 @@ shows the Diary, just with less context.
   remote servers. The only permitted outbound network calls are fetches
   of public URLs the user has explicitly captured.
   *(Scope note: constitution Principles IX and X explicitly permit
-  post-v1 cloud capabilities — BYOK LLM (spec 005) and BYOC cloud
-  storage (spec 006) — gated by explicit per-user, per-capability
-  opt-in with user-owned keys and user-owned storage. Those
-  capabilities do not exist in v1 and are out of scope for this spec.)*
+  post-v1 cloud capabilities — Orbit-managed LLM + BYOK (spec 005),
+  Orbit Cloud storage (spec 006), and BYOC sovereign storage (spec
+  009) — gated by explicit per-user, per-capability opt-in with
+  consent-aware prompt assembly and structural tenant isolation.
+  Those capabilities do not exist in v1 and are out of scope for
+  this spec.)*
 - **FR-017**: System MUST structurally separate processes with network
   access from processes with access to user content, such that a single
   process cannot both read the corpus and reach the network.
