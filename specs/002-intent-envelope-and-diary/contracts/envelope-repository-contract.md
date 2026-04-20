@@ -36,6 +36,46 @@ processes) can bind. Orbit does not accept external binders.
 
 ---
 
+## 2.1 Storage backend abstraction (forward-compatible)
+
+`EnvelopeRepositoryImpl` delegates every persistence operation to an
+injected `EnvelopeStorageBackend` interface (spec 002 tasks T025c,
+T025d). The AIDL surface (§3) is backend-agnostic: callers never know
+which backend is active.
+
+Backends registered by release:
+
+| Release | Backend | Role |
+|---|---|---|
+| v1   | `LocalRoomBackend`       | Sole backend. All reads and writes hit the on-device encrypted Room DB in `:ml`. |
+| v1.1 | `OrbitCloudBackend`      | Added alongside `LocalRoomBackend` when the user opts into Orbit Cloud (spec 006). Writes go to Room first (source of truth); a mirror job enqueues the cloud write via `:net`. Reads fall back to cloud only for queries the local last-N-days projection cannot answer (e.g., KG traversal, multi-device corpus search). |
+| v1.3 | `ByocPostgresBackend`    | Added when the user opts into BYOC (spec 009). Schema-identical to Orbit Cloud so the router can swap backends losslessly. |
+
+Backend selection is a **runtime router**, not a subclass hierarchy.
+At most one cloud backend is active at a time (Orbit Cloud XOR BYOC);
+`LocalRoomBackend` is always active. The router is configured in
+`:ml` at process start from persisted user preferences and never
+crosses the AIDL surface.
+
+**Invariants (enforced for every release)**:
+
+1. Every write path starts at `LocalRoomBackend`. A cloud write is
+   never the first write.
+2. Cloud writes cross the `:ml` → `:net` boundary via a typed mirror
+   job; `:ml` never opens a socket.
+3. The AIDL surface (§3) remains unchanged across v1 → v1.1 → v1.3.
+   Adding a cloud backend is additive — no caller recompiles, no
+   binder signature changes.
+4. The audit log and consent ledger (constitution Principle X
+   non-negotiable condition #2) remain `LocalRoomBackend`-only in
+   every release. They have no corresponding cloud write path.
+5. Any payload destined for a cloud backend MUST have passed the
+   `:agent` consent filter (constitution Principle XI) before the
+   mirror job enters `:net`. `EnvelopeRepositoryImpl` rejects
+   unfiltered payloads with `CONSENT_FILTER_REQUIRED`.
+
+---
+
 ## 3. AIDL Interface
 
 ```aidl
