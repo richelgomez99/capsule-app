@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 class OverlayViewModel : ViewModel() {
@@ -20,7 +21,6 @@ class OverlayViewModel : ViewModel() {
         private const val SNAP_ANIMATION_DURATION_MS = 180L
         /** Number of frames in the snap animation. 60 fps → 12 frames for 200 ms. */
         private const val SNAP_ANIMATION_FRAMES = 12
-        private const val BUBBLE_SIZE_DP = 56
     }
 
     private var snapAnimationJob: Job? = null
@@ -40,6 +40,9 @@ class OverlayViewModel : ViewModel() {
     /** Callback set by service to persist bubble position. */
     var onBubblePositionChanged: ((x: Int, y: Int, edge: EdgeSide) -> Unit)? = null
 
+    /** Callback set by service when the user dismisses the overlay via drag target. */
+    var onDismissRequested: (() -> Unit)? = null
+
     // --- User Actions ---
 
     fun onBubbleTap() {
@@ -56,30 +59,65 @@ class OverlayViewModel : ViewModel() {
     }
 
     fun onBubbleDragStart() {
-        _bubbleState.value = _bubbleState.value.copy(isDragging = true)
+        snapAnimationJob?.cancel()
+        _bubbleState.value = _bubbleState.value.copy(
+            isDragging = true,
+            isDismissTargetVisible = true,
+            isOverDismissTarget = false
+        )
     }
 
-    fun onBubbleDrag(dx: Int, dy: Int, screenWidth: Int, screenHeight: Int) {
+    fun onBubbleDrag(
+        dx: Int,
+        dy: Int,
+        screenWidth: Int,
+        screenHeight: Int,
+        bubbleSizePx: Int,
+        dismissTargetMetrics: DismissTargetMetrics?
+    ) {
         val current = _bubbleState.value
-        // Assume square bubble sized to BUBBLE_SIZE_DP; the service passes screen
-        // dimensions in pixels so we need the bubble size in pixels too. Use a
-        // conservative fallback (density 2.75 ≈ 154 px) when density unknown;
-        // in practice the service calls onBubbleDragEnd with the real bubbleWidthPx
-        // so the final snap position is accurate even if mid-drag clamp is loose.
-        val bubbleWidthEstimate = (BUBBLE_SIZE_DP * 2.75).toInt()
-        val newX = (current.x + dx).coerceIn(0, (screenWidth - bubbleWidthEstimate).coerceAtLeast(0))
-        val newY = (current.y + dy).coerceIn(0, (screenHeight - bubbleWidthEstimate).coerceAtLeast(0))
-        _bubbleState.value = current.copy(x = newX, y = newY)
+        val newX = (current.x + dx).coerceIn(0, (screenWidth - bubbleSizePx).coerceAtLeast(0))
+        val newY = (current.y + dy).coerceIn(0, (screenHeight - bubbleSizePx).coerceAtLeast(0))
+        val bubbleCenterX = newX + (bubbleSizePx / 2)
+        val bubbleCenterY = newY + (bubbleSizePx / 2)
+        val isOverDismissTarget = dismissTargetMetrics?.let { target ->
+            hypot(
+                (bubbleCenterX - target.centerX).toDouble(),
+                (bubbleCenterY - target.centerY).toDouble()
+            ) <= target.activationRadiusPx.toDouble()
+        } ?: false
+
+        _bubbleState.value = current.copy(
+            x = newX,
+            y = newY,
+            isOverDismissTarget = isOverDismissTarget
+        )
     }
 
     fun onBubbleDragEnd(screenWidth: Int, bubbleWidthPx: Int) {
         val current = _bubbleState.value
+
+        if (current.isOverDismissTarget) {
+            _bubbleState.value = current.copy(
+                isDragging = false,
+                isDismissTargetVisible = false,
+                isOverDismissTarget = false
+            )
+            onDismissRequested?.invoke()
+            return
+        }
+
         val edgeSide = if (current.x + bubbleWidthPx / 2 < screenWidth / 2) EdgeSide.LEFT else EdgeSide.RIGHT
         val targetX = if (edgeSide == EdgeSide.LEFT) 0 else (screenWidth - bubbleWidthPx)
         val startX = current.x
 
         // End drag immediately so BubbleUI knows the gesture is over.
-        _bubbleState.value = current.copy(isDragging = false, edgeSide = edgeSide)
+        _bubbleState.value = current.copy(
+            isDragging = false,
+            edgeSide = edgeSide,
+            isDismissTargetVisible = false,
+            isOverDismissTarget = false
+        )
 
         // SC-003: animate edge-snap <=200 ms. Cancel any in-flight snap first so
         // rapid successive drags don't pile up overlapping animations.

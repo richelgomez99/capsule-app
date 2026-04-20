@@ -8,6 +8,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+**/build/
+*.log
+build_log.txt
+build_output.log
 
 # Editor / tool caches
 .vscode/

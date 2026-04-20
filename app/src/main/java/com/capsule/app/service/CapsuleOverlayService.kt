@@ -25,15 +25,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.capsule.app.overlay.BubbleUI
 import com.capsule.app.overlay.CaptureSheetUI
+import com.capsule.app.overlay.DismissTargetMetrics
+import com.capsule.app.overlay.DismissTargetUI
 import com.capsule.app.overlay.EdgeSide
 import com.capsule.app.overlay.ExpansionState
 import com.capsule.app.overlay.OverlayViewModel
 import com.capsule.app.ui.theme.CapsuleTheme
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class CapsuleOverlayService : LifecycleService() {
 
@@ -43,6 +48,9 @@ class CapsuleOverlayService : LifecycleService() {
         const val ACTION_RESTART_OVERLAY = "com.capsule.app.action.RESTART_OVERLAY"
         private const val TAG = "CapsuleOverlay"
         private const val PREFS_NAME = "capsule_overlay_prefs"
+        private const val DISMISS_TARGET_SIZE_DP = 72
+        private const val DISMISS_TARGET_BOTTOM_MARGIN_DP = 48
+        private const val DISMISS_TARGET_ACTIVATION_PADDING_DP = 20
     }
 
     private lateinit var windowManager: WindowManager
@@ -54,6 +62,7 @@ class CapsuleOverlayService : LifecycleService() {
     private var overlayParams: WindowManager.LayoutParams? = null
     private var clipboardStateMachine: ClipboardFocusStateMachine? = null
     private var viewModel: OverlayViewModel? = null
+    private var dismissTargetView: ComposeView? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -208,17 +217,26 @@ class CapsuleOverlayService : LifecycleService() {
                 .putInt("bubble_y", y)
                 .putString("bubble_edge", edge.name)
                 .apply()
-            // Also update the window position
-            params.x = x
-            params.y = y
-            try {
-                windowManager.updateViewLayout(view, params)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update overlay position", e)
-            }
+        }
+
+        vm.onDismissRequested = {
+            prefs.edit().putBoolean("service_enabled", false).apply()
+            stopSelf()
         }
 
         val screenHeight = displayMetrics.heightPixels
+
+        lifecycleScope.launch {
+            vm.bubbleState.collectLatest { bubbleState ->
+                syncCollapsedOverlayPosition(view, params, bubbleState)
+
+                if (bubbleState.isDismissTargetVisible) {
+                    showDismissTarget(vm)
+                } else {
+                    hideDismissTarget()
+                }
+            }
+        }
 
         view.setContent {
             CapsuleTheme {
@@ -278,7 +296,20 @@ class CapsuleOverlayService : LifecycleService() {
                     BubbleUI(
                         onTap = { vm.onBubbleTap() },
                         onDragStart = { vm.onBubbleDragStart() },
-                        onDrag = { dx, dy -> vm.onBubbleDrag(dx, dy, screenWidth, screenHeight) },
+                        onDrag = { dx, dy ->
+                            vm.onBubbleDrag(
+                                dx = dx,
+                                dy = dy,
+                                screenWidth = screenWidth,
+                                screenHeight = screenHeight,
+                                bubbleSizePx = bubbleWidthPx,
+                                dismissTargetMetrics = computeDismissTargetMetrics(
+                                    screenWidth = screenWidth,
+                                    screenHeight = screenHeight,
+                                    bubbleSizePx = bubbleWidthPx
+                                )
+                            )
+                        },
                         onDragEnd = { vm.onBubbleDragEnd(screenWidth, bubbleWidthPx) }
                     )
                 }
@@ -297,6 +328,7 @@ class CapsuleOverlayService : LifecycleService() {
     }
 
     private fun removeOverlay() {
+        hideDismissTarget()
         composeView?.let { view ->
             overlayLifecycleOwner.onPause()
             overlayLifecycleOwner.onStop()
@@ -310,6 +342,97 @@ class CapsuleOverlayService : LifecycleService() {
         composeView = null
         clipboardStateMachine = null
         viewModel = null
+    }
+
+    private fun syncCollapsedOverlayPosition(
+        view: ComposeView,
+        params: WindowManager.LayoutParams,
+        bubbleState: com.capsule.app.overlay.BubbleState
+    ) {
+        if (bubbleState.expansion != ExpansionState.COLLAPSED) {
+            return
+        }
+        if (params.width != WindowManager.LayoutParams.WRAP_CONTENT ||
+            params.height != WindowManager.LayoutParams.WRAP_CONTENT) {
+            return
+        }
+
+        if (params.x == bubbleState.x && params.y == bubbleState.y) {
+            return
+        }
+
+        params.x = bubbleState.x
+        params.y = bubbleState.y
+        try {
+            windowManager.updateViewLayout(view, params)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update overlay position", e)
+        }
+    }
+
+    private fun computeDismissTargetMetrics(
+        screenWidth: Int,
+        screenHeight: Int,
+        bubbleSizePx: Int
+    ): DismissTargetMetrics {
+        val density = resources.displayMetrics.density
+        val targetSizePx = (DISMISS_TARGET_SIZE_DP * density).toInt()
+        val bottomMarginPx = (DISMISS_TARGET_BOTTOM_MARGIN_DP * density).toInt()
+        val activationPaddingPx = (DISMISS_TARGET_ACTIVATION_PADDING_DP * density).toInt()
+        return DismissTargetMetrics(
+            centerX = screenWidth / 2,
+            centerY = screenHeight - bottomMarginPx - (targetSizePx / 2),
+            activationRadiusPx = (targetSizePx / 2) + (bubbleSizePx / 2) + activationPaddingPx
+        )
+    }
+
+    private fun showDismissTarget(vm: OverlayViewModel) {
+        if (dismissTargetView != null) {
+            return
+        }
+
+        val targetView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(overlayLifecycleOwner)
+            setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
+            setContent {
+                CapsuleTheme {
+                    val bubbleState by vm.bubbleState.collectAsState()
+                    DismissTargetUI(isActive = bubbleState.isOverDismissTarget)
+                }
+            }
+        }
+
+        val bottomMarginPx = (DISMISS_TARGET_BOTTOM_MARGIN_DP * resources.displayMetrics.density).toInt()
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = bottomMarginPx
+        }
+
+        try {
+            windowManager.addView(targetView, params)
+            dismissTargetView = targetView
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show dismiss target", e)
+        }
+    }
+
+    private fun hideDismissTarget() {
+        val targetView = dismissTargetView ?: return
+        try {
+            windowManager.removeView(targetView)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to hide dismiss target", e)
+        }
+        dismissTargetView = null
     }
 
     private fun scheduleRestart() {

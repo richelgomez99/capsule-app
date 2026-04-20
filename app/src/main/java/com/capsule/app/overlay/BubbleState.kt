@@ -9,7 +9,9 @@ data class BubbleState(
     val y: Int = 100,
     val expansion: ExpansionState = ExpansionState.COLLAPSED,
     val isDragging: Boolean = false,
-    val edgeSide: EdgeSide = EdgeSide.LEFT
+    val edgeSide: EdgeSide = EdgeSide.LEFT,
+    val isDismissTargetVisible: Boolean = false,
+    val isOverDismissTarget: Boolean = false
 )
 
 enum class ExpansionState {
@@ -30,4 +32,10 @@ data class CapturedContent(
     val sourcePackage: String?,
     val timestamp: Long,
     val isSensitive: Boolean
+)
+
+data class DismissTargetMetrics(
+    val centerX: Int,
+    val centerY: Int,
+    val activationRadiusPx: Int
 )

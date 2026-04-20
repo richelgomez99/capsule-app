@@ -21,6 +21,16 @@
     <!-- Exact alarm for OEM kill recovery -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Network: scoped to :net process only. Enforced by OrbitNoHttpClientOutsideNet lint rule. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- App usage stats for AppCategory detection -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Activity Recognition for StateSnapshot -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <queries>
         <package android:name="androidx.test.services" />
     </queries>
@@ -36,6 +46,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Capsule">
 
+        <!-- :ui process (default) -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -47,13 +58,35 @@
             </intent-filter>
         </activity>
 
+        <!-- :capture process -->
         <service
             android:name=".service.CapsuleOverlayService"
+            android:process=":capture"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent user-interactive floating overlay for explicit clipboard capture triggered by user tap. Requires continuous foreground presence to render TYPE_APPLICATION_OVERLAY window." />
+        </service>
+
+        <!-- :ml process — encrypted Room DB owner, AI inference -->
+        <service
+            android:name=".data.ipc.EnvelopeRepositoryService"
+            android:process=":ml"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_ENVELOPE_REPOSITORY" />
+            </intent-filter>
+        </service>
+
+        <!-- :net process — sole network egress -->
+        <service
+            android:name=".net.NetworkGatewayService"
+            android:process=":net"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_NETWORK_GATEWAY" />
+            </intent-filter>
         </service>
 
         <receiver

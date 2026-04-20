@@ -1,0 +1,498 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "3572c66308113ed0bda610837bedf7ef",
+    "entities": [
+      {
+        "tableName": "intent_envelope",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `contentType` TEXT NOT NULL, `textContent` TEXT, `imageUri` TEXT, `textContentSha256` TEXT, `intent` TEXT NOT NULL, `intentConfidence` REAL, `intentSource` TEXT NOT NULL, `intentHistoryJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `day_local` TEXT NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `deletedAt` INTEGER, `sharedContinuationResultId` TEXT, `appCategory` TEXT NOT NULL, `activityState` TEXT NOT NULL, `tzId` TEXT NOT NULL, `hourLocal` INTEGER NOT NULL, `dayOfWeekLocal` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "textContent",
+            "columnName": "textContent",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUri",
+            "columnName": "imageUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "textContentSha256",
+            "columnName": "textContentSha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "intent",
+            "columnName": "intent",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentConfidence",
+            "columnName": "intentConfidence",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "intentSource",
+            "columnName": "intentSource",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentHistoryJson",
+            "columnName": "intentHistoryJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayLocal",
+            "columnName": "day_local",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeleted",
+            "columnName": "isDeleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deletedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sharedContinuationResultId",
+            "columnName": "sharedContinuationResultId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state.appCategory",
+            "columnName": "appCategory",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.activityState",
+            "columnName": "activityState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.tzId",
+            "columnName": "tzId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.hourLocal",
+            "columnName": "hourLocal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.dayOfWeekLocal",
+            "columnName": "dayOfWeekLocal",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_intent_envelope_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          },
+          {
+            "name": "index_intent_envelope_intent",
+            "unique": false,
+            "columnNames": [
+              "intent"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_intent` ON `${TABLE_NAME}` (`intent`)"
+          },
+          {
+            "name": "index_intent_envelope_day_local",
+            "unique": false,
+            "columnNames": [
+              "day_local"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_day_local` ON `${TABLE_NAME}` (`day_local`)"
+          }
+        ]
+      },
+      {
+        "tableName": "continuation",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `type` TEXT NOT NULL, `status` TEXT NOT NULL, `inputUrl` TEXT, `scheduledAt` INTEGER NOT NULL, `startedAt` INTEGER, `completedAt` INTEGER, `attemptCount` INTEGER NOT NULL, `failureReason` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputUrl",
+            "columnName": "inputUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scheduledAt",
+            "columnName": "scheduledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attemptCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failureReason",
+            "columnName": "failureReason",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_continuation_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_continuation_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_continuation_type_status",
+            "unique": false,
+            "columnNames": [
+              "type",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_type_status` ON `${TABLE_NAME}` (`type`, `status`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "continuation_result",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `continuationId` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `producedAt` INTEGER NOT NULL, `title` TEXT, `domain` TEXT, `canonicalUrl` TEXT, `canonicalUrlHash` TEXT, `excerpt` TEXT, `summary` TEXT, `summaryModel` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`continuationId`) REFERENCES `continuation`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "continuationId",
+            "columnName": "continuationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "producedAt",
+            "columnName": "producedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "domain",
+            "columnName": "domain",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canonicalUrl",
+            "columnName": "canonicalUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canonicalUrlHash",
+            "columnName": "canonicalUrlHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "excerpt",
+            "columnName": "excerpt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summaryModel",
+            "columnName": "summaryModel",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_continuation_result_continuationId",
+            "unique": false,
+            "columnNames": [
+              "continuationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_result_continuationId` ON `${TABLE_NAME}` (`continuationId`)"
+          },
+          {
+            "name": "index_continuation_result_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_result_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_continuation_result_canonicalUrlHash",
+            "unique": true,
+            "columnNames": [
+              "canonicalUrlHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_continuation_result_canonicalUrlHash` ON `${TABLE_NAME}` (`canonicalUrlHash`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "continuation",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "continuationId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "audit_log",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `at` INTEGER NOT NULL, `action` TEXT NOT NULL, `description` TEXT NOT NULL, `envelopeId` TEXT, `extraJson` TEXT, `llmProvider` TEXT, `llmModel` TEXT, `promptDigestSha256` TEXT, `tokenCount` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "at",
+            "columnName": "at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "action",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extraJson",
+            "columnName": "extraJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "llmProvider",
+            "columnName": "llmProvider",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "llmModel",
+            "columnName": "llmModel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "promptDigestSha256",
+            "columnName": "promptDigestSha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tokenCount",
+            "columnName": "tokenCount",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_audit_log_at",
+            "unique": false,
+            "columnNames": [
+              "at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_at` ON `${TABLE_NAME}` (`at`)"
+          },
+          {
+            "name": "index_audit_log_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_audit_log_action",
+            "unique": false,
+            "columnNames": [
+              "action"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_action` ON `${TABLE_NAME}` (`action`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3572c66308113ed0bda610837bedf7ef')"
+    ]
+  }
+}

@@ -19,3 +19,26 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# --- Orbit 002: Room entities ---
+-keep class com.capsule.app.data.entity.** { *; }
+-keep class com.capsule.app.data.model.** { *; }
+
+# --- Orbit 002: Kotlinx Serialization ---
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.capsule.app.**$$serializer { *; }
+-keepclassmembers class com.capsule.app.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.capsule.app.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# --- Orbit 002: AIDL Parcelables ---
+-keep class com.capsule.app.data.ipc.** { *; }
+-keep class com.capsule.app.net.ipc.** { *; }
