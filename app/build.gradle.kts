@@ -44,6 +44,7 @@ android {
     buildFeatures {
         compose = true
         aidl = true
+        buildConfig = true
     }
     lint {
         abortOnError = true

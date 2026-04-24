@@ -30,4 +30,10 @@ interface ContinuationDao {
     /** T093 — full dump for user-initiated export. */
     @Query("SELECT * FROM continuation ORDER BY scheduledAt DESC")
     suspend fun listAll(): List<ContinuationEntity>
+
+    /** T105 — per-status counts for DebugDumpReceiver. */
+    @Query("SELECT status, COUNT(*) AS n FROM continuation GROUP BY status")
+    suspend fun countByStatus(): List<StatusCount>
 }
+
+data class StatusCount(val status: String, val n: Int)

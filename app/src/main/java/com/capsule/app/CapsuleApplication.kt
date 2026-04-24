@@ -7,6 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.capsule.app.audit.AuditLogRetentionWorker
+import com.capsule.app.audit.DebugDumpReceiver
 import com.capsule.app.continuation.SoftDeleteRetentionWorker
 import java.util.concurrent.TimeUnit
 
@@ -36,7 +37,22 @@ class CapsuleApplication : Application(), Configuration.Provider {
         if (isDefaultProcess()) {
             scheduleSoftDeleteRetention()
             scheduleAuditLogRetention()
+            registerDebugDumpReceiverIfDebug()
         }
+    }
+
+    /**
+     * T105 / T106 — register the dev-only debug-dump receiver dynamically.
+     * Dynamic rather than manifest-declared so it cannot accidentally ship
+     * in a release build: the whole `if (BuildConfig.DEBUG)` block is dead
+     * code in release and R8 strips it.
+     */
+    private fun registerDebugDumpReceiverIfDebug() {
+        if (!BuildConfig.DEBUG) return
+        val filter = android.content.IntentFilter(DebugDumpReceiver.ACTION)
+        // Flag required on API 33+ for non-exported, unprotected receivers.
+        val flags = android.content.Context.RECEIVER_NOT_EXPORTED
+        registerReceiver(DebugDumpReceiver(), filter, flags)
     }
 
     private fun scheduleSoftDeleteRetention() {

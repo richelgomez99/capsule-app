@@ -603,8 +603,8 @@
 **Purpose**: Lock down privacy invariants, close the loop on self-dogfood, and run the quickstart as a release gate.
 
 - [x] T104 [P] Add `SERVICE_STARTED` / `SERVICE_STOPPED` audit rows in `CapsuleOverlayService.onCreate`/`onDestroy` (contracts/audit-log-contract.md §3)
-- [ ] T105 [P] Add local-only counters in `com.capsule.app.audit.DebugDumpReceiver` — captures, continuation success rate, diary open count; broadcast-driven dump handler for `com.capsule.app.DEBUG_DUMP` (dev builds only) per plan.md §Source Code
-- [ ] T106 Gate `DebugDumpReceiver` behind `BuildConfig.DEBUG` so no production build exports counters
+- [x] T105 [P] Add local-only counters in `com.capsule.app.audit.DebugDumpReceiver` — captures, continuation success rate, diary open count; broadcast-driven dump handler for `com.capsule.app.DEBUG_DUMP` (dev builds only) per plan.md §Source Code
+- [x] T106 Gate `DebugDumpReceiver` behind `BuildConfig.DEBUG` so no production build exports counters
 - [x] T107 [P] Rename user-visible strings "Capsule" → "Orbit" in `app/src/main/res/values/strings.xml` and any XML (`android:label`, `android:description`); leave package names untouched per plan.md (addresses pending `rename_references` todo for strings-only)
 - [ ] T108 [P] Update launcher label + monochrome icon to "Orbit" in `res/drawable/`, `res/mipmap-anydpi-v26/ic_launcher.xml`
 - [ ] T109 [P] Add `README.md` pointer at repo root linking to `.specify/memory/PRD.md`, `.specify/memory/constitution.md`, and `specs/002-intent-envelope-and-diary/quickstart.md`

@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.lifecycle.lifecycleScope
 import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.audit.DebugCounters
 import com.capsule.app.diary.ui.DiaryScreen
 import com.capsule.app.permission.OverlayPermissionHelper
 import com.capsule.app.settings.SettingsActivity
@@ -40,6 +41,8 @@ class DiaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // T105 — dev-only diary-open counter (no-op in release).
+        DebugCounters.incDiaryOpen(this)
 
         repository = BinderDiaryRepository(applicationContext)
         viewModel = DiaryViewModel(
