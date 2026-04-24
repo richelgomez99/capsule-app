@@ -82,8 +82,26 @@ dependencies {
     // Jsoup (Readability extraction, :net process only)
     implementation(libs.jsoup)
 
+    // OkHttp + Readability4J (:net process only — enforced by OrbitNoHttpClientOutsideNet lint rule)
+    implementation(libs.okhttp)
+    implementation(libs.readability4j)
+
+    // ML Kit text recognition — T075 OcrEngine (on-device, Latin script bundled model)
+    implementation(libs.mlkit.text.recognition)
+
+    // Coil Compose — T078 screenshot thumbnails in EnvelopeCard
+    implementation(libs.coil.compose)
+
+    // Google Play Services Location — T081 ActivityRecognitionClient wrapper
+    implementation(libs.play.services.location)
+
     // Unit tests
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    // Android's org.json is stubbed in mockable android.jar (returns null/0);
+    // bring in the real impl so VM tests that parse JSON (e.g. intentHistoryJson
+    // in EnvelopeDetailViewModel) can round-trip in JVM tests.
+    testImplementation("org.json:json:20240303")
 
     // Instrumented tests
     androidTestImplementation(libs.androidx.junit)
@@ -94,6 +112,7 @@ dependencies {
     androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.okhttp.mockwebserver)
 
     // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)

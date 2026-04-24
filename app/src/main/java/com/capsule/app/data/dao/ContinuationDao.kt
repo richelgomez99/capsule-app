@@ -26,4 +26,8 @@ interface ContinuationDao {
 
     @Query("SELECT * FROM continuation WHERE status IN ('PENDING', 'FAILED_TRANSIENT') ORDER BY scheduledAt ASC")
     suspend fun pendingOrRetryable(): List<ContinuationEntity>
+
+    /** T093 — full dump for user-initiated export. */
+    @Query("SELECT * FROM continuation ORDER BY scheduledAt DESC")
+    suspend fun listAll(): List<ContinuationEntity>
 }

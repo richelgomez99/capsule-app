@@ -62,13 +62,13 @@ class OrbitDatabaseTest {
             textContent = "Hello Orbit",
             imageUri = null,
             textContentSha256 = null,
-            intent = Intent.SAVE,
+            intent = Intent.WANT_IT,
             intentConfidence = 0.9f,
             intentSource = IntentSource.PREDICTED_SILENT,
             intentHistoryJson = "[]",
             state = StateSnapshot(
                 appCategory = AppCategory.BROWSER,
-                activityState = ActivityState.ACTIVE,
+                activityState = ActivityState.STILL,
                 tzId = "America/New_York",
                 hourLocal = 14,
                 dayOfWeekLocal = 3
@@ -81,7 +81,7 @@ class OrbitDatabaseTest {
         val loaded = db.intentEnvelopeDao().getById(id)
         assertNotNull(loaded)
         assertEquals("Hello Orbit", loaded!!.textContent)
-        assertEquals(Intent.SAVE, loaded.intent)
+        assertEquals(Intent.WANT_IT, loaded.intent)
     }
 
     @Test
@@ -93,13 +93,13 @@ class OrbitDatabaseTest {
             textContent = "To delete",
             imageUri = null,
             textContentSha256 = null,
-            intent = Intent.SAVE,
+            intent = Intent.AMBIGUOUS,
             intentConfidence = null,
             intentSource = IntentSource.FALLBACK,
             intentHistoryJson = "[]",
             state = StateSnapshot(
                 appCategory = AppCategory.OTHER,
-                activityState = ActivityState.ACTIVE,
+                activityState = ActivityState.STILL,
                 tzId = "UTC",
                 hourLocal = 10,
                 dayOfWeekLocal = 1
@@ -130,11 +130,11 @@ class OrbitDatabaseTest {
             textContent = "Envelope $suffix",
             imageUri = null,
             textContentSha256 = null,
-            intent = Intent.SAVE,
+            intent = Intent.AMBIGUOUS,
             intentConfidence = null,
             intentSource = IntentSource.FALLBACK,
             intentHistoryJson = "[]",
-            state = StateSnapshot(AppCategory.OTHER, ActivityState.ACTIVE, "UTC", 10, 1),
+            state = StateSnapshot(AppCategory.OTHER, ActivityState.STILL, "UTC", 10, 1),
             createdAt = now,
             dayLocal = day
         )
@@ -157,7 +157,7 @@ class OrbitDatabaseTest {
         val entry = AuditLogEntryEntity(
             id = UUID.randomUUID().toString(),
             at = System.currentTimeMillis(),
-            action = AuditAction.ENVELOPE_SEALED,
+            action = AuditAction.ENVELOPE_CREATED,
             description = "Sealed test envelope",
             envelopeId = "env-123",
             extraJson = null
@@ -166,6 +166,6 @@ class OrbitDatabaseTest {
         db.auditLogDao().insert(entry)
         val results = db.auditLogDao().entriesForEnvelope("env-123")
         assertEquals(1, results.size)
-        assertEquals(AuditAction.ENVELOPE_SEALED, results[0].action)
+        assertEquals(AuditAction.ENVELOPE_CREATED, results[0].action)
     }
 }

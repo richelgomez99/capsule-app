@@ -3,6 +3,18 @@ package com.capsule.app.data.ipc
 import android.os.Parcel
 import android.os.Parcelable
 
+/**
+ * AIDL-carried view of an envelope for the diary UI.
+ *
+ * Exposes the subset of [com.capsule.app.data.entity.IntentEnvelopeEntity]
+ * that the UI process needs, including the `StateSnapshot` fields
+ * (`appCategory`, `activityState`, `hourLocal`, `dayOfWeekLocal`) which
+ * drive thread grouping (T047) and the "from {app} · {activity} · {time}"
+ * card subtitle (T051).
+ *
+ * Continuation-derived fields (`title`, `domain`, `excerpt`, `summary`) are
+ * populated only after US3 runs — null on fresh seals.
+ */
 data class EnvelopeViewParcel(
     val id: String,
     val contentType: String,
@@ -16,7 +28,17 @@ data class EnvelopeViewParcel(
     val title: String?,
     val domain: String?,
     val excerpt: String?,
-    val summary: String?
+    val summary: String?,
+    val appCategory: String,
+    val activityState: String,
+    val hourLocal: Int,
+    val dayOfWeekLocal: Int,
+    /** T055a — raw `intentHistoryJson` for the detail screen. "[]" on legacy rows. */
+    val intentHistoryJson: String = "[]",
+    /** T055a — canonical URL from a successful hydration; null if not hydrated. */
+    val canonicalUrl: String? = null,
+    /** T091a — when soft-deleted; null on live envelopes. */
+    val deletedAtMillis: Long? = null
 ) : Parcelable {
 
     constructor(parcel: Parcel) : this(
@@ -32,7 +54,14 @@ data class EnvelopeViewParcel(
         title = parcel.readString(),
         domain = parcel.readString(),
         excerpt = parcel.readString(),
-        summary = parcel.readString()
+        summary = parcel.readString(),
+        appCategory = parcel.readString()!!,
+        activityState = parcel.readString()!!,
+        hourLocal = parcel.readInt(),
+        dayOfWeekLocal = parcel.readInt(),
+        intentHistoryJson = parcel.readString() ?: "[]",
+        canonicalUrl = parcel.readString(),
+        deletedAtMillis = parcel.readLong().takeIf { it != 0L }
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -49,6 +78,13 @@ data class EnvelopeViewParcel(
         parcel.writeString(domain)
         parcel.writeString(excerpt)
         parcel.writeString(summary)
+        parcel.writeString(appCategory)
+        parcel.writeString(activityState)
+        parcel.writeInt(hourLocal)
+        parcel.writeInt(dayOfWeekLocal)
+        parcel.writeString(intentHistoryJson)
+        parcel.writeString(canonicalUrl)
+        parcel.writeLong(deletedAtMillis ?: 0L)
     }
 
     override fun describeContents(): Int = 0

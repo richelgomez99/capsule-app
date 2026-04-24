@@ -15,11 +15,16 @@ sqlcipher = "4.14.1"
 workmanager = "2.9.1"
 securityCrypto = "1.1.0-alpha06"
 jsoup = "1.18.3"
+okhttp = "4.12.0"
+readability4j = "1.0.8"
 kotlinxSerialization = "1.7.3"
 kotlinxSerializationPlugin = "2.2.10"
 ksp = "2.3.6"
 coroutinesTest = "1.10.2"
 testCore = "1.6.1"
+mlkitTextRecognition = "16.0.1"
+coilCompose = "2.7.0"
+playServicesLocation = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,12 +57,23 @@ androidx-work-testing = { group = "androidx.work", name = "work-testing", versio
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 # Jsoup (Readability extraction)
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+# OkHttp (:net process only — enforced by OrbitNoHttpClientOutsideNet lint rule)
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+# Readability4J (content extraction inside :net)
+readability4j = { group = "net.dankito.readability4j", name = "readability4j", version.ref = "readability4j" }
 # Kotlinx Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 # Kotlinx Coroutines Test
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 # AndroidX Test Core
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "testCore" }
+# ML Kit text recognition (bundled, on-device Latin script — T075 OCR engine)
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+# Coil Compose (T078 screenshot thumbnails)
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
+# Google Play Services Location (T081 Activity Recognition wrapper)
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -31,6 +31,10 @@
     <!-- Activity Recognition for StateSnapshot -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
+    <!-- T073: ScreenshotObserver watches the user's screenshot folder. Min SDK 33
+         so only the post-API-33 flavour is required. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <queries>
         <package android:name="androidx.test.services" />
     </queries>
@@ -47,8 +51,9 @@
         android:theme="@style/Theme.Capsule">
 
         <!-- :ui process (default) -->
+        <!-- T052/T053: DiaryActivity is the launcher entry point for User Story 2. -->
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".diary.DiaryActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Capsule">
@@ -57,6 +62,45 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- MainActivity demoted to deep-link-only setup/permissions screen. -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T070: SettingsActivity — deep-link only (opened from Diary). -->
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T091a: TrashActivity — opened from Settings. -->
+        <activity
+            android:name=".settings.TrashActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T091: AuditLogActivity — "What Orbit did today". -->
+        <activity
+            android:name=".audit.AuditLogActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T055b: EnvelopeDetailActivity — launched from EnvelopeCard tap.
+             Not exported; internal explicit-intent only. -->
+        <activity
+            android:name=".diary.EnvelopeDetailActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".diary.DiaryActivity"
+            android:theme="@style/Theme.Capsule" />
 
         <!-- :capture process -->
         <service
@@ -76,6 +120,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.capsule.app.action.BIND_ENVELOPE_REPOSITORY" />
+                <action android:name="com.capsule.app.action.BIND_AUDIT_LOG" />
             </intent-filter>
         </service>
 

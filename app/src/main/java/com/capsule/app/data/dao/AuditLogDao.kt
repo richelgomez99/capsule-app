@@ -22,5 +22,12 @@ interface AuditLogDao {
     suspend fun countForDay(startMillis: Long, endMillis: Long, action: String): Int
 
     @Query("DELETE FROM audit_log WHERE at < :cutoffMillis")
-    suspend fun deleteOlderThan(cutoffMillis: Long)
+    suspend fun deleteOlderThan(cutoffMillis: Long): Int
+
+    @Query("DELETE FROM audit_log WHERE envelopeId = :envelopeId")
+    suspend fun deleteByEnvelopeId(envelopeId: String)
+
+    /** T093 — full dump for user-initiated export (respects 90-day retention). */
+    @Query("SELECT * FROM audit_log ORDER BY at DESC")
+    suspend fun listAll(): List<AuditLogEntryEntity>
 }

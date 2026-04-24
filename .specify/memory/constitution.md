@@ -6,9 +6,9 @@ from architecture to UX to data policy. These principles are non-
 negotiable. A design, feature, or implementation that violates any of
 them is wrong, regardless of how useful it seems in isolation.
 
-**Version**: 3.0.0
+**Version**: 3.1.0
 **Ratified**: 2026-04-16
-**Last Amended**: 2026-04-20
+**Last Amended**: 2026-04-21
 **Domain**: orbitassistant.com
 
 **Companion documents**:
@@ -49,6 +49,21 @@ ignores the chip.
 A user who hesitates before saving has already lost the capture. The
 mental cost of using Orbit must be lower than the mental cost of
 re-finding what they wanted to remember.
+
+**Amendment 2026-04-21 (spec 011 Manual Compose)**: Capture is
+*effortless* AND *deliberate*. The reactive paths (bubble, screenshot
+observer) minimize friction for thoughts already surfaced by another
+app. The deliberate path (manual compose, share sheet, and — later —
+voice) serves thoughts the user initiates from outside any observed
+surface, including retroactive backfill onto a past day in the diary.
+Both families of paths converge on the same seal contract, the same
+sensitivity-scrub pipeline, and the same audit obligation. Composition
+is never *required* — a user who only ever uses the bubble gets a
+complete Orbit. Backfill is always stamped with wall-clock honesty
+(`createdAt = now()`) while its `dayLocal` reflects the page the user
+was writing onto, and an `ENVELOPE_BACKFILLED` audit row records the
+temporal displacement so the user (and the knowledge graph, per
+Principle XII) can tell reflective notes from in-the-moment notes.
 
 ### III. Intent Before Artifact
 

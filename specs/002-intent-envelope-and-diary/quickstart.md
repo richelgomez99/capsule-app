@@ -170,6 +170,30 @@ On a device without AICore:
 - Verify `intentHistoryJson` has two entries and audit log shows
   `INTENT_SUPERSEDED`.
 
+### 4.8 Envelope detail screen
+
+- Open Diary and tap a capture card (anywhere outside the intent pill,
+  the delete icon, or the "Tap to retry" row).
+- The detail screen opens with:
+  - TopAppBar back arrow + overflow menu
+    (Archive / Delete / Open original URL / Copy text / Share).
+  - Full-width intent picker (4 chips, current intent highlighted).
+  - `from {app} · {activity} · {absolute time}` subtitle.
+  - IMAGE thumbnail (if capture is an image).
+  - Full hydrated title and summary (no maxLines clamp).
+  - Domain chip → tapping opens the canonical URL in the browser.
+  - Original captured text in a monospace-styled selectable block.
+  - **Intent history** list, oldest-first, one row per entry in
+    `intentHistoryJson` with `intent · source · timestamp`.
+  - **Audit trail** list (hidden if empty) — per-envelope rows from
+    `IAuditLog.entriesForEnvelope(envelopeId)`.
+- Tap a chip → intent reassigns silently; the screen stays open and
+  re-loads.
+- Open the overflow menu → tap **Archive** → screen closes; the card
+  no longer appears in Diary today.
+- Re-open a different card → tap **Delete** → confirm in the dialog →
+  screen closes; the capture moves to trash (Settings → Trash).
+
 ---
 
 ## 5. How to inspect local state
