@@ -606,14 +606,14 @@
 - [x] T105 [P] Add local-only counters in `com.capsule.app.audit.DebugDumpReceiver` — captures, continuation success rate, diary open count; broadcast-driven dump handler for `com.capsule.app.DEBUG_DUMP` (dev builds only) per plan.md §Source Code
 - [x] T106 Gate `DebugDumpReceiver` behind `BuildConfig.DEBUG` so no production build exports counters
 - [x] T107 [P] Rename user-visible strings "Capsule" → "Orbit" in `app/src/main/res/values/strings.xml` and any XML (`android:label`, `android:description`); leave package names untouched per plan.md (addresses pending `rename_references` todo for strings-only)
-- [ ] T108 [P] Update launcher label + monochrome icon to "Orbit" in `res/drawable/`, `res/mipmap-anydpi-v26/ic_launcher.xml`
-- [ ] T109 [P] Add `README.md` pointer at repo root linking to `.specify/memory/PRD.md`, `.specify/memory/constitution.md`, and `specs/002-intent-envelope-and-diary/quickstart.md`
+- [x] T108 [P] Update launcher label + monochrome icon to "Orbit" in `res/drawable/`, `res/mipmap-anydpi-v26/ic_launcher.xml`
+- [x] T109 [P] Add `README.md` pointer at repo root linking to `.specify/memory/PRD.md`, `.specify/memory/constitution.md`, and `specs/002-intent-envelope-and-diary/quickstart.md`
 - [ ] T110 Run quickstart.md §3..§4.7 end-to-end on a physical Pixel; record results in `specs/002-intent-envelope-and-diary/acceptance-results.md`
 - [ ] T110a [P] Create `app/src/androidTest/java/com/capsule/app/regression/Spec001SmokeTest.kt` — regression harness covering the 001 primitives per FR-025 so 002's overlay/service changes cannot silently break capture: (a) bubble drag end position is clamped to the screen edge within the 200ms animation window; (b) `ClipboardFocusStateMachine.resetToIdle()` restores `FLAG_NOT_FOCUSABLE` after the capture sheet collapses (001 Clarification 2026-04-17); (c) service survives an OEM-simulated process kill via `Process.killProcess(Process.myPid())` and re-appears within the AlarmManager restart window; (d) `CapsuleOverlayService.onCreate` catches `ForegroundServiceStartNotAllowedException` on a simulated A15 restricted launch and no crash is logged. Fails the release gate if any 001 primitive regresses.
 - [ ] T111 [P] MITM-proxy acceptance run (quickstart.md §6): assert zero outgoing HTTP from any process besides `:net`, no `Referer`, no cookies; attach `mitm.log` to acceptance doc
 - [ ] T112 [P] Memory leak check on overlay + `:ml` unbind path using Android Studio Profiler over a 10-min capture burst (50 envelopes) — document results
 - [ ] T113 [P] Performance validation: assert p50 seal < 200ms, p95 URL hydration < 30s, Diary p50 render < 1s per plan.md §Technical Context; adjust debouncers if violated
-- [ ] T114 Archive the deleted `app/sampledata/specs/001-core-capture-overlay/*` artifacts (already deleted from 001 — confirm they are not referenced by any build target)
+- [x] T114 Archive the deleted `app/sampledata/specs/001-core-capture-overlay/*` artifacts (already deleted from 001 — confirm they are not referenced by any build target)
 
 ---
 

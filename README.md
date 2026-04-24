@@ -92,6 +92,7 @@ The depth of the work lives here:
 | [`.specify/memory/design.md`](./.specify/memory/design.md) | Visual architecture: typography, color, motion, every UI surface for v1–v1.3. Includes the "Quiet Almanac" aesthetic and first-class Graphite dark mode. |
 | [`specs/001-core-capture-overlay/`](./specs/001-core-capture-overlay/) | Spec-kit breakdown of the capture overlay (the foundation that shipped) |
 | [`specs/002-intent-envelope-and-diary/`](./specs/002-intent-envelope-and-diary/) | Spec-kit breakdown of v1 (envelope model + daily diary) |
+| [`specs/002-intent-envelope-and-diary/quickstart.md`](./specs/002-intent-envelope-and-diary/quickstart.md) | Step-by-step acceptance walk-through for v1 on a physical device |
 | [`specs/003-orbit-actions/`](./specs/003-orbit-actions/) through [`007-knowledge-graph/`](./specs/007-knowledge-graph/) | Post-v1 spec stubs |
 
 ---
