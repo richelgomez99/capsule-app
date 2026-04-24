@@ -583,16 +583,16 @@
 
 ### Implementation (US7)
 
-- [ ] T096 [P] [US7] Create `com.capsule.app.onboarding.OnboardingActivity` with Compose host and 4 steps
-- [ ] T097 [P] [US7] Step 1: notifications rationale + runtime request (`POST_NOTIFICATIONS`)
-- [ ] T098 [P] [US7] Step 2: overlay rationale + `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` deep link
-- [ ] T099 [P] [US7] Step 3: usage access rationale + `Settings.ACTION_USAGE_ACCESS_SETTINGS` deep link with polling-on-resume to detect grant (research.md §State Signal Collection)
-- [ ] T100 [P] [US7] Step 4: physical activity rationale + runtime request (`ACTIVITY_RECOGNITION`)
-- [ ] T101 [US7] Route `MAIN`/`LAUNCHER` to `OnboardingActivity` on first run (SharedPreferences flag `onboarding.completed=false`), else to `DiaryActivity`
-- [ ] T102 [US7] Write `PERMISSION_GRANTED`/`PERMISSION_REVOKED` audit rows for each permission outcome (contracts/audit-log-contract.md §3)
-- [ ] T103 [US7] Add "Grant later" escape on each step that marks `onboarding.completed=true` but keeps the missing-permission banner persistent in `DiaryScreen` until granted
-- [ ] T103a [US7] On permission-denied for `SYSTEM_ALERT_WINDOW` **or** `POST_NOTIFICATIONS` (both are structurally required to run the foreground capture service), surface a Compose rationale modal (NOT the system dialog — explains the consequence: "Without this, Orbit cannot capture. You can still browse the Diary in read-only mode."). On second decline, set `SharedPreferences.orbit.reducedMode = true`, skip `startForegroundService(CapsuleOverlayService)`, and route `MAIN`/`LAUNCHER` to `ReducedModeActivity` instead of `DiaryActivity`. Write one `PERMISSION_REDUCED_MODE_ENTERED` audit row. Per FR-021.
-- [ ] T103b [P] [US7] Create Compose `com.capsule.app.onboarding.ReducedModeActivity` — hosts `DiaryScreen` in read-only mode (no overlay, no new-capture FAB, no bubble service start); a persistent banner at the top reads "Capture is off. Tap to enable." → links to system permission settings. On resume, if both permissions are now granted, clear `reducedMode`, start `CapsuleOverlayService`, and hand off to `DiaryActivity`.
+- [x] T096 [P] [US7] Create `com.capsule.app.onboarding.OnboardingActivity` with Compose host and 4 steps
+- [x] T097 [P] [US7] Step 1: notifications rationale + runtime request (`POST_NOTIFICATIONS`)
+- [x] T098 [P] [US7] Step 2: overlay rationale + `Settings.ACTION_MANAGE_OVERLAY_PERMISSION` deep link
+- [x] T099 [P] [US7] Step 3: usage access rationale + `Settings.ACTION_USAGE_ACCESS_SETTINGS` deep link with polling-on-resume to detect grant (research.md §State Signal Collection)
+- [x] T100 [P] [US7] Step 4: physical activity rationale + runtime request (`ACTIVITY_RECOGNITION`)
+- [x] T101 [US7] Route `MAIN`/`LAUNCHER` to `OnboardingActivity` on first run (SharedPreferences flag `onboarding.completed=false`), else to `DiaryActivity`
+- [x] T102 [US7] Write `PERMISSION_GRANTED`/`PERMISSION_REVOKED` audit rows for each permission outcome (contracts/audit-log-contract.md §3)
+- [x] T103 [US7] Add "Grant later" escape on each step that marks `onboarding.completed=true` but keeps the missing-permission banner persistent in `DiaryScreen` until granted
+- [x] T103a [US7] On permission-denied for `SYSTEM_ALERT_WINDOW` **or** `POST_NOTIFICATIONS` (both are structurally required to run the foreground capture service), surface a Compose rationale modal (NOT the system dialog — explains the consequence: "Without this, Orbit cannot capture. You can still browse the Diary in read-only mode."). On second decline, set `SharedPreferences.orbit.reducedMode = true`, skip `startForegroundService(CapsuleOverlayService)`, and route `MAIN`/`LAUNCHER` to `ReducedModeActivity` instead of `DiaryActivity`. Write one `PERMISSION_REDUCED_MODE_ENTERED` audit row. Per FR-021.
+- [x] T103b [P] [US7] Create Compose `com.capsule.app.onboarding.ReducedModeActivity` — hosts `DiaryScreen` in read-only mode (no overlay, no new-capture FAB, no bubble service start); a persistent banner at the top reads "Capture is off. Tap to enable." → links to system permission settings. On resume, if both permissions are now granted, clear `reducedMode`, start `CapsuleOverlayService`, and hand off to `DiaryActivity`.
 
 **Checkpoint**: Fresh install yields a 45-60s onboarding; declining optional permissions does not break core capture.
 

@@ -11,6 +11,9 @@ import androidx.lifecycle.lifecycleScope
 import com.capsule.app.ai.NanoLlmProvider
 import com.capsule.app.audit.DebugCounters
 import com.capsule.app.diary.ui.DiaryScreen
+import com.capsule.app.onboarding.OnboardingActivity
+import com.capsule.app.onboarding.OnboardingPreferences
+import com.capsule.app.onboarding.ReducedModeActivity
 import com.capsule.app.permission.OverlayPermissionHelper
 import com.capsule.app.settings.SettingsActivity
 import com.capsule.app.ui.MainActivity
@@ -41,6 +44,21 @@ class DiaryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // T101 — first-run routing. If onboarding hasn't been completed,
+        // hand off to OnboardingActivity; if the user elected reduced mode,
+        // hand off to ReducedModeActivity. Both cases finish() this
+        // activity so the back stack stays clean.
+        val onboardingPrefs = OnboardingPreferences(this)
+        if (!onboardingPrefs.completed) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+        if (onboardingPrefs.reducedMode) {
+            startActivity(Intent(this, ReducedModeActivity::class.java))
+            finish()
+            return
+        }
         // T105 — dev-only diary-open counter (no-op in release).
         DebugCounters.incDiaryOpen(this)
 

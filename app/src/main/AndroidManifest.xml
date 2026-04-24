@@ -70,6 +70,20 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.Capsule" />
 
+        <!-- T096: OnboardingActivity — first-run only, routed from DiaryActivity. -->
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T103b: ReducedModeActivity — read-only Diary when capture perms declined. -->
+        <activity
+            android:name=".onboarding.ReducedModeActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
         <!-- T070: SettingsActivity — deep-link only (opened from Diary). -->
         <activity
             android:name=".settings.SettingsActivity"
