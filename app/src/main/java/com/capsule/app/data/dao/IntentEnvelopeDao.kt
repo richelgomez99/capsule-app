@@ -24,7 +24,7 @@ interface IntentEnvelopeDao {
         WHERE day_local = :dayLocal
           AND deletedAt IS NULL
           AND isArchived = 0
-        ORDER BY createdAt DESC
+        ORDER BY CASE kind WHEN 'DIGEST' THEN 0 ELSE 1 END ASC, createdAt DESC
         """
     )
     fun observeDay(dayLocal: String): Flow<List<IntentEnvelopeEntity>>
@@ -43,7 +43,7 @@ interface IntentEnvelopeDao {
         WHERE day_local = :dayLocal
           AND deletedAt IS NULL
           AND isArchived = 0
-        ORDER BY createdAt DESC
+        ORDER BY CASE kind WHEN 'DIGEST' THEN 0 ELSE 1 END ASC, createdAt DESC
         """
     )
     fun observeDayWithResults(dayLocal: String): Flow<List<IntentEnvelopeWithResults>>
@@ -139,4 +139,49 @@ interface IntentEnvelopeDao {
     /** T093 — full dump for user-initiated export. */
     @Query("SELECT * FROM intent_envelope ORDER BY createdAt DESC")
     suspend fun listAll(): List<IntentEnvelopeEntity>
+
+    /**
+     * T074 / 003 US3 — input window for [com.capsule.app.ai.DigestComposer].
+     * Excludes soft-deleted, archived, AMBIGUOUS-intent, and any non-REGULAR
+     * row (DIGEST/DERIVED) per weekly-digest-contract.md §4. Bounded by
+     * [limit] so a particularly noisy week can't run away with the prompt.
+     */
+    @Query(
+        """
+        SELECT * FROM intent_envelope
+        WHERE day_local >= :windowStartDayLocal
+          AND day_local <= :windowEndDayLocalInclusive
+          AND deletedAt IS NULL
+          AND isArchived = 0
+          AND intent != 'AMBIGUOUS'
+          AND kind = 'REGULAR'
+        ORDER BY createdAt DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun listRegularEnvelopesInWindow(
+        windowStartDayLocal: String,
+        windowEndDayLocalInclusive: String,
+        limit: Int
+    ): List<IntentEnvelopeEntity>
+
+    /**
+     * T075 — find non-deleted DIGEST envelopes whose
+     * `derivedFromEnvelopeIdsJson` array contains the given source id.
+     *
+     * The provenance column is stored as a JSON array string like
+     * `["a","b","c"]`, so we LIKE on the quoted form `"<id>"` to avoid
+     * matching ids that share a prefix. Caller still parses the JSON
+     * to confirm — this is a coarse first pass for performance.
+     */
+    @Query(
+        """
+        SELECT * FROM intent_envelope
+        WHERE kind = 'DIGEST'
+          AND deletedAt IS NULL
+          AND derivedFromEnvelopeIdsJson IS NOT NULL
+          AND derivedFromEnvelopeIdsJson LIKE :quotedIdPattern
+        """
+    )
+    suspend fun listDigestsReferencing(quotedIdPattern: String): List<IntentEnvelopeEntity>
 }

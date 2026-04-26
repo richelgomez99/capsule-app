@@ -69,6 +69,20 @@ class SoftDeleteRetentionWorkerPurgeTest {
         override suspend fun countAll(): Int = 0
         override suspend fun countArchived(): Int = 0
         override suspend fun countDeleted(): Int = 0
+        override suspend fun insertDigestTransaction(
+            envelope: com.capsule.app.data.entity.IntentEnvelopeEntity,
+            auditEntry: AuditLogEntryEntity
+        ): Boolean = error("unused")
+        override suspend fun listRegularEnvelopesInWindow(
+            windowStartDayLocal: String,
+            windowEndDayLocalInclusive: String,
+            limit: Int
+        ): List<com.capsule.app.data.entity.IntentEnvelopeEntity> = emptyList()
+        override suspend fun cascadeDigestInvalidation(
+            deletedEnvelopeId: String,
+            now: Long,
+            auditFor: (String) -> AuditLogEntryEntity
+        ): List<String> = emptyList()
     }
 
     @Test

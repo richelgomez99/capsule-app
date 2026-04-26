@@ -20,6 +20,7 @@ build_output.log
 .cursor/mcp-cache/
 .cursor/logs/
 .cursor/history/
+.kotlin/
 
 # Private working notes (never push)
 .specify/memory/linkedin*.md

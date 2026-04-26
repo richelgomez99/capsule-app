@@ -40,6 +40,7 @@ class CapsuleApplication : Application(), Configuration.Provider {
         if (isDefaultProcess()) {
             scheduleSoftDeleteRetention()
             scheduleAuditLogRetention()
+            scheduleWeeklyDigest()
             registerDebugDumpReceiverIfDebug()
         }
         // T025 — :ml process owns the AppFunction registry. Register the
@@ -114,6 +115,56 @@ class CapsuleApplication : Application(), Configuration.Provider {
             ExistingPeriodicWorkPolicy.KEEP,
             request
         )
+    }
+
+    /**
+     * T073 — schedule the Sunday weekly-digest worker. Per
+     * Principle IV the worker requires charging + UNMETERED + battery
+     * not low so the LLM call doesn't burn user data or battery; per
+     * the contract it fires once per week with a 4h flex window so
+     * Doze can pick a low-cost moment. Initial delay anchors the next
+     * occurrence to 06:00 local on the upcoming Sunday so the digest
+     * shows up before the user opens the diary on Sunday morning.
+     */
+    private fun scheduleWeeklyDigest() {
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(androidx.work.NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        val initialDelay = computeInitialDelayToSunday06(
+            now = java.time.ZonedDateTime.now(java.time.ZoneId.systemDefault()),
+            targetLocalTime = java.time.LocalTime.of(6, 0)
+        )
+        val request = PeriodicWorkRequestBuilder<com.capsule.app.continuation.WeeklyDigestWorker>(
+            repeatInterval = 7,
+            repeatIntervalTimeUnit = TimeUnit.DAYS,
+            flexTimeInterval = 4,
+            flexTimeIntervalUnit = TimeUnit.HOURS
+        )
+            .setConstraints(constraints)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.capsule.app.continuation.WeeklyDigestWorker.UNIQUE_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    internal fun computeInitialDelayToSunday06(
+        now: java.time.ZonedDateTime,
+        targetLocalTime: java.time.LocalTime
+    ): java.time.Duration {
+        val candidate = now
+            .with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY))
+            .with(targetLocalTime)
+        val anchor = if (!candidate.isAfter(now)) {
+            candidate.plusWeeks(1)
+        } else {
+            candidate
+        }
+        return java.time.Duration.between(now, anchor)
     }
 
     private fun isDefaultProcess(): Boolean {

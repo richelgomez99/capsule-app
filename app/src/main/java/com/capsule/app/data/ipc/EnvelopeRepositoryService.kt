@@ -13,6 +13,8 @@ import com.capsule.app.data.AppFunctionRegistry
 import com.capsule.app.data.EnvelopeRepositoryImpl
 import com.capsule.app.data.LocalRoomBackend
 import com.capsule.app.data.OrbitDatabase
+import com.capsule.app.data.WeeklyDigestDelegate
+import com.capsule.app.ai.DigestComposer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -72,13 +74,25 @@ class EnvelopeRepositoryService : Service() {
             llmProvider = NanoLlmProvider(),
             auditWriter = auditWriter
         )
+        // T072/T074 — weekly digest delegate. Composer reuses the same
+        // NanoLlmProvider instance, taking advantage of the locale-gated
+        // structured fallback when AICore isn't available. Backend
+        // pointer is shared so the partial unique index check happens
+        // inside the same Room writer.
+        val weeklyDigestDelegate = WeeklyDigestDelegate(
+            database = db,
+            backend = backend,
+            composer = DigestComposer(NanoLlmProvider()),
+            auditWriter = auditWriter
+        )
         repository = EnvelopeRepositoryImpl(
             backend = backend,
             auditWriter = auditWriter,
             scope = serviceScope,
             continuationEngine = engine,
             actionsDelegate = actionsDelegate,
-            actionExtractor = actionExtractor
+            actionExtractor = actionExtractor,
+            weeklyDigestDelegate = weeklyDigestDelegate
         )
         // T088 — same service binder pool exposes the audit-log surface on a
         // distinct intent action so the Settings / audit viewer process can

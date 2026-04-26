@@ -72,7 +72,14 @@ class EnvelopeRepositoryImpl(
      * reason as [actionsDelegate]; production binds it in
      * `EnvelopeRepositoryService`.
      */
-    private val actionExtractor: ActionExtractor? = null
+    private val actionExtractor: ActionExtractor? = null,
+    /**
+     * T072/T074 — weekly digest delegate invoked from
+     * `WeeklyDigestWorker` via [runWeeklyDigest]. Nullable for the same
+     * reason as [actionsDelegate]: 002 contract tests construct the
+     * Impl with the smaller surface and never call this method.
+     */
+    private val weeklyDigestDelegate: WeeklyDigestDelegate? = null
 ) : IEnvelopeRepository.Stub() {
 
     /** envelopeId → millis-deadline after which `undo()` returns false. */
@@ -348,6 +355,25 @@ class EnvelopeRepositoryImpl(
                 envelopeId = envelopeId
             )
             backend.softDeleteTransaction(envelopeId, now, audit)
+            // T075 — DIGEST provenance cascade. Procedural because the
+            // FK is a JSON array, not a SQL relation. Runs in its own
+            // transaction (after the soft-delete commits) so a cascade
+            // failure can never roll back the user's delete.
+            runCatching {
+                backend.cascadeDigestInvalidation(envelopeId, now) { digestId ->
+                    auditWriter.build(
+                        action = AuditAction.ENVELOPE_INVALIDATED,
+                        description = "Digest invalidated (lost_provenance)",
+                        envelopeId = digestId,
+                        extraJson = """{"reason":"lost_provenance","triggeredBy":"$envelopeId"}"""
+                    )
+                }
+            }.onFailure { t ->
+                android.util.Log.w(
+                    "EnvelopeRepository",
+                    "Digest cascade failed for $envelopeId: ${t.message}"
+                )
+            }
         }
     }
 
@@ -739,6 +765,14 @@ class EnvelopeRepositoryImpl(
     override fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
         val delegate = actionsDelegate ?: return
         runBlocking { delegate.setTodoItemDone(envelopeId, itemIndex, done) }
+    }
+
+    // T072/T074 — weekly digest entry point. Returns a stable outcome
+    // string per AIDL contract; the caller (WeeklyDigestWorker) maps
+    // GENERATED:* / SKIPPED:* to Result.success() and FAILED:* to retry.
+    override fun runWeeklyDigest(targetDayLocal: String): String {
+        val delegate = weeklyDigestDelegate ?: return "FAILED:digest_disabled"
+        return runBlocking { delegate.runWeeklyDigest(targetDayLocal) }
     }
 
     // ---- Helpers ----

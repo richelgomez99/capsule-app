@@ -183,4 +183,13 @@ interface IEnvelopeRepository {
     // T064 — checkbox toggle for derived-todo envelopes. No-op if the
     // envelope has no `todoMetaJson` or the index is out of range.
     void setTodoItemDone(String envelopeId, int itemIndex, boolean done);
+
+    // T072 / T074 — WeeklyDigestWorker entry point. `targetDayLocal` is
+    // the ISO-8601 local Sunday this digest is for (e.g. "2026-04-26").
+    // Returns one of:
+    //   "GENERATED:<envelopeId>"  — DIGEST envelope inserted
+    //   "SKIPPED:too_sparse"      — < 3 source envelopes in window
+    //   "SKIPPED:already_exists"  — partial unique index conflict
+    //   "FAILED:<short_reason>"   — worker maps to Result.retry()
+    String runWeeklyDigest(String targetDayLocal);
 }

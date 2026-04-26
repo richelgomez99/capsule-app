@@ -89,6 +89,85 @@ class LocalRoomBackend(
     override suspend fun listIdsSoftDeletedBefore(cutoffMillis: Long): List<String> =
         envelopeDao.listIdsSoftDeletedBefore(cutoffMillis)
 
+    /**
+     * T074 / 003 US3 — single-transaction insert + audit. Returns
+     * `false` when the partial unique index `index_digest_unique_per_day`
+     * rejects the row (concurrent writer). The caller distinguishes
+     * GENERATED vs SKIPPED on this boolean so we don't ask the backend
+     * to know about audit reasons.
+     */
+    override suspend fun insertDigestTransaction(
+        envelope: com.capsule.app.data.entity.IntentEnvelopeEntity,
+        auditEntry: com.capsule.app.data.entity.AuditLogEntryEntity
+    ): Boolean = try {
+        database.withTransaction {
+            envelopeDao.insert(envelope)
+            auditDao.insert(auditEntry)
+        }
+        true
+    } catch (_: android.database.sqlite.SQLiteConstraintException) {
+        // Partial UNIQUE index on (day_local) WHERE kind='DIGEST'
+        // fired — another worker raced us. Caller will write a
+        // DIGEST_SKIPPED audit row out-of-band.
+        false
+    }
+
+    override suspend fun listRegularEnvelopesInWindow(
+        windowStartDayLocal: String,
+        windowEndDayLocalInclusive: String,
+        limit: Int
+    ): List<com.capsule.app.data.entity.IntentEnvelopeEntity> =
+        envelopeDao.listRegularEnvelopesInWindow(
+            windowStartDayLocal = windowStartDayLocal,
+            windowEndDayLocalInclusive = windowEndDayLocalInclusive,
+            limit = limit
+        )
+
+    override suspend fun cascadeDigestInvalidation(
+        deletedEnvelopeId: String,
+        now: Long,
+        auditFor: (String) -> com.capsule.app.data.entity.AuditLogEntryEntity
+    ): List<String> {
+        // Coarse first pass: LIKE on the quoted form. We still parse
+        // JSON below so a substring match (e.g. id `abc` matching
+        // `abcdef`) cannot trigger a false cascade — the JSON
+        // tokenizer's `equals` check is the source of truth.
+        val pattern = "%\"$deletedEnvelopeId\"%"
+        val candidates = envelopeDao.listDigestsReferencing(pattern)
+        if (candidates.isEmpty()) return emptyList()
+
+        val cascaded = mutableListOf<String>()
+        database.withTransaction {
+            for (digest in candidates) {
+                val ids = parseDerivedIds(digest.derivedFromEnvelopeIdsJson) ?: continue
+                if (deletedEnvelopeId !in ids) continue
+                // Cascade only when *all* sources are gone — otherwise
+                // the digest still has provenance to stand on.
+                val allDeleted = ids.all { sourceId ->
+                    val src = envelopeDao.getById(sourceId)
+                    src == null || src.deletedAt != null
+                }
+                if (!allDeleted) continue
+                envelopeDao.softDelete(digest.id, now)
+                auditDao.insert(auditFor(digest.id))
+                cascaded += digest.id
+            }
+        }
+        return cascaded
+    }
+
+    private fun parseDerivedIds(json: String?): List<String>? {
+        if (json.isNullOrBlank()) return null
+        return try {
+            val arr = org.json.JSONArray(json)
+            buildList(arr.length()) {
+                for (i in 0 until arr.length()) add(arr.getString(i))
+            }
+        } catch (_: org.json.JSONException) {
+            null
+        }
+    }
+
     override suspend fun undoSealTransaction(envelopeId: String) {
         database.withTransaction {
             // Retract the capture entirely — including its audit trail — because

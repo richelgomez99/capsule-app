@@ -59,6 +59,49 @@ interface EnvelopeStorageBackend {
     suspend fun hardDeleteTransaction(id: String, auditEntry: AuditLogEntryEntity)
 
     /**
+     * T074 / 003 US3 — inserts a DIGEST envelope and its
+     * `DIGEST_GENERATED` audit row in a single transaction. Returns
+     * `true` on success; `false` when the partial unique index
+     * `index_digest_unique_per_day` rejects the row (another worker
+     * already wrote the digest for that local day) — in that case the
+     * caller writes a `DIGEST_SKIPPED reason=already_exists` audit row
+     * out-of-band per weekly-digest-contract.md §3.
+     */
+    suspend fun insertDigestTransaction(
+        envelope: IntentEnvelopeEntity,
+        auditEntry: AuditLogEntryEntity
+    ): Boolean
+
+    /**
+     * T074 / 003 US3 — read-only window query used by
+     * `WeeklyDigestDelegate` to assemble the digest input. Filters out
+     * deleted, archived, ambiguous-intent, and DIGEST/DERIVED envelopes
+     * — only original REGULAR captures with assigned intent are
+     * summarised per weekly-digest-contract.md §4.
+     */
+    suspend fun listRegularEnvelopesInWindow(
+        windowStartDayLocal: String,
+        windowEndDayLocalInclusive: String,
+        limit: Int
+    ): List<IntentEnvelopeEntity>
+
+    /**
+     * T075 — atomic DIGEST cascade. The caller already soft-deleted the
+     * regular envelope; this method finds any DIGESTs that referenced
+     * it via `derivedFromEnvelopeIdsJson`, checks whether *all* of each
+     * digest's source envelopes are now soft-deleted, and if so soft-
+     * deletes the DIGEST plus writes one `ENVELOPE_INVALIDATED` audit
+     * row per cascaded digest — all inside one transaction.
+     *
+     * Returns the ids of cascaded digests for caller logging/tests.
+     */
+    suspend fun cascadeDigestInvalidation(
+        deletedEnvelopeId: String,
+        now: Long,
+        auditFor: (digestId: String) -> com.capsule.app.data.entity.AuditLogEntryEntity
+    ): List<String>
+
+    /**
      * T089a — returns ids of envelopes whose `deletedAt` is older than
      * [cutoffMillis]. The retention worker hard-purges each via
      * [hardDeleteTransaction] so every purge carries its own audit row.
