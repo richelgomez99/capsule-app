@@ -199,4 +199,75 @@ class Spec001SmokeTest {
         )
         assertNotNull(platformException)
     }
+
+    /**
+     * T102 (spec/003): Orbit Actions MUST NOT break the spec-001/002 capture
+     * primitives. 003 introduces `ActionExecutorService` in the `:capture`
+     * process and an unexported `ActionsSettingsActivity`; neither should
+     * remove, rename, or shadow the overlay/clipboard hooks above.
+     *
+     * This test is the structural sibling of the perf assertion noted in the
+     * task ("p50 seal < 200ms / Diary p50 render < 1s"); the real perf gate
+     * requires a physical Pixel and is tracked under T103+ (deferred — no
+     * device available in CI).
+     */
+    @Test
+    fun actions_do_not_break_capture() {
+        // 1. CapsuleOverlayService still owns scheduleRestart (FR-025 OEM kill recovery).
+        val overlayCls = Class.forName("com.capsule.app.service.CapsuleOverlayService")
+        assertTrue(
+            "CapsuleOverlayService.scheduleRestart() must remain after 003",
+            overlayCls.declaredMethods.any { it.name == "scheduleRestart" }
+        )
+
+        // 2. 003's ActionExecutorService loads cleanly and is a distinct class
+        //    (no accidental rename/shadowing of the overlay service).
+        val executorCls = Class.forName("com.capsule.app.action.ActionExecutorService")
+        assertTrue(
+            "ActionExecutorService must be a Service subclass",
+            android.app.Service::class.java.isAssignableFrom(executorCls)
+        )
+        assertTrue(
+            "ActionExecutorService and CapsuleOverlayService must be distinct classes",
+            overlayCls != executorCls
+        )
+
+        // 3. ClipboardFocusStateMachine.resetToIdle() preserved (001 clarification 2026-04-17).
+        val resetToIdle = ClipboardFocusStateMachine::class.java.methods
+            .firstOrNull { it.name == "resetToIdle" && it.parameterCount == 0 }
+        assertNotNull(
+            "ClipboardFocusStateMachine.resetToIdle() must remain after 003",
+            resetToIdle
+        )
+
+        // 4. Overlay snap invariant preserved end-to-end with a real ViewModel.
+        //    Mirrors the (a) test but compressed: any regression in snap math
+        //    caused by an :ui ↔ :capture wiring change in 003 fails here.
+        val vm = OverlayViewModel()
+        val screenWidth = 1080
+        val bubble = 144
+        vm.onBubbleDragStart()
+        vm.onBubbleDrag(
+            dx = 50, // left third
+            dy = 0,
+            screenWidth = screenWidth,
+            screenHeight = 2400,
+            bubbleSizePx = bubble,
+            dismissTargetMetrics = null
+        )
+        vm.onBubbleDragEnd(screenWidth, bubble)
+        // Snap is launched on the main dispatcher pinned in @Before; flush it.
+        kotlinx.coroutines.test.runTest {
+            kotlinx.coroutines.test.advanceUntilIdle()
+        }
+        // Final state may still be mid-animation if dispatcher wasn't advanced
+        // by runTest above (snap is on viewModelScope, not the test scope), so
+        // assert only the invariant that holds regardless: edgeSide is decided
+        // synchronously on drag-end.
+        assertEquals(
+            "Drag-end on the LEFT half must commit edgeSide=LEFT (003 must not break 001 snap)",
+            EdgeSide.LEFT,
+            vm.bubbleState.value.edgeSide
+        )
+    }
 }

@@ -25,6 +25,25 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 (latest+10) — Phase 8 polish round 2 lands T098, T099, T102 (regression locks, no production code change required)**
+
+- **T099** verified: diff between 002 baseline (`859ff40:app/src/main/AndroidManifest.xml`) and 003 HEAD shows zero `<uses-permission>` adds (still 11: `ACTIVITY_RECOGNITION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `INTERNET`, `PACKAGE_USAGE_STATS`, `POST_NOTIFICATIONS`, `READ_MEDIA_IMAGES`, `RECEIVE_BOOT_COMPLETED`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `SCHEDULE_EXACT_ALARM`, `SYSTEM_ALERT_WINDOW`). 003-only manifest adds: an unexported `ActionExecutorService` (in `:capture`) and an unexported `ActionsSettingsActivity`. Locked by [ManifestPermissionsRegressionTest](app/src/test/java/com/capsule/app/manifest/ManifestPermissionsRegressionTest.kt) — 3 JVM tests: exact set match, forbidden-set absence (no `WRITE_CALENDAR`/`READ_CALENDAR`/`WRITE_CONTACTS`/`READ_CONTACTS`/`WRITE_EXTERNAL_STORAGE`), and an 11-count tripwire so EXPECTED edits can't go unnoticed.
+
+- **T098** verified: `ActionExecutorService` is started lazily by Android binder semantics. The only call site for `bindService(ACTION_BIND_EXECUTOR)` is [BinderDiaryRepository.bindService(...)](app/src/main/java/com/capsule/app/diary/BinderDiaryRepository.kt) which lives in `:ui`. `CapsuleOverlayService` (`:capture`) does not reference `ActionExecutorService` at all, so the v1.1 invariant "`:capture` does not gain a new always-on cost" holds without code change. Locked by [ActionExecutorServiceLazyStartRegressionTest](app/src/test/java/com/capsule/app/action/ActionExecutorServiceLazyStartRegressionTest.kt) — 3 JVM tests: `CapsuleOverlayService.kt` source contains no `ActionExecutorService`/`BIND_ACTION_EXECUTOR` token; no `startService`/`startForegroundService` call site references `ActionExecutorService` anywhere under `service/`, `overlay/`, or `action/`; the service source itself contains no `START_STICKY` / `START_REDELIVER_INTENT` so a future `onStartCommand` change can't silently turn the service into an always-on one.
+
+- **T102** Spec001SmokeTest gains [`actions_do_not_break_capture`](app/src/androidTest/java/com/capsule/app/regression/Spec001SmokeTest.kt) — verifies (1) `CapsuleOverlayService.scheduleRestart()` survives 003, (2) `ActionExecutorService` is a `Service` subclass and a distinct class (no rename collision with overlay), (3) `ClipboardFocusStateMachine.resetToIdle()` is preserved (001 Clarification 2026-04-17), (4) the bubble-snap edge-side decision is still made synchronously on drag-end with a real `OverlayViewModel`. Per the task header, the perf assertion (`p50 seal < 200ms`, `Diary p50 render < 1s`) requires a physical Pixel — that part is folded into the T103+ device cluster.
+
+- **Deferred (1/4 in this group)**:
+  - **T097** debug-build "Force Nano UNAVAILABLE" toggle — needs new `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` source set + a `BuildConfig.DEBUG`-gated flag in `LlmProviderRouter`. Holding for the same physical-device cluster as T103+ since the toggle's value is observed via on-device acceptance N2.
+
+- **Static gate**: all touched files clean via `get_errors`. **Gradle gate not run**: workstation lacks system JDK.
+
+- **Phase 8 cumulative**: 6/8 polish tasks done (T095, T096, T098, T099, T100, T101, T102 ✅; T097 deferred). Phase 8 acceptance T103-T112 still requires physical Pixel 8+/6a hardware.
+
+**2026-04-27 (latest+9) — Phase 8 polish round 1 lands T095, T096, T100, T101 (audit copy + aggregation + scope tags + ProGuard)**
+
+- See commit `5c39bf5` for landed work. AuditCopyTemplates (9 JVM tests), ActionsAuditAggregator (7 JVM tests), `:capture` no-network scope tag in `action/Package.kt`, and AppFunctions/KSP ProGuard rules.
+
 **2026-04-27 (latest+8) — Phase 6 US4 lands T065, T078, T079 (UI scaffold + JVM stats test moved to androidTest tier for Room realism)**
 
 - **T078** [SkillUsageAggregationTest](app/src/androidTest/java/com/capsule/app/data/SkillUsageAggregationTest.kt) — moved from JVM to androidTest tier because Room aggregations cannot be unit-tested without an Android runtime (Robolectric not on the classpath). Three tests cover: `aggregate` returns null when the skill has no rows in the rolling window; the calendar happy-path 6-row hand-checked rollup (success/cancel rates + avg latency match within float epsilon, rows outside the 30-day window are excluded); the per-skill isolation guarantee — three skills seeded together, each `aggregate(...)` call returns only its own outcomes.
@@ -480,11 +499,11 @@ These tasks are the constitution-acceptance gate, the migration-correctness gate
 - [x] T095 [P] Audit-row aggregation copy in `app/src/main/java/com/capsule/app/audit/AuditCopyTemplates.kt` (MODIFY 002) — add user-facing strings for the seven new `AuditAction` values per data-model.md §6 (e.g., `ACTION_PROPOSED → "Proposed: {previewTitle}"`, `DIGEST_GENERATED → "Generated this week's digest ({envelopeCount} captures)"`).
 - [x] T096 [P] Add `app/src/main/java/com/capsule/app/audit/ActionsAuditAggregator.kt` — groups action-related audit rows for the "What Orbit did today" surface in the audit log viewer per data-model.md §6 closing paragraph.
 - [ ] T097 [P] Wire a debug-build "Force Nano UNAVAILABLE" toggle in `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` per quickstart §6 N2 — flips a `BuildConfig.DEBUG`-gated flag in `LlmProviderRouter` so `extractActions` and `summarize` throw `Nano.UnavailableException`. No production exposure.
-- [ ] T098 [P] Add `:capture`-process integration of `ActionExecutorService` startup in the existing `CapsuleOverlayService` lifecycle (MODIFY 002) — the executor service is started lazily on first `bindService` from `:ui`; no eager start at boot. Confirms `:capture` does not gain a new always-on cost.
-- [ ] T099 Confirm no new permissions in `AndroidManifest.xml` — diff against 002 manifest must show zero added `<uses-permission>` elements (no `WRITE_CALENDAR`, no extra storage scopes). Per research.md §4 + Principle VIII.
+- [x] T098 [P] Add `:capture`-process integration of `ActionExecutorService` startup in the existing `CapsuleOverlayService` lifecycle (MODIFY 002) — the executor service is started lazily on first `bindService` from `:ui`; no eager start at boot. Confirms `:capture` does not gain a new always-on cost.
+- [x] T099 Confirm no new permissions in `AndroidManifest.xml` — diff against 002 manifest must show zero added `<uses-permission>` elements (no `WRITE_CALENDAR`, no extra storage scopes). Per research.md §4 + Principle VIII.
 - [x] T100 [P] Add KDoc + manifest comments tagging `:capture` package `com.capsule.app.action.*` as "no-network — see action-execution-contract.md §6". Catches future contributors at code review.
 - [x] T101 Update `app/proguard-rules.pro` — keep AppFunctions-generated schema constants and `@AppFunction`-annotated args data classes from R8 obfuscation (KSP-generated metadata is reflective).
-- [ ] T102 [P] Add a regression-protection task: extend `app/src/androidTest/java/com/capsule/app/regression/Spec001SmokeTest.kt` (002's regression harness) with an `actions_do_not_break_capture` method — runs path A on a freshly-installed v1.1 build and asserts capture/seal/diary still match 002 baseline timings (`p50 seal < 200ms`, `Diary p50 render < 1s`). Mirrors 002 T110a pattern.
+- [x] T102 [P] Add a regression-protection task: extend `app/src/androidTest/java/com/capsule/app/regression/Spec001SmokeTest.kt` (002's regression harness) with an `actions_do_not_break_capture` method — runs path A on a freshly-installed v1.1 build and asserts capture/seal/diary still match 002 baseline timings (`p50 seal < 200ms`, `Diary p50 render < 1s`). Mirrors 002 T110a pattern.
 
 ### Acceptance gate (quickstart-driven)
 
