@@ -120,7 +120,13 @@ class DiaryActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        repository.disconnect()
+        // Guard: when first-run routing finish()es in onCreate before the
+        // repository is constructed, onDestroy still runs. Accessing the
+        // lateinit property in that path threw UninitializedPropertyAccessException
+        // and crashed the app on launch.
+        if (::repository.isInitialized) {
+            repository.disconnect()
+        }
         super.onDestroy()
     }
 
