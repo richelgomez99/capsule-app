@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Orbit</string>
+    <!-- T065 / 003 US2 — Settings → Actions copy. -->
+    <string name="share_target_remembered_package">Forget remembered to-do app</string>
+    <string name="share_target_remembered_subtitle">Show the chooser again the next time you add a to-do.</string>
+    <!-- T079 / 003 US4 — Settings → Actions screen. -->
+    <string name="actions_settings_title">Actions</string>
+    <string name="actions_settings_per_skill_toggle">Enable</string>
+    <string name="actions_settings_no_skills">No actions registered yet.</string>
 </resources>
