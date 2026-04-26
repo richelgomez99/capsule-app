@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  T097 (spec/003) debug-only manifest overlay.
+
+  Adds a launcher entry for `DiagnosticsActivity`. This file lives in
+  `app/src/debug/` so it is merged ONLY into debug-build APKs; release
+  builds never see it. See action-execution-contract §6 + quickstart §6 N2.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application tools:ignore="MissingApplicationIcon">
+
+        <!-- Debug-only diagnostic surface. Launcher category gives easy access
+             from the device launcher; android:exported="true" is required for
+             LAUNCHER but is harmless because the activity is gated to the
+             debug source set. -->
+        <activity
+            android:name="com.capsule.app.diagnostics.DiagnosticsActivity"
+            android:exported="true"
+            android:label="Capsule Diagnostics">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>

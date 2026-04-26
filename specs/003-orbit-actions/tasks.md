@@ -25,6 +25,25 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 (latest+11) — Phase 8 polish round 3 lands T097 (debug Nano-unavailable seam, all 8/8 polish tasks now done)**
+
+- **T097** wired across three layers:
+  - **Main** [LlmProviderDiagnostics](app/src/main/java/com/capsule/app/ai/LlmProviderDiagnostics.kt) (NEW) — `object` with a single `@Volatile @JvmStatic var forceNanoUnavailable: Boolean = false`. Co-located with [NanoUnavailableException](app/src/main/java/com/capsule/app/ai/LlmProviderDiagnostics.kt) (also NEW), thrown from the provider when the flag is set. The flag *check* lives in main code so the runtime cost is a single volatile read; the security model rests on no production code path *writing* the flag.
+  - **Main** [NanoLlmProvider](app/src/main/java/com/capsule/app/ai/NanoLlmProvider.kt) (MODIFY) — `extractActions` and `summarize` now check `LlmProviderDiagnostics.forceNanoUnavailable` and throw `NanoUnavailableException` *before* any work. These are the two methods Orbit Actions / Weekly Digest call (US2 + US3); other LlmProvider methods are unchanged because 003 doesn't route through them yet.
+  - **Debug-only** [DiagnosticsActivity](app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt) (NEW) — minimal `Activity` with no Compose / theme / resource dependencies (LinearLayout + 2 Buttons + 1 TextView constructed programmatically). "Toggle" flips the flag, "Reset" forces it false, status text reflects current state. Lives only in `app/src/debug/`, registered only in [`app/src/debug/AndroidManifest.xml`](app/src/debug/AndroidManifest.xml) (NEW) — release builds never see the activity declaration so there is **no production exposure**, satisfying the task's hard constraint.
+  - **JVM tests** [LlmProviderDiagnosticsTest](app/src/test/java/com/capsule/app/ai/LlmProviderDiagnosticsTest.kt) — 5 tests with `@After` reset: default = available, happy-path empty list when flag off, `NanoUnavailableException` thrown by both `extractActions` and `summarize` when flag on, message tags the seam, toggling back to false restores the happy path.
+
+- **Manifest invariant preserved**: 003 release manifest still has 11 permissions (T099 regression test passes — debug overlay is in the debug source set only, never merged into release).
+
+- **Static gate**: all touched files clean via `get_errors`. **Gradle gate not run**: workstation lacks system JDK.
+
+- **Phase 8 cumulative**: **8/8 polish tasks done** (T095, T096, T097, T098, T099, T100, T101, T102 ✅). Phase 8 acceptance T103-T112 still requires physical Pixel 8+/6a hardware.
+
+- **Spec 003 status**: All non-device tasks complete. Remaining work is:
+  - Physical-device acceptance: T103–T112 (Pixel 8+/6a).
+  - Instrumented-tier deferrals from earlier phases: T067–T070 (US3), T079 instrumented (US4 ViewModel + Activity wiring), T086–T089 (US5 sensitivity / no-Nano / schema-mismatch / re-extraction-idempotency).
+  - These collectively form the "physical-device cluster" that needs hardware to run.
+
 **2026-04-27 (latest+10) — Phase 8 polish round 2 lands T098, T099, T102 (regression locks, no production code change required)**
 
 - **T099** verified: diff between 002 baseline (`859ff40:app/src/main/AndroidManifest.xml`) and 003 HEAD shows zero `<uses-permission>` adds (still 11: `ACTIVITY_RECOGNITION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `INTERNET`, `PACKAGE_USAGE_STATS`, `POST_NOTIFICATIONS`, `READ_MEDIA_IMAGES`, `RECEIVE_BOOT_COMPLETED`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `SCHEDULE_EXACT_ALARM`, `SYSTEM_ALERT_WINDOW`). 003-only manifest adds: an unexported `ActionExecutorService` (in `:capture`) and an unexported `ActionsSettingsActivity`. Locked by [ManifestPermissionsRegressionTest](app/src/test/java/com/capsule/app/manifest/ManifestPermissionsRegressionTest.kt) — 3 JVM tests: exact set match, forbidden-set absence (no `WRITE_CALENDAR`/`READ_CALENDAR`/`WRITE_CONTACTS`/`READ_CONTACTS`/`WRITE_EXTERNAL_STORAGE`), and an 11-count tripwire so EXPECTED edits can't go unnoticed.
@@ -498,7 +517,7 @@ These tasks are the constitution-acceptance gate, the migration-correctness gate
 
 - [x] T095 [P] Audit-row aggregation copy in `app/src/main/java/com/capsule/app/audit/AuditCopyTemplates.kt` (MODIFY 002) — add user-facing strings for the seven new `AuditAction` values per data-model.md §6 (e.g., `ACTION_PROPOSED → "Proposed: {previewTitle}"`, `DIGEST_GENERATED → "Generated this week's digest ({envelopeCount} captures)"`).
 - [x] T096 [P] Add `app/src/main/java/com/capsule/app/audit/ActionsAuditAggregator.kt` — groups action-related audit rows for the "What Orbit did today" surface in the audit log viewer per data-model.md §6 closing paragraph.
-- [ ] T097 [P] Wire a debug-build "Force Nano UNAVAILABLE" toggle in `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` per quickstart §6 N2 — flips a `BuildConfig.DEBUG`-gated flag in `LlmProviderRouter` so `extractActions` and `summarize` throw `Nano.UnavailableException`. No production exposure.
+- [x] T097 [P] Wire a debug-build "Force Nano UNAVAILABLE" toggle in `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` per quickstart §6 N2 — flips a `BuildConfig.DEBUG`-gated flag in `LlmProviderRouter` so `extractActions` and `summarize` throw `Nano.UnavailableException`. No production exposure.
 - [x] T098 [P] Add `:capture`-process integration of `ActionExecutorService` startup in the existing `CapsuleOverlayService` lifecycle (MODIFY 002) — the executor service is started lazily on first `bindService` from `:ui`; no eager start at boot. Confirms `:capture` does not gain a new always-on cost.
 - [x] T099 Confirm no new permissions in `AndroidManifest.xml` — diff against 002 manifest must show zero added `<uses-permission>` elements (no `WRITE_CALENDAR`, no extra storage scopes). Per research.md §4 + Principle VIII.
 - [x] T100 [P] Add KDoc + manifest comments tagging `:capture` package `com.capsule.app.action.*` as "no-network — see action-execution-contract.md §6". Catches future contributors at code review.
