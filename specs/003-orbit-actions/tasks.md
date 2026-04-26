@@ -477,13 +477,13 @@ These tasks are the constitution-acceptance gate, the migration-correctness gate
 
 ### Cross-cutting code
 
-- [ ] T095 [P] Audit-row aggregation copy in `app/src/main/java/com/capsule/app/audit/AuditCopyTemplates.kt` (MODIFY 002) — add user-facing strings for the seven new `AuditAction` values per data-model.md §6 (e.g., `ACTION_PROPOSED → "Proposed: {previewTitle}"`, `DIGEST_GENERATED → "Generated this week's digest ({envelopeCount} captures)"`).
-- [ ] T096 [P] Add `app/src/main/java/com/capsule/app/audit/ActionsAuditAggregator.kt` — groups action-related audit rows for the "What Orbit did today" surface in the audit log viewer per data-model.md §6 closing paragraph.
+- [x] T095 [P] Audit-row aggregation copy in `app/src/main/java/com/capsule/app/audit/AuditCopyTemplates.kt` (MODIFY 002) — add user-facing strings for the seven new `AuditAction` values per data-model.md §6 (e.g., `ACTION_PROPOSED → "Proposed: {previewTitle}"`, `DIGEST_GENERATED → "Generated this week's digest ({envelopeCount} captures)"`).
+- [x] T096 [P] Add `app/src/main/java/com/capsule/app/audit/ActionsAuditAggregator.kt` — groups action-related audit rows for the "What Orbit did today" surface in the audit log viewer per data-model.md §6 closing paragraph.
 - [ ] T097 [P] Wire a debug-build "Force Nano UNAVAILABLE" toggle in `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` per quickstart §6 N2 — flips a `BuildConfig.DEBUG`-gated flag in `LlmProviderRouter` so `extractActions` and `summarize` throw `Nano.UnavailableException`. No production exposure.
 - [ ] T098 [P] Add `:capture`-process integration of `ActionExecutorService` startup in the existing `CapsuleOverlayService` lifecycle (MODIFY 002) — the executor service is started lazily on first `bindService` from `:ui`; no eager start at boot. Confirms `:capture` does not gain a new always-on cost.
 - [ ] T099 Confirm no new permissions in `AndroidManifest.xml` — diff against 002 manifest must show zero added `<uses-permission>` elements (no `WRITE_CALENDAR`, no extra storage scopes). Per research.md §4 + Principle VIII.
-- [ ] T100 [P] Add KDoc + manifest comments tagging `:capture` package `com.capsule.app.action.*` as "no-network — see action-execution-contract.md §6". Catches future contributors at code review.
-- [ ] T101 Update `app/proguard-rules.pro` — keep AppFunctions-generated schema constants and `@AppFunction`-annotated args data classes from R8 obfuscation (KSP-generated metadata is reflective).
+- [x] T100 [P] Add KDoc + manifest comments tagging `:capture` package `com.capsule.app.action.*` as "no-network — see action-execution-contract.md §6". Catches future contributors at code review.
+- [x] T101 Update `app/proguard-rules.pro` — keep AppFunctions-generated schema constants and `@AppFunction`-annotated args data classes from R8 obfuscation (KSP-generated metadata is reflective).
 - [ ] T102 [P] Add a regression-protection task: extend `app/src/androidTest/java/com/capsule/app/regression/Spec001SmokeTest.kt` (002's regression harness) with an `actions_do_not_break_capture` method — runs path A on a freshly-installed v1.1 build and asserts capture/seal/diary still match 002 baseline timings (`p50 seal < 200ms`, `Diary p50 render < 1s`). Mirrors 002 T110a pattern.
 
 ### Acceptance gate (quickstart-driven)
