@@ -117,6 +117,21 @@ class ActionExecutorService : Service() {
                 )
             }
 
+            // T091 — re-validate that argsJson still parses as a JSONObject
+            // matching the registered schema's top-level type. A debug seam
+            // (or stale proposal) may have corrupted argsJson between
+            // ACTION_PROPOSED and the user's confirm tap. Per
+            // action-execution-contract.md §4 step 1: on mismatch we MUST
+            // NOT fire the Intent — write ACTION_FAILED reason=schema_mismatch
+            // and the delegate flips the proposal to INVALIDATED.
+            if (!isValidArgsJsonShape(request.argsJson)) {
+                return failNow(
+                    request, executionId, dispatchedAt,
+                    reason = "schema_mismatch",
+                    repo = repo
+                )
+            }
+
             // Dispatch. We block the binder thread for the handler — handlers
             // are non-blocking modulo a final Intent#startActivity, so this is
             // bounded; the AIDL caller awaits the result anyway.
@@ -204,8 +219,7 @@ class ActionExecutorService : Service() {
         dispatchedAt: Long,
         reason: String,
         repo: IEnvelopeRepository? = repository
-    ): ActionExecuteResultParcel {
-        repo?.let {
+    ): ActionExecuteResultParcel {        repo?.let {
             runCatching {
                 it.recordActionInvocation(
                     executionId,
@@ -227,6 +241,18 @@ class ActionExecutorService : Service() {
             dispatchedAtMillis = dispatchedAt,
             latencyMs = 0L
         )
+    }
+
+    /**
+     * Lightweight shape check: argsJson MUST parse as a JSONObject (the
+     * v1.1 built-in schemas are all top-level type=object). Full Draft
+     * 2020-12 keyword validation is deferred until the JSON-schema
+     * dependency lands; until then this catches the realistic failure
+     * mode — corrupted/blank argsJson — without letting the Intent fire.
+     */
+    private fun isValidArgsJsonShape(argsJson: String?): Boolean {
+        if (argsJson.isNullOrBlank()) return false
+        return runCatching { org.json.JSONObject(argsJson) }.isSuccess
     }
 
     companion object {

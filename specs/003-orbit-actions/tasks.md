@@ -461,11 +461,11 @@ app/src/androidTest/java/com/capsule/app/      # Instrumented tests
 
 ### Implementation (US5)
 
-- [ ] T090 [US5] Implement the sensitivity gate in `ActionExtractor.extract()` (MODIFY T043) — early-return `Skipped("sensitivity_changed")` if envelope's `sensitivity_flags` contains `credentials` or `medical`, OR if a `SensitivityScope.PUBLIC` action is proposed against `financial`-flagged content per research.md §8.
-- [ ] T091 [US5] Implement schema re-validation in `ActionExecutorService.execute()` (MODIFY T047) per action-execution-contract.md §4 step 1 — load `argsSchemaJson` for the request's `schemaVersion`, re-validate `argsJson`; on mismatch, write `ACTION_FAILED reason=schema_mismatch` and flip proposal to `INVALIDATED` without firing the Intent.
-- [ ] T092 [US5] Add `ActivityNotFoundException` catch + user-facing toast "No app handles this" in all three handlers (MODIFY T049, T060, T062) per action-execution-contract.md §4 + quickstart §6 N4. Audit `ACTION_FAILED reason=no_handler`.
-- [ ] T093 [US5] Implement past-undo-window no-op in `IActionExecutor.cancelWithinUndoWindow` (MODIFY T047) per action-execution-contract.md §3 — load `action_execution.dispatchedAt`, return `false` if `now - dispatchedAt > 5000ms` and outcome already terminal. Quickstart §6 N5.
-- [ ] T094 [US5] Implement re-extraction idempotency in `ActionExtractionWorker` (MODIFY T044) — pre-check `ActionProposalDao.findByEnvelopeAndFunction(envelopeId, functionId)`; if a non-`INVALIDATED` proposal already exists, audit `CONTINUATION_COMPLETED outcome=noop` and `Result.success()` per quickstart §6 N6.
+- [x] T090 [US5] Implement the sensitivity gate in `ActionExtractor.extract()` (MODIFY T043) — early-return `Skipped("sensitivity_changed")` if envelope's `sensitivity_flags` contains `credentials` or `medical`, OR if a `SensitivityScope.PUBLIC` action is proposed against `financial`-flagged content per research.md §8.
+- [x] T091 [US5] Implement schema re-validation in `ActionExecutorService.execute()` (MODIFY T047) per action-execution-contract.md §4 step 1 — load `argsSchemaJson` for the request's `schemaVersion`, re-validate `argsJson`; on mismatch, write `ACTION_FAILED reason=schema_mismatch` and flip proposal to `INVALIDATED` without firing the Intent.
+- [x] T092 [US5] Add `ActivityNotFoundException` catch + user-facing toast "No app handles this" in all three handlers (MODIFY T049, T060, T062) per action-execution-contract.md §4 + quickstart §6 N4. Audit `ACTION_FAILED reason=no_handler`.
+- [x] T093 [US5] Implement past-undo-window no-op in `IActionExecutor.cancelWithinUndoWindow` (MODIFY T047) per action-execution-contract.md §3 — load `action_execution.dispatchedAt`, return `false` if `now - dispatchedAt > 5000ms` and outcome already terminal. Quickstart §6 N5.
+- [x] T094 [US5] Implement re-extraction idempotency in `ActionExtractionWorker` (MODIFY T044) — pre-check `ActionProposalDao.findByEnvelopeAndFunction(envelopeId, functionId)`; if a non-`INVALIDATED` proposal already exists, audit `CONTINUATION_COMPLETED outcome=noop` and `Result.success()` per quickstart §6 N6.
 
 **US5 checkpoint**: all six quickstart §6 negative paths' audit rows can be reproduced via instrumented tests on emulator.
 

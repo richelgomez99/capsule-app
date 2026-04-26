@@ -214,6 +214,16 @@ class ActionsRepositoryDelegate(
                     }.toString()
                 )
             )
+
+            // T091 — schema-failure proposals are terminal: flip to
+            // INVALIDATED so the UI hides them and a retry-tap won't
+            // re-fire the (still-broken) Intent. Mirrors
+            // action-execution-contract.md §4 step 1.
+            if (outcome == ActionExecutionOutcome.FAILED &&
+                (outcomeReason == "schema_invalidated" || outcomeReason == "schema_mismatch")
+            ) {
+                proposalDao.markInvalidated(proposalId, completedAtMillis.coerceAtLeast(dispatchedAtMillis))
+            }
         }
     }
 

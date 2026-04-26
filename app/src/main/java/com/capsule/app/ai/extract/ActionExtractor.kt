@@ -144,11 +144,15 @@ class ActionExtractor(
         }
 
         database.withTransaction {
+            var skippedDup = 0
             for (p in accepted) {
                 // Unique-index (envelopeId, functionId) means a re-run after a
                 // partial earlier success would conflict. Skip in that case.
                 val existing = proposalDao.findByEnvelopeAndFunction(envelopeId, p.functionId)
-                if (existing != null) continue
+                if (existing != null) {
+                    skippedDup += 1
+                    continue
+                }
                 proposalDao.insert(p)
                 auditLogDao.insert(
                     auditWriter.build(
@@ -166,6 +170,21 @@ class ActionExtractor(
                         description = "Dropped $fid (sensitivity_scope_mismatch)",
                         envelopeId = envelopeId,
                         extraJson = """{"functionId":"$fid","reason":"sensitivity_scope_mismatch"}"""
+                    )
+                )
+            }
+            // T094 — re-extraction idempotency. If every accepted candidate
+            // hit the unique constraint (already proposed in a prior run),
+            // emit a CONTINUATION_COMPLETED outcome=noop audit row so the
+            // continuation engine + audit aggregator can distinguish a
+            // genuine no-candidates run from an idempotent re-run.
+            if (accepted.isNotEmpty() && skippedDup == accepted.size && droppedSensitivityIds.isEmpty()) {
+                auditLogDao.insert(
+                    auditWriter.build(
+                        action = AuditAction.CONTINUATION_COMPLETED,
+                        description = "ACTION_EXTRACT noop (duplicate)",
+                        envelopeId = envelopeId,
+                        extraJson = """{"phase":"extract","outcome":"noop","reason":"duplicate","skipped":$skippedDup}"""
                     )
                 )
             }
