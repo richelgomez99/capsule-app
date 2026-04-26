@@ -6,6 +6,7 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.capsule.app.data.model.ContentType
+import com.capsule.app.data.model.EnvelopeKind
 import com.capsule.app.data.model.Intent
 import com.capsule.app.data.model.IntentSource
 
@@ -14,7 +15,10 @@ import com.capsule.app.data.model.IntentSource
     indices = [
         Index(value = ["createdAt"]),
         Index(value = ["intent"]),
-        Index(value = ["day_local"])
+        Index(value = ["day_local"]),
+        // 003 v1.1: speeds up the Diary's `kind = 'DIGEST'` filter and the
+        // per-day rendering query that orders by kind ascending then time.
+        Index(value = ["kind", "day_local"])
     ]
 )
 data class IntentEnvelopeEntity(
@@ -33,5 +37,18 @@ data class IntentEnvelopeEntity(
     val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
     val deletedAt: Long? = null,
-    val sharedContinuationResultId: String? = null
+    val sharedContinuationResultId: String? = null,
+    // 003 v1.1 additions — see specs/003-orbit-actions/data-model.md §1.
+    /** Discriminator: REGULAR (default), DIGEST (weekly summary), DERIVED (forward-compat). */
+    val kind: EnvelopeKind = EnvelopeKind.REGULAR,
+    /** JSON array of envelope ids this DIGEST/DERIVED row summarises; null for REGULAR. */
+    val derivedFromEnvelopeIdsJson: String? = null,
+    /**
+     * To-do payload when this envelope was created via the `todo_add`
+     * AppFunction with target=local. Shape:
+     * `{"items":[{"text":"…","done":false,"dueEpochMillis":null}],"derivedFromProposalId":"…"}`.
+     * Null on every other envelope. See specs/003-orbit-actions/tasks.md T063.
+     */
+    val todoMetaJson: String? = null
 )
+

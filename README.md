@@ -93,7 +93,8 @@ The depth of the work lives here:
 | [`specs/001-core-capture-overlay/`](./specs/001-core-capture-overlay/) | Spec-kit breakdown of the capture overlay (the foundation that shipped) |
 | [`specs/002-intent-envelope-and-diary/`](./specs/002-intent-envelope-and-diary/) | Spec-kit breakdown of v1 (envelope model + daily diary) |
 | [`specs/002-intent-envelope-and-diary/quickstart.md`](./specs/002-intent-envelope-and-diary/quickstart.md) | Step-by-step acceptance walk-through for v1 on a physical device |
-| [`specs/003-orbit-actions/`](./specs/003-orbit-actions/) through [`007-knowledge-graph/`](./specs/007-knowledge-graph/) | Post-v1 spec stubs |
+| [`specs/003-orbit-actions/quickstart.md`](./specs/003-orbit-actions/quickstart.md) | **v1.1 Orbit Actions** — calendar / to-do / share AppFunctions + weekly Sunday digest, on-device only |
+| [`specs/004-ask-orbit/`](./specs/004-ask-orbit/) through [`007-knowledge-graph/`](./specs/007-knowledge-graph/) | Post-v1 spec stubs |
 
 ---
 

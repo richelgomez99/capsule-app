@@ -148,6 +148,27 @@
             </intent-filter>
         </service>
 
+        <!-- 003 v1.1: ActionExecutorService runs in :capture (no-network process).
+             Bound by :ui via "com.capsule.app.action.BIND_ACTION_EXECUTOR".
+             See specs/003-orbit-actions/contracts/action-execution-contract.md §2.
+             No new permissions are added by 003 — see T099. -->
+        <service
+            android:name=".action.ActionExecutorService"
+            android:process=":capture"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_ACTION_EXECUTOR" />
+            </intent-filter>
+        </service>
+
+        <!-- 003 v1.1: ActionsSettingsActivity — deep-link only (opened from Settings → Actions). -->
+        <activity
+            android:name=".settings.ActionsSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
+
         <receiver
             android:name=".service.RestartReceiver"
             android:exported="false">

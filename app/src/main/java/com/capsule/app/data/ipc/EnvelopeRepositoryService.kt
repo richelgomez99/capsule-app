@@ -5,7 +5,11 @@ import android.content.Intent
 import android.os.IBinder
 import com.capsule.app.audit.AuditLogImpl
 import com.capsule.app.audit.AuditLogWriter
+import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.extract.ActionExtractor
 import com.capsule.app.continuation.ContinuationEngine
+import com.capsule.app.data.ActionsRepositoryDelegate
+import com.capsule.app.data.AppFunctionRegistry
 import com.capsule.app.data.EnvelopeRepositoryImpl
 import com.capsule.app.data.LocalRoomBackend
 import com.capsule.app.data.OrbitDatabase
@@ -40,11 +44,41 @@ class EnvelopeRepositoryService : Service() {
         // construct `EnvelopeRepositoryImpl` directly pass `null` for the
         // engine and stay oblivious to WorkManager.
         val engine = ContinuationEngine.create(applicationContext)
+        // T025/T027 — actions registry + delegate live in :ml so binder
+        // calls from :ui flow through here. Registry is constructed eagerly
+        // but boot-time `registerAll(BUILT_IN)` is owned by Application.
+        val registry = AppFunctionRegistry(
+            database = db,
+            skillDao = db.appFunctionSkillDao(),
+            usageDao = db.skillUsageDao(),
+            auditLogDao = db.auditLogDao(),
+            auditWriter = auditWriter
+        )
+        val actionsDelegate = ActionsRepositoryDelegate(
+            database = db,
+            registry = registry,
+            auditWriter = auditWriter,
+            scope = serviceScope
+        )
+        // T043/T044 — extractor lives in :ml and is invoked via
+        // [IEnvelopeRepository.extractActionsForEnvelope] from
+        // [com.capsule.app.ai.extract.ActionExtractionWorker].
+        val actionExtractor = ActionExtractor(
+            database = db,
+            envelopeDao = db.intentEnvelopeDao(),
+            proposalDao = db.actionProposalDao(),
+            auditLogDao = db.auditLogDao(),
+            registry = registry,
+            llmProvider = NanoLlmProvider(),
+            auditWriter = auditWriter
+        )
         repository = EnvelopeRepositoryImpl(
             backend = backend,
             auditWriter = auditWriter,
             scope = serviceScope,
-            continuationEngine = engine
+            continuationEngine = engine,
+            actionsDelegate = actionsDelegate,
+            actionExtractor = actionExtractor
         )
         // T088 — same service binder pool exposes the audit-log surface on a
         // distinct intent action so the Settings / audit viewer process can

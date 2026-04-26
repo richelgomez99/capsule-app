@@ -5,8 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import com.capsule.app.action.ActionExecutorService
+import com.capsule.app.action.ipc.ActionExecuteRequestParcel
+import com.capsule.app.action.ipc.ActionExecuteResultParcel
+import com.capsule.app.action.ipc.IActionExecutor
+import com.capsule.app.data.ipc.ActionProposalParcel
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
+import com.capsule.app.data.ipc.IActionProposalObserver
 import com.capsule.app.data.ipc.IEnvelopeObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import kotlinx.coroutines.channels.awaitClose
@@ -43,6 +49,13 @@ class BinderDiaryRepository(
     private var connection: ServiceConnection? = null
     private var readyDeferred: CompletableDeferred<IEnvelopeRepository>? = null
 
+    // T054 — separate :capture IActionExecutor binding. Held independently
+    // from the :ml binder because the two services live in different
+    // processes and have independent ServiceConnection lifecycles.
+    private var executorBinder: IActionExecutor? = null
+    private var executorConnection: ServiceConnection? = null
+    private var executorReadyDeferred: CompletableDeferred<IActionExecutor>? = null
+
     /**
      * Bind to [com.capsule.app.data.ipc.EnvelopeRepositoryService] in the
      * `:ml` process. Suspends until the binder is handed back. Safe to
@@ -78,11 +91,53 @@ class BinderDiaryRepository(
 
     /** Unbind. Safe if not bound. */
     fun disconnect() {
-        val conn = connection ?: return
-        runCatching { context.unbindService(conn) }
-        connection = null
-        binder = null
-        readyDeferred = null
+        val conn = connection
+        if (conn != null) {
+            runCatching { context.unbindService(conn) }
+            connection = null
+            binder = null
+            readyDeferred = null
+        }
+        val execConn = executorConnection
+        if (execConn != null) {
+            runCatching { context.unbindService(execConn) }
+            executorConnection = null
+            executorBinder = null
+            executorReadyDeferred = null
+        }
+    }
+
+    /**
+     * T054 — bind the `:capture` `IActionExecutor`. Called lazily on the
+     * first action confirm; production callers may pre-warm in
+     * `DiaryActivity.onCreate`. Idempotent like [connect].
+     */
+    suspend fun connectExecutor(): IActionExecutor = withContext(Dispatchers.Main) {
+        executorBinder?.let { return@withContext it }
+
+        val deferred = CompletableDeferred<IActionExecutor>()
+        executorReadyDeferred = deferred
+        val conn = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                val stub = IActionExecutor.Stub.asInterface(service)
+                executorBinder = stub
+                deferred.complete(stub)
+            }
+
+            override fun onServiceDisconnected(name: ComponentName?) {
+                executorBinder = null
+            }
+        }
+        executorConnection = conn
+        val intent = Intent(ActionExecutorService.ACTION_BIND_EXECUTOR).apply {
+            `package` = context.packageName
+        }
+        val bound = context.bindService(intent, conn, Context.BIND_AUTO_CREATE)
+        if (!bound) {
+            executorConnection = null
+            throw IllegalStateException("bindService(ActionExecutorService) failed")
+        }
+        deferred.await()
     }
 
     override fun observeDay(isoDate: String): Flow<DayPageParcel> = callbackFlow {
@@ -130,5 +185,48 @@ class BinderDiaryRepository(
         return withContext(Dispatchers.IO) {
             repo.distinctDayLocalsWithContent(limit, offset) ?: emptyList()
         }
+    }
+
+    // ---- Spec 003 v1.1 — Orbit Actions (T053) -----------------------------
+
+    override fun observeProposals(envelopeId: String): Flow<List<ActionProposalParcel>> =
+        callbackFlow {
+            val repo = connect()
+            val observer = object : IActionProposalObserver.Stub() {
+                override fun onProposals(proposals: MutableList<ActionProposalParcel>?) {
+                    trySend(proposals?.toList() ?: emptyList())
+                }
+            }
+            repo.observeProposalsForEnvelope(envelopeId, observer)
+            awaitClose {
+                runCatching { repo.stopObservingProposals(observer) }
+            }
+        }
+
+    override suspend fun markProposalConfirmed(proposalId: String): Boolean {
+        val repo = connect()
+        return withContext(Dispatchers.IO) { repo.markProposalConfirmed(proposalId) }
+    }
+
+    override suspend fun markProposalDismissed(proposalId: String): Boolean {
+        val repo = connect()
+        return withContext(Dispatchers.IO) { repo.markProposalDismissed(proposalId) }
+    }
+
+    override suspend fun executeAction(
+        request: ActionExecuteRequestParcel
+    ): ActionExecuteResultParcel {
+        val exec = connectExecutor()
+        return withContext(Dispatchers.IO) { exec.execute(request) }
+    }
+
+    override suspend fun cancelWithinUndoWindow(executionId: String): Boolean {
+        val exec = connectExecutor()
+        return withContext(Dispatchers.IO) { exec.cancelWithinUndoWindow(executionId) }
+    }
+
+    override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
+        val repo = connect()
+        withContext(Dispatchers.IO) { repo.setTodoItemDone(envelopeId, itemIndex, done) }
     }
 }

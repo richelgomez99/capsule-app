@@ -1,5 +1,8 @@
 package com.capsule.app.diary
 
+import com.capsule.app.action.ipc.ActionExecuteRequestParcel
+import com.capsule.app.action.ipc.ActionExecuteResultParcel
+import com.capsule.app.data.ipc.ActionProposalParcel
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import kotlinx.coroutines.flow.Flow
@@ -41,4 +44,28 @@ interface DiaryRepository {
      * days.
      */
     suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String>
+
+    // ---- Spec 003 v1.1 — Orbit Actions (T053) -----------------------------
+
+    /**
+     * Live feed of action proposals attached to [envelopeId]. Emits the
+     * full current set on every change so observers don't reconstruct
+     * deltas (mirrors [observeDay]).
+     */
+    fun observeProposals(envelopeId: String): Flow<List<ActionProposalParcel>>
+
+    /** Flips proposal `state` PROPOSED→CONFIRMED + audits ACTION_CONFIRMED. */
+    suspend fun markProposalConfirmed(proposalId: String): Boolean
+
+    /** Flips proposal `state` PROPOSED→DISMISSED + audits ACTION_DISMISSED. */
+    suspend fun markProposalDismissed(proposalId: String): Boolean
+
+    /** Dispatches the side effect via `:capture` IActionExecutor binder. */
+    suspend fun executeAction(request: ActionExecuteRequestParcel): ActionExecuteResultParcel
+
+    /** Best-effort cancel within the 5s undo window. Returns false past the window. */
+    suspend fun cancelWithinUndoWindow(executionId: String): Boolean
+
+    /** T064 (003 US2) — toggle one item on a derived to-do envelope. */
+    suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean)
 }

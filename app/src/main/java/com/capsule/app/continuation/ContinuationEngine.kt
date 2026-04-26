@@ -193,6 +193,49 @@ class ContinuationEngine(
     }
 
     /**
+     * T045 — enqueue an `ACTION_EXTRACT` continuation for [envelopeId]
+     * (specs/003-orbit-actions/contracts/action-extraction-contract.md §2).
+     *
+     * Idempotent: re-enqueue while existing work is in-flight is a no-op
+     * thanks to [ExistingWorkPolicy.KEEP] + a stable unique work id.
+     * Charger + UNMETERED + battery-not-low constraints are required by
+     * Principle IV.
+     *
+     * Caller responsibility (lives in `EnvelopeRepositoryImpl.seal()`):
+     *  1. Run the [com.capsule.app.ai.extract.ActionExtractionPrefilter]
+     *     synchronously inside `:ml` first — only enqueue if true.
+     *  2. Skip kind != REGULAR envelopes; skip credentials/medical-flagged
+     *     envelopes (research §8). The engine itself does NOT re-check
+     *     these — it trusts the caller, identical to how
+     *     [enqueueForNewEnvelope] trusts the URL extractor.
+     */
+    fun enqueueActionExtract(envelopeId: String) {
+        if (envelopeId.isBlank()) return
+        if (privacyPreferences?.continuationsPaused == true) return
+        val request = OneTimeWorkRequestBuilder<com.capsule.app.ai.extract.ActionExtractionWorker>()
+            .setConstraints(ACTION_EXTRACT_CONSTRAINTS)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                ACTION_EXTRACT_BACKOFF_BASE_SECONDS,
+                TimeUnit.SECONDS
+            )
+            .addTag(TAG_CONTINUATION)
+            .addTag(TYPE_TAG_ACTION_EXTRACT)
+            .addTag(tagForEnvelope(envelopeId))
+            .setInputData(
+                Data.Builder()
+                    .putString(KEY_ENVELOPE_ID, envelopeId)
+                    .build()
+            )
+            .build()
+        workManager.enqueueUniqueWork(
+            uniqueNameForActionExtract(envelopeId),
+            ExistingWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
      * Cancel every continuation tied to a single envelope. Called when
      * an envelope is archived or soft-deleted (§6 rule 1) — the caller
      * (merge zone) is the repository transaction.
@@ -213,6 +256,7 @@ class ContinuationEngine(
         const val TAG_CONTINUATION = "continuation"
         const val TYPE_TAG_URL_HYDRATE = "type:URL_HYDRATE"
         const val TYPE_TAG_SCREENSHOT_OCR = "type:SCREENSHOT_OCR"
+        const val TYPE_TAG_ACTION_EXTRACT = "type:ACTION_EXTRACT"
 
         const val KEY_ENVELOPE_ID = "envelopeId"
         const val KEY_CONTINUATION_ID = "continuationId"
@@ -220,6 +264,7 @@ class ContinuationEngine(
         const val KEY_IMAGE_URI = "imageUri"
 
         const val BACKOFF_BASE_SECONDS = 60L
+        const val ACTION_EXTRACT_BACKOFF_BASE_SECONDS = 30L
         const val MAX_ATTEMPTS = 3
 
         fun tagForEnvelope(envelopeId: String): String = "envelope:$envelopeId"
@@ -228,6 +273,8 @@ class ContinuationEngine(
             "url-hydrate:$continuationId"
         fun uniqueNameForScreenshotOcr(continuationId: String): String =
             "screenshot-ocr:$continuationId"
+        fun uniqueNameForActionExtract(envelopeId: String): String =
+            "action-extract:$envelopeId"
 
         val DEFAULT_CONSTRAINTS: Constraints = Constraints.Builder()
             // v1 dev: charger + unmetered Wi-Fi constraints temporarily
@@ -237,6 +284,18 @@ class ContinuationEngine(
             // shipping — spec FR-013 + contracts/continuation-engine §2
             // still mandate charger + unmetered for GA.
             .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        /**
+         * Per spec 003 contracts/action-extraction-contract.md §2:
+         * charger + UNMETERED Wi-Fi + battery-not-low. Action
+         * extraction never blocks seal so we keep these strict even
+         * during dev (Nano runs on charger anyway).
+         */
+        val ACTION_EXTRACT_CONSTRAINTS: Constraints = Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
             .build()
 
         // http(s) URL matcher. Intentionally lenient: we strip common

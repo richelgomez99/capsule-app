@@ -502,6 +502,70 @@ vertical-centered: *"Nothing captured yet today. Orbit is watching."*
 **Don't.** No FAB. No search bar pinned at top. No filter chips. No "New
 capture" button. If you want to capture, you use the bubble.
 
+#### 4.5.1 Cluster-suggestion card (added 2026-04-26, spec 002 amendment + spec 010 FR-010-018+)
+
+**Purpose.** The first surface in the entire product where the *agent
+speaks*. Surfaces the morning after a research-session cluster forms.
+Two-or-three inline actions (e.g., for research-session: *Summarize*,
+*Open All*, *Save as Structured Reading List*).
+
+**Placement.** Inside §4.5's composition list, between item #2 (Day
+header paragraph) and item #3 (Thin rule). The day header remains the
+Diary's hero; the cluster-suggestion card is a secondary agent voice
+beneath it. No card means no slot — when no cluster has formed
+overnight, the day header runs straight into the thin rule as today.
+
+**Composition** (top-to-bottom inside the card):
+
+1. **Agent-voice mark** — a NEW glyph reserved exclusively for
+   agent-spoken surfaces, drawn via the same `Canvas.drawPath`
+   mechanism as the four envelope wax seals (§ 3.6) but visually
+   distinct. Recommended: ✦ (six-pointed star) at 14 sp in
+   `--ink-accent-cluster` (a new accent token; lock by April 30
+   alongside `AgentVoiceMark` lint allow-list, spec 010 FR-010-019).
+   Hangs in the margin column, right-aligned, like a wax seal.
+2. **Card body** — Newsreader italic 16 sp, content column, ≤ 2
+   sentences. Lead with the cluster's *what*: *"You had a research
+   session on Founder Mode this weekend. 4 captures across Twitter,
+   Safari, and a podcast app."* Italic distinguishes agent voice from
+   day-header (which is Fraunces non-italic). The italic is the
+   product's tonal mark for "this is the agent talking."
+3. **Action row** — Geist 12 sp small caps, content column,
+   left-aligned. Action labels separated by typographic mid-dot (`·`)
+   in `--ink-dim`. Example: `SUMMARIZE · OPEN ALL · SAVE AS LIST`. No
+   button chrome. Touch targets pad to ≥ 48 dp per FR-010-016.
+4. **Dismiss affordance** — small typographic close (`×` in Geist 14
+   sp, `--ink-dim`, top-right of card body row, 48 dp touch target)
+   OR swipe-to-dismiss horizontally. Dismissal is per
+   `(cluster_id, day_local)`, persistent for that day.
+
+**Card chrome.** Ruled-divider frame consistent with envelope cards
+(§ 4.6) — 1 px `--rule` top + bottom only, no side rules, no shadow,
+no fill differentiation. The card is *of the page*, not floating
+above it. Internal padding: 16 dp top, 16 dp bottom, content-column
+horizontal alignment (no separate gutter).
+
+**Stacking.** Max 2 cards per Diary day in v1. If 3+ clusters form
+overnight, the lowest-confidence cluster cards drop below a "more"
+fold (deferred to v1.1 — flag in spec 010 D5).
+
+**Motion.** Card fades in over §3.3 *short* duration when first
+rendered on a fresh diary open. No directional motion. Reduce-motion
+respects the same fade. Dismissal is an instant collapse with the
+sibling envelope list animating up over the same *short* duration.
+
+**Empty-state behavior.** When the cluster-suggestion card is
+present, the Diary's existing empty-state copy (*"Nothing captured
+yet today. Orbit is watching."*) is suppressed — the card itself is
+the day's first content. Cards persist across days only via the KG
+cluster_id; visually they only appear once on the day they form.
+
+**Don't.** No notification, no banner, no badge. The card waits
+patiently in the diary; the user finds it when they open Orbit.
+Principle V (silence is a feature) is constitutionally enforced
+here. No avatar (the agent doesn't have a face). No Material
+Surface elevation. No purple. No emoji.
+
 ### 4.6 Envelope card — expanded (spec 002, US2 + US3)
 
 **Purpose.** Make a single captured item legible and actionable without

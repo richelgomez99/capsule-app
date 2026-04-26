@@ -1,4 +1,4 @@
-package com.capsule.app.continuation
+apackage com.capsule.app.continuation
 
 import com.capsule.app.audit.AuditLogWriter
 import com.capsule.app.data.LocalRoomBackend

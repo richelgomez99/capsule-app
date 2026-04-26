@@ -1,10 +1,13 @@
 package com.capsule.app.ai
 
+import com.capsule.app.ai.model.ActionExtractionResult
+import com.capsule.app.ai.model.AppFunctionSummary
 import com.capsule.app.ai.model.DayHeaderResult
 import com.capsule.app.ai.model.IntentClassification
 import com.capsule.app.ai.model.LlmProvenance
 import com.capsule.app.ai.model.SensitivityResult
 import com.capsule.app.ai.model.SummaryResult
+import com.capsule.app.data.entity.StateSnapshot
 
 /**
  * Sole v1 LlmProvider — delegates to on-device Gemini Nano via AICore.
@@ -31,5 +34,21 @@ class NanoLlmProvider : LlmProvider {
         envelopeSummaries: List<String>
     ): DayHeaderResult {
         TODO("AICore integration — US2")
+    }
+
+    override suspend fun extractActions(
+        text: String,
+        contentType: String,
+        state: StateSnapshot,
+        registeredFunctions: List<AppFunctionSummary>,
+        maxCandidates: Int
+    ): ActionExtractionResult {
+        // Until AICore is wired up, return an empty list with LocalNano
+        // provenance. Callers treat this the same as a model that decided
+        // there are no actions in the text — extraction-contract §5.
+        return ActionExtractionResult(
+            provenance = LlmProvenance.LocalNano,
+            candidates = emptyList()
+        )
     }
 }

@@ -33,7 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +44,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import com.capsule.app.data.ipc.ActionProposalParcel
 import com.capsule.app.data.model.Intent
+import com.capsule.app.diary.ActionPreviewSheet
+import com.capsule.app.diary.ActionProposalChipRow
 import com.capsule.app.diary.DayUiState
 import com.capsule.app.diary.DiaryPagingSource
 import com.capsule.app.diary.DiaryViewModel
@@ -248,12 +254,30 @@ private fun RenderDayState(
     onOpenSetup: (() -> Unit)?
 ) {
     val context = LocalContext.current
+    var pendingProposal by remember { mutableStateOf<ActionProposalParcel?>(null) }
+
+    // T053 — surface the 5 s undo window via a Toast. Compose Snackbar
+    // would be a cleaner host but the rest of Diary already uses Toasts
+    // for transient feedback, so we match for visual consistency.
+    val undoState by viewModel.undoState.collectAsState()
+    LaunchedEffect(undoState?.executionId) {
+        val s = undoState ?: return@LaunchedEffect
+        val msg = when (s.outcome) {
+            "DISPATCHED", "SUCCESS" -> "Added · tap notification to undo"
+            "FAILED" -> "Couldn't add: ${s.outcomeReason ?: "unknown"}"
+            "USER_CANCELLED" -> "Cancelled"
+            else -> s.outcome
+        }
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    }
+
     when (val s = state) {
         is DayUiState.Loading -> LoadingView()
         is DayUiState.Empty -> EmptyDayView(isoDate = s.isoDate, onOpenSetup = onOpenSetup)
         is DayUiState.Error -> ErrorView(message = s.message)
         is DayUiState.Ready -> DayContentView(
             state = s,
+            viewModel = viewModel,
             onReassign = { id, intent ->
                 viewModel.onReassignIntent(id, intent.name, reason = "DIARY_REASSIGN")
             },
@@ -269,6 +293,21 @@ private fun RenderDayState(
                 context.startActivity(
                     EnvelopeDetailActivity.newIntent(context, id, dayLocal = s.isoDate)
                 )
+            },
+            onProposalTap = { proposal -> pendingProposal = proposal }
+        )
+    }
+
+    pendingProposal?.let { proposal ->
+        ActionPreviewSheet(
+            proposal = proposal,
+            onConfirm = { editedArgsJson ->
+                viewModel.onConfirmProposal(proposal, editedArgsJson)
+                pendingProposal = null
+            },
+            onDismiss = {
+                viewModel.onDismissProposal(proposal.id)
+                pendingProposal = null
             }
         )
     }
@@ -333,10 +372,12 @@ private fun ErrorView(message: String) {
 @Composable
 private fun DayContentView(
     state: DayUiState.Ready,
+    viewModel: DiaryViewModel,
     onReassign: (String, Intent) -> Unit,
     onRetry: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onOpenDetail: (String) -> Unit
+    onOpenDetail: (String) -> Unit,
+    onProposalTap: (ActionProposalParcel) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -364,7 +405,18 @@ private fun DayContentView(
                     onReassign = onReassign,
                     onRetry = onRetry,
                     onDelete = onDelete,
-                    onOpenDetail = onOpenDetail
+                    onOpenDetail = onOpenDetail,
+                    onToggleTodoItem = { id, index, done ->
+                        viewModel.onToggleTodoItem(id, index, done)
+                    }
+                )
+                // T051 — chip-row inline beneath the card. The flow is
+                // owned by this item so swiping the envelope out of the
+                // viewport correctly tears down the proposal observer.
+                ActionProposalChipRow(
+                    envelopeId = env.id,
+                    proposalsFlow = viewModel.observeProposals(env.id),
+                    onChipTap = onProposalTap
                 )
             }
             item(key = "thread-space-${thread.id}") {

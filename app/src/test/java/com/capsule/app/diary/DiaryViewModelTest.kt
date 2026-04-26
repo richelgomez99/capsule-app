@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -82,7 +83,81 @@ class DiaryViewModelTest {
         var stubDistinctDays: List<String> = emptyList()
         override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> =
             stubDistinctDays.drop(offset).take(limit)
+
+        // T053 Orbit Actions surface — unused by these tests; default stubs.
+        override fun observeProposals(envelopeId: String) =
+            kotlinx.coroutines.flow.flowOf(emptyList<com.capsule.app.data.ipc.ActionProposalParcel>())
+        override suspend fun markProposalConfirmed(proposalId: String): Boolean = false
+        override suspend fun markProposalDismissed(proposalId: String): Boolean = false
+        override suspend fun executeAction(
+            request: com.capsule.app.action.ipc.ActionExecuteRequestParcel
+        ): com.capsule.app.action.ipc.ActionExecuteResultParcel =
+            error("FakeRepo.executeAction not stubbed")
+        override suspend fun cancelWithinUndoWindow(executionId: String): Boolean = false
+        override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {}
     }
+
+    /** Test fake recording every Orbit Actions hop. */
+    private class ActionRecordingRepo : DiaryRepository {
+        val confirmCalls = mutableListOf<String>()
+        val dismissCalls = mutableListOf<String>()
+        val executeCalls = mutableListOf<com.capsule.app.action.ipc.ActionExecuteRequestParcel>()
+        val cancelCalls = mutableListOf<String>()
+        var executeResult: com.capsule.app.action.ipc.ActionExecuteResultParcel =
+            com.capsule.app.action.ipc.ActionExecuteResultParcel(
+                executionId = "exec-1",
+                outcome = "DISPATCHED",
+                outcomeReason = null,
+                dispatchedAtMillis = 0L,
+                latencyMs = 5L
+            )
+
+        override fun observeDay(isoDate: String) =
+            kotlinx.coroutines.flow.flowOf(DayPageParcel(isoDate, emptyList()))
+        override suspend fun reassignIntent(envelopeId: String, newIntentName: String, reason: String?) {}
+        override suspend fun archive(envelopeId: String) {}
+        override suspend fun delete(envelopeId: String) {}
+        override suspend fun retryHydration(envelopeId: String) {}
+        override suspend fun getEnvelope(envelopeId: String) = error("unused")
+        override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> = emptyList()
+        override fun observeProposals(envelopeId: String) =
+            kotlinx.coroutines.flow.flowOf(emptyList<com.capsule.app.data.ipc.ActionProposalParcel>())
+        override suspend fun markProposalConfirmed(proposalId: String): Boolean {
+            confirmCalls += proposalId; return true
+        }
+        override suspend fun markProposalDismissed(proposalId: String): Boolean {
+            dismissCalls += proposalId; return true
+        }
+        override suspend fun executeAction(
+            request: com.capsule.app.action.ipc.ActionExecuteRequestParcel
+        ): com.capsule.app.action.ipc.ActionExecuteResultParcel {
+            executeCalls += request
+            return executeResult
+        }
+        override suspend fun cancelWithinUndoWindow(executionId: String): Boolean {
+            cancelCalls += executionId; return true
+        }
+        val todoToggleCalls = mutableListOf<Triple<String, Int, Boolean>>()
+        override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
+            todoToggleCalls += Triple(envelopeId, itemIndex, done)
+        }
+    }
+
+    private fun proposal(id: String = "p1") = com.capsule.app.data.ipc.ActionProposalParcel(
+        id = id,
+        envelopeId = "env-1",
+        functionId = "calendar.createEvent",
+        schemaVersion = 1,
+        argsJson = """{"title":"Coffee","startEpochMillis":1745164800000}""",
+        previewTitle = "Coffee",
+        previewSubtitle = null,
+        confidence = 0.9f,
+        provenance = "LocalNano",
+        state = "PROPOSED",
+        sensitivityScope = "PUBLIC",
+        createdAtMillis = 0L,
+        stateChangedAtMillis = 0L
+    )
 
     private class StubNano(private val response: String = "Nano output") : LlmProvider {
         override suspend fun classifyIntent(text: String, appCategory: String) = error("unused")
@@ -227,5 +302,116 @@ class DiaryViewModelTest {
         vm.onDelete("abc")
         advanceUntilIdle()
         assertEquals(listOf("abc"), repo.deleteCalls)
+    }
+
+    // ---- Spec 003 v1.1 Orbit Actions hops (T053) -------------------------
+
+    @Test
+    fun onConfirmProposal_marksConfirmed_thenExecutes_thenOpensUndoToast() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        vm.onConfirmProposal(proposal("p1"))
+        advanceUntilIdle()
+        assertEquals(listOf("p1"), repo.confirmCalls)
+        assertEquals(1, repo.executeCalls.size)
+        // Round-trip: VM passes proposal's argsJson through unchanged when
+        // editedArgsJson is null (default).
+        assertEquals(
+            """{"title":"Coffee","startEpochMillis":1745164800000}""",
+            repo.executeCalls.single().argsJson
+        )
+        // Per request contract: withUndo defaults to true so the executor
+        // opens its 5 s window.
+        assertTrue(repo.executeCalls.single().withUndo)
+        assertEquals("exec-1", vm.undoState.value?.executionId)
+    }
+
+    @Test
+    fun onConfirmProposal_propagatesEditedArgsJson() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        val edited = """{"title":"Tea","startEpochMillis":1745164800000,"location":"Cafe"}"""
+        vm.onConfirmProposal(proposal("p1"), editedArgsJson = edited)
+        advanceUntilIdle()
+        assertEquals(edited, repo.executeCalls.single().argsJson)
+    }
+
+    @Test
+    fun onDismissProposal_callsRepository_doesNotExecute() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        vm.onDismissProposal("p1")
+        advanceUntilIdle()
+        assertEquals(listOf("p1"), repo.dismissCalls)
+        assertTrue(repo.executeCalls.isEmpty())
+        // No toast surfaced for a dismiss — undo window only opens on execute.
+        assertEquals(null, vm.undoState.value)
+    }
+
+    @Test
+    fun onUndoExecution_cancelsAndClearsToast() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        vm.onConfirmProposal(proposal("p1"))
+        advanceUntilIdle()
+        assertEquals("exec-1", vm.undoState.value?.executionId)
+
+        vm.onUndoExecution("exec-1")
+        advanceUntilIdle()
+        assertEquals(listOf("exec-1"), repo.cancelCalls)
+        assertEquals(null, vm.undoState.value)
+    }
+
+    @Test
+    fun undoToast_autoClearsAfterFiveSeconds() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        vm.onConfirmProposal(proposal("p1"))
+        advanceUntilIdle()
+        assertEquals("exec-1", vm.undoState.value?.executionId)
+        // Drain the 5 s delay using the virtual scheduler.
+        advanceTimeBy(5_001L)
+        advanceUntilIdle()
+        assertEquals(null, vm.undoState.value)
+    }
+
+    // ---- Spec 003 v1.1 US2 to-do toggle (T064) ---------------------------
+
+    @Test
+    fun onToggleTodoItem_delegatesToRepository() = runTest {
+        val repo = ActionRecordingRepo()
+        val vm = TestScopeVm(this, repo)
+        vm.onToggleTodoItem("env-9", 2, done = true)
+        advanceUntilIdle()
+        assertEquals(listOf(Triple("env-9", 2, true)), repo.todoToggleCalls)
+    }
+
+    @Test
+    fun onToggleTodoItem_swallowsRepositoryFailure() = runTest {
+        val repo = object : DiaryRepository {
+            override fun observeDay(isoDate: String) =
+                kotlinx.coroutines.flow.flowOf(DayPageParcel(isoDate, emptyList()))
+            override suspend fun reassignIntent(envelopeId: String, newIntentName: String, reason: String?) {}
+            override suspend fun archive(envelopeId: String) {}
+            override suspend fun delete(envelopeId: String) {}
+            override suspend fun retryHydration(envelopeId: String) {}
+            override suspend fun getEnvelope(envelopeId: String) = error("unused")
+            override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> = emptyList()
+            override fun observeProposals(envelopeId: String) =
+                kotlinx.coroutines.flow.flowOf(emptyList<com.capsule.app.data.ipc.ActionProposalParcel>())
+            override suspend fun markProposalConfirmed(proposalId: String) = false
+            override suspend fun markProposalDismissed(proposalId: String) = false
+            override suspend fun executeAction(
+                request: com.capsule.app.action.ipc.ActionExecuteRequestParcel
+            ) = error("unused")
+            override suspend fun cancelWithinUndoWindow(executionId: String) = false
+            override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
+                throw android.os.RemoteException("simulated binder death")
+            }
+        }
+        val vm = TestScopeVm(this, repo)
+        // Must not crash — runCatching{} wrapper inside the VM swallows.
+        vm.onToggleTodoItem("env-9", 0, done = true)
+        advanceUntilIdle()
     }
 }

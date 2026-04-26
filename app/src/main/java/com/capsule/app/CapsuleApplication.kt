@@ -9,6 +9,9 @@ import androidx.work.WorkManager
 import com.capsule.app.audit.AuditLogRetentionWorker
 import com.capsule.app.audit.DebugDumpReceiver
 import com.capsule.app.continuation.SoftDeleteRetentionWorker
+import com.capsule.app.data.AppFunctionRegistry
+import com.capsule.app.data.OrbitDatabase
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -38,6 +41,39 @@ class CapsuleApplication : Application(), Configuration.Provider {
             scheduleSoftDeleteRetention()
             scheduleAuditLogRetention()
             registerDebugDumpReceiverIfDebug()
+        }
+        // T025 — :ml process owns the AppFunction registry. Register the
+        // hand-curated built-in schemas at boot. Idempotent: schemas already
+        // present at the same version are no-ops.
+        if (isMlProcess()) {
+            registerBuiltInAppFunctions()
+        }
+    }
+
+    /**
+     * T025 — registers the v1.1 built-in skill set into the encrypted
+     * `appfunction_skill` table. Runs in `:ml` only, off the main thread,
+     * fire-and-forget: a registry failure is logged but does not block
+     * the rest of the process from coming up.
+     */
+    private fun registerBuiltInAppFunctions() {
+        val scope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
+        )
+        scope.launch {
+            try {
+                val db = OrbitDatabase.getInstance(this@CapsuleApplication)
+                val registry = AppFunctionRegistry(
+                    database = db,
+                    skillDao = db.appFunctionSkillDao(),
+                    usageDao = db.skillUsageDao(),
+                    auditLogDao = db.auditLogDao(),
+                    auditWriter = com.capsule.app.audit.AuditLogWriter()
+                )
+                registry.registerAll(com.capsule.app.action.BuiltInAppFunctionSchemas.ALL)
+            } catch (t: Throwable) {
+                Log.e("CapsuleApplication", "AppFunctionRegistry boot failed", t)
+            }
         }
     }
 
@@ -87,5 +123,13 @@ class CapsuleApplication : Application(), Configuration.Provider {
         val me = info.firstOrNull { it.pid == pid } ?: return true
         // Default process name is the app package (no ":subprocess" suffix).
         return me.processName == packageName
+    }
+
+    private fun isMlProcess(): Boolean {
+        val pid = android.os.Process.myPid()
+        val am = getSystemService(ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return false
+        val info = am.runningAppProcesses ?: return false
+        val me = info.firstOrNull { it.pid == pid } ?: return false
+        return me.processName == "$packageName:ml"
     }
 }

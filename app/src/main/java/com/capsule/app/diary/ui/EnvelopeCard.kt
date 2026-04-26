@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +68,15 @@ fun EnvelopeCard(
     modifier: Modifier = Modifier,
     onRetry: ((envelopeId: String) -> Unit)? = null,
     onDelete: ((envelopeId: String) -> Unit)? = null,
-    onOpenDetail: ((envelopeId: String) -> Unit)? = null
+    onOpenDetail: ((envelopeId: String) -> Unit)? = null,
+    /**
+     * T064 (003 US2) — toggle the `done` flag on a derived to-do item.
+     * Only fires when [EnvelopeViewParcel.todoMetaJson] is non-null and
+     * the user taps the checkbox row. Diary screen wires this to
+     * `DiaryViewModel.onToggleTodoItem` which calls
+     * `IEnvelopeRepository.setTodoItemDone` on `:ml`.
+     */
+    onToggleTodoItem: ((envelopeId: String, itemIndex: Int, done: Boolean) -> Unit)? = null
 ) {
     var pickerOpen by rememberSaveable(envelope.id) { mutableStateOf(false) }
     var confirmDelete by rememberSaveable(envelope.id) { mutableStateOf(false) }
@@ -192,6 +201,48 @@ fun EnvelopeCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 4
                 )
+            }
+
+            // Row 4b — T064 (003 US2) derived to-do checklist. Rendered
+            // only when [todoMetaJson] is non-null. Each tap calls back
+            // to the diary VM which writes through `:ml` and emits a
+            // refreshed envelope view.
+            val todoMeta = envelope.todoMetaJson
+            if (!todoMeta.isNullOrBlank() && onToggleTodoItem != null) {
+                val items = remember(todoMeta) { parseTodoItems(todoMeta) }
+                if (items.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Column {
+                        items.forEachIndexed { index, item ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onToggleTodoItem(envelope.id, index, !item.done)
+                                    },
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = item.done,
+                                    onCheckedChange = { checked ->
+                                        onToggleTodoItem(envelope.id, index, checked)
+                                    }
+                                )
+                                Text(
+                                    text = item.text,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (item.done)
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    else
+                                        MaterialTheme.colorScheme.onSurface,
+                                    textDecoration = if (item.done)
+                                        androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                    else null
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Row 5 — T069 domain tag (US3 only, shown once hydration
@@ -355,4 +406,32 @@ private val URL_PRESENCE_REGEX = Regex(
 private fun containsUrl(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
     return URL_PRESENCE_REGEX.containsMatchIn(text)
+}
+
+// ---- T064 (003 US2) to-do parsing -----------------------------------
+
+internal data class TodoItem(val text: String, val done: Boolean, val dueEpochMillis: Long?)
+
+/**
+ * Tolerant parser for `IntentEnvelopeEntity.todoMetaJson`. Returns an
+ * empty list on malformed JSON, missing `items`, or empty array. Used
+ * by [EnvelopeCard]'s checklist row.
+ *
+ * Visible for unit tests in `EnvelopeCardTodoParseTest`.
+ */
+internal fun parseTodoItems(json: String): List<TodoItem> {
+    val obj = runCatching { org.json.JSONObject(json) }.getOrNull() ?: return emptyList()
+    val items = obj.optJSONArray("items") ?: return emptyList()
+    val out = mutableListOf<TodoItem>()
+    for (i in 0 until items.length()) {
+        val raw = items.optJSONObject(i) ?: continue
+        val text = raw.optString("text").trim()
+        if (text.isEmpty()) continue
+        val done = raw.optBoolean("done", false)
+        val due = if (raw.has("dueEpochMillis") && !raw.isNull("dueEpochMillis"))
+            raw.optLong("dueEpochMillis", -1L).takeIf { it >= 0L }
+        else null
+        out.add(TodoItem(text = text, done = done, dueEpochMillis = due))
+    }
+    return out
 }

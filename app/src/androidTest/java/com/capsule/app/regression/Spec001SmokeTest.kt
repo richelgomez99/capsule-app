@@ -1,4 +1,4 @@
-package com.capsule.app.regression
+ package com.capsule.app.regression
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.capsule.app.overlay.EdgeSide

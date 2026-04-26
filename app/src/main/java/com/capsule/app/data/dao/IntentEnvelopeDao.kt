@@ -62,6 +62,15 @@ interface IntentEnvelopeDao {
     @Query("UPDATE intent_envelope SET sharedContinuationResultId = :resultId WHERE id = :id")
     suspend fun updateSharedContinuationResultId(id: String, resultId: String)
 
+    /**
+     * Spec 003 v1.1 / T064 — replaces the JSON blob carried by a
+     * derived to-do envelope. Used when the user toggles a checkbox in
+     * `EnvelopeCard`. No-op (returns 0) when the row has no
+     * `todoMetaJson` to overwrite.
+     */
+    @Query("UPDATE intent_envelope SET todoMetaJson = :json WHERE id = :id")
+    suspend fun updateTodoMetaJson(id: String, json: String): Int
+
     @Query("UPDATE intent_envelope SET isArchived = 1 WHERE id = :id")
     suspend fun archive(id: String)
 

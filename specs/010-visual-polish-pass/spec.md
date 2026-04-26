@@ -2,10 +2,11 @@
 
 **Feature Branch**: `010-visual-polish-pass`
 **Created**: 2026-04-21
+**Last amended**: 2026-04-26 (cluster-suggestion card surface added after office-hours pivot)
 **Status**: Draft
 **Input**: User feedback — "nice and functional but not up to par with sleek 2026 standards, especially for Notion/Asana-grade knowledge workers."
 **Governing documents**: [.specify/memory/constitution.md](.specify/memory/constitution.md), [.specify/memory/design.md](.specify/memory/design.md)
-**Depends on**: specs 001, 002 functional surfaces landed (capture, diary, envelope detail, trash, audit log, settings). Does NOT depend on 003–009.
+**Depends on**: specs 001, 002 functional surfaces landed (capture, diary, envelope detail, trash, audit log, settings) **plus the v1 cluster-suggestion card surface (spec 002 2026-04-26 amendment) plus spec 012 (Resolution Semantics — defines the wax-seal fill states, italic resolution line, graduated visual fade, and resolution-event-entry typography that this spec implements)**. Does NOT depend on 003–009.
 **Blocks**: none. This is a polish pass — behavioral specs remain authoritative for *what* each surface does; this spec binds *how it looks, moves, and feels*.
 
 ---
@@ -24,8 +25,8 @@ Target audience (knowledge workers fluent in Notion, Asana, Linear, Arc, Things)
 
 ## Non-Goals (v1 polish pass)
 
-- No new functional surfaces. Existing screens keep their current information architecture.
-- No Figma redesign of flows. We execute the already-ratified design.md.
+- ~~No new functional surfaces. Existing screens keep their current information architecture.~~ **AMENDED 2026-04-26:** The v1 cluster-suggestion card is a new functional surface that lands inside this polish window. It is NOT a Figma redesign — it's a card that surfaces inside the existing Diary information architecture. See User Story 5 + FR-010-018 onward.
+- No Figma redesign of flows. We execute the already-ratified design.md and extend it ONLY for the cluster-suggestion card.
 - No animation library (Lottie/Compose-Animatable complex choreography). Motion is subtle and Compose-native only.
 - No dark-mode rework — design.md §3 defines both palettes; v1 ships both with parity.
 - No custom webfonts requiring network fetch (violates Principle I). Bundled fonts only.
@@ -69,6 +70,19 @@ As a user navigating between diary → envelope detail → trash → audit log �
 2. No direct `androidx.compose.material.icons.*` imports outside `/ui/primitives/WaxSeal.kt`, `/ui/primitives/TypoGlyphs.kt`, and the launcher icon resource.
 3. Lint rule `OrbitMaterialIconUsage` fires on any rogue Material-icon import introduced after this pass.
 
+### User Story 5 — "The cluster-suggestion card feels native to the Quiet Almanac" (P1, added 2026-04-26)
+
+As a user opening the Diary the morning after a research-session cluster forms, I see a single card at the top of today's page that doesn't shout for attention. It's set in the same serif as the day-header paragraph, sits inside a ruled-divider frame consistent with envelope cards, carries a subtle "agent voice" treatment (a small wax-seal-style mark distinguishing it from envelope cards but in the same visual family), and offers 2-3 inline action affordances rendered in the same monospace + caps treatment as the rest of the action vocabulary in Orbit.
+
+**Why P1**: this is the first surface in the entire product where the *agent speaks*. If it looks like a Material 3 ChatGPT bubble, the Quiet Almanac collapses. If it looks native to the daybook, it's the demo's wow moment AND a permanent product surface that won't ever feel grafted on.
+
+**Acceptance**:
+1. **Given** a research-session cluster has formed overnight, **When** I open the diary, **Then** I see one cluster-suggestion card at the top of today's page (above the day-header paragraph), set in the spec'd serif, framed by ruled dividers consistent with envelope cards.
+2. **Given** the cluster-suggestion card is visible, **When** I look at the action affordances (Summarize / Open All / Save as Structured List), **Then** they render as monospace caps labels with no Material button chrome, separated by typographic mid-dots or vertical rules.
+3. **Given** the card includes a "from the agent" mark, **When** I look at it, **Then** I see a fifth wax-seal-style glyph distinct from the four envelope-intent glyphs (▲/◆/●/○) — a glyph the design system explicitly reserves for agent voice (proposed: ✦ or a small unicursal mark per design.md amendment).
+4. **Given** I dismiss the card with a swipe or tap-to-dismiss, **When** I return to the diary, **Then** the card does not reappear for the same cluster (one-shot per cluster per day).
+5. **Given** my system has reduce-motion enabled, **When** the card surfaces, **Then** it fades in over the design.md §7 short duration with no directional motion.
+
 ### User Story 4 — "The app is readable at every accessibility scale" (P1)
 
 As a user with large system font sizes (130%+) or a color-vision deficiency (protanopia/deuteranopia), I can still parse every screen: intent is carried by glyph **shape** (▲/◆/●/○) first and accent ink second, typography respects system scale, contrast meets WCAG AA across both palettes.
@@ -111,7 +125,15 @@ As a user with large system font sizes (130%+) or a color-vision deficiency (pro
 - **FR-010-016**: All touch targets MUST be ≥48 dp (Android baseline) even when the visual asset is smaller (wax seal glyph at 24 dp with 12 dp padding on each side).
 
 **Golden tests**:
-- **FR-010-017**: System MUST ship Paparazzi (or Roborazzi) golden tests for: DiaryScreen Ready state, DiaryScreen Empty state, EnvelopeDetailScreen Ready, TrashScreen with 3 items, AuditLogScreen with groupings, SettingsScreen. Both palettes × both font scales (100% + 130%). Goldens checked into repo.
+- **FR-010-017**: System MUST ship Paparazzi (or Roborazzi) golden tests for: DiaryScreen Ready state, DiaryScreen Empty state, **DiaryScreen with cluster-suggestion card visible (research-session)**, EnvelopeDetailScreen Ready, TrashScreen with 3 items, AuditLogScreen with groupings, SettingsScreen. Both palettes × both font scales (100% + 130%). Goldens checked into repo.
+
+**Cluster-suggestion card primitives (added 2026-04-26)**:
+- **FR-010-018**: System MUST ship a `ClusterSuggestionCard(cluster: ClusterRef, actions: List<ClusterAction>)` primitive in `app/src/main/java/com/capsule/app/ui/primitives/`. The card consumes the existing token + primitive layer (FR-010-001 through FR-010-008). No new color tokens.
+- **FR-010-019**: System MUST ship an `AgentVoiceMark` glyph distinct from the four envelope-intent wax seals. Rendered via the same `Canvas.drawPath` mechanism as `WaxSeal` (FR-010-005). Reserved exclusively for agent-spoken surfaces — no other component may render this glyph in v1.
+- **FR-010-020**: System MUST ship a `ClusterActionRow(actions: List<ClusterAction>)` primitive. Renders 2-3 action labels in the design.md spec'd monospace caps treatment, separated by a typographic mid-dot (·) or vertical rule. Touch targets ≥48 dp per FR-010-016. No Material button chrome.
+- **FR-010-021**: System MUST integrate `ClusterSuggestionCard` into `DiaryScreen` (FR-010-009 migration list) **between the day-header paragraph and the thin rule** (per design.md §4.5.1, 2026-04-26 amendment), NOT above the day-header. The day-header remains the Diary's hero; the cluster card is a secondary agent voice beneath it. ONLY rendered on days where a cluster formed overnight. Stacks vertically if multiple clusters formed (max 2 cards per day in v1; further deferred to v1.1).
+- **FR-010-022**: System MUST persist card-dismissed state per (cluster_id, day_local) so a dismissed card doesn't reappear on the same day's diary view.
+- **FR-010-023**: System MUST add an integration test `DiaryClusterSuggestionCardTest` covering: card renders for a cluster, dismissal persists across navigation, action labels are tappable and route to the correct handler, card respects reduce-motion preference.
 
 ---
 
@@ -139,3 +161,6 @@ As a user with large system font sizes (130%+) or a color-vision deficiency (pro
 - **D1**: Do we bundle a custom serif (e.g., Source Serif Pro, iA Writer Quattro) or license a paid face? Custom → zero cost but generic; paid → brand-tier look. Recommendation: ship with a well-set free face (e.g., *Source Serif 4*, OFL) in v1; revisit at v1.3.
 - **D2**: Wax-seal rendering — typographic character (`FontFamily`) or `Canvas.drawPath`? Path gives pixel-perfect control + color flexibility; font gives cheap rendering + free accessibility labels. Recommendation: path, wrapped in `semantics { contentDescription = "…" }`.
 - **D3**: Golden-test framework — Paparazzi (JVM, fast) or Roborazzi (Robolectric-backed, more accurate Compose)? Recommendation: Paparazzi for speed + a minimal Roborazzi pass on the capture-sheet overlay path only.
+- **D4 (added 2026-04-26)**: `AgentVoiceMark` glyph — what's the actual mark? Options: ✦ (six-pointed star, distinct from the four envelope wax seals), a unicursal hexagram, a small typographic asterism (⁂), or a custom stroke. Recommendation: design.md gets a §4.3 amendment proposing ✦ as the agent-voice mark, with rationale that it's tonally compatible with the wax-seal vocabulary (small, drawn, ink-like) but visually distinct (radial vs. solid). Lock by April 30 to unblock FR-010-019.
+- **D5 (added 2026-04-26)**: Cluster-card stacking with per-envelope Orbit Actions chips (spec 003) — when both surface on the same day, how do they visually relate? Option A: cluster card always at top, per-envelope chips inline under their envelopes (parallel hierarchies). Option B: a unified "actionable" lane to the side. Recommendation: A in v1 (cleaner), defer B as v1.1 explorationfor when Orbit Actions ships. Spec 003 also flags this question.
+- **D6 (added 2026-04-26, RESOLVED)**: Where in design.md does the cluster-suggestion card live? **Resolved 2026-04-26**: design.md gained §4.5.1 ("Cluster-suggestion card") as a sub-section of §4.5 (Diary — today's page). Placement decided: inside the Diary's composition list between item #2 (Day header paragraph) and item #3 (Thin rule). The day header remains the Diary's hero; the cluster card is a secondary agent voice beneath it. Italic Newsreader is the agent-voice tonal mark.

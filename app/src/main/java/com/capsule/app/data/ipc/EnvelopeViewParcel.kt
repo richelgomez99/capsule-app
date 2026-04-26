@@ -38,7 +38,9 @@ data class EnvelopeViewParcel(
     /** T055a — canonical URL from a successful hydration; null if not hydrated. */
     val canonicalUrl: String? = null,
     /** T091a — when soft-deleted; null on live envelopes. */
-    val deletedAtMillis: Long? = null
+    val deletedAtMillis: Long? = null,
+    /** T064 (003 US2) — derived to-do JSON: `{items:[…], derivedFromProposalId}`. Null for non-todo envelopes. */
+    val todoMetaJson: String? = null
 ) : Parcelable {
 
     constructor(parcel: Parcel) : this(
@@ -61,7 +63,8 @@ data class EnvelopeViewParcel(
         dayOfWeekLocal = parcel.readInt(),
         intentHistoryJson = parcel.readString() ?: "[]",
         canonicalUrl = parcel.readString(),
-        deletedAtMillis = parcel.readLong().takeIf { it != 0L }
+        deletedAtMillis = parcel.readLong().takeIf { it != 0L },
+        todoMetaJson = parcel.readString()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -85,6 +88,7 @@ data class EnvelopeViewParcel(
         parcel.writeString(intentHistoryJson)
         parcel.writeString(canonicalUrl)
         parcel.writeLong(deletedAtMillis ?: 0L)
+        parcel.writeString(todoMetaJson)
     }
 
     override fun describeContents(): Int = 0

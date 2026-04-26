@@ -72,8 +72,12 @@ class DiaryActivity : ComponentActivity() {
 
         // T055 — pre-warm the :ml binding off the main thread so first
         // render isn't blocked on bindService round-trip.
+        // T054 — also pre-warm the :capture IActionExecutor binding so
+        // the first action confirm tap doesn't pay the bindService
+        // round-trip cost on the main thread.
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { repository.connect() }
+            runCatching { repository.connectExecutor() }
             // T056 — fetch the first batch of older non-empty days in the
             // background so the pager has something to swipe into by the
             // time the user starts backscrolling.

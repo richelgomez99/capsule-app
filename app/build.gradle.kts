@@ -71,6 +71,12 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.sqlcipher.android)
 
+    // AppFunctions (003 v1.1) — agent-callable function registry. KSP processor
+    // generates argsSchemaJson constants from @AppFunction-annotated args data
+    // classes (see com.capsule.app.action.AppFunctionAnnotations).
+    implementation(libs.androidx.appfunctions.runtime)
+    ksp(libs.androidx.appfunctions.compiler)
+
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 

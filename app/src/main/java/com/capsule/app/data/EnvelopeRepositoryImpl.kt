@@ -1,5 +1,8 @@
 package com.capsule.app.data
 
+import com.capsule.app.ai.extract.ActionExtractionPrefilter
+import com.capsule.app.ai.extract.ActionExtractor
+import com.capsule.app.ai.extract.ExtractOutcome
 import com.capsule.app.audit.AuditLogWriter
 import com.capsule.app.continuation.ContinuationEngine
 import com.capsule.app.data.entity.ContinuationEntity
@@ -56,7 +59,20 @@ class EnvelopeRepositoryImpl(
      * tests (T029–T033c) keep working; production constructs it in
      * `EnvelopeRepositoryService`.
      */
-    private val continuationEngine: ContinuationEngine? = null
+    private val continuationEngine: ContinuationEngine? = null,
+    /**
+     * Spec 003 v1.1 — actions delegate. Nullable so 002 contract tests stay
+     * green. Production wiring constructs it in `EnvelopeRepositoryService`.
+     * AIDL methods that need it short-circuit with safe defaults when null.
+     */
+    private val actionsDelegate: ActionsRepositoryDelegate? = null,
+    /**
+     * T043/T044 — extractor invoked from the ACTION_EXTRACT worker via the
+     * binder method [extractActionsForEnvelope]. Nullable for the same
+     * reason as [actionsDelegate]; production binds it in
+     * `EnvelopeRepositoryService`.
+     */
+    private val actionExtractor: ActionExtractor? = null
 ) : IEnvelopeRepository.Stub() {
 
     /** envelopeId → millis-deadline after which `undo()` returns false. */
@@ -203,6 +219,21 @@ class EnvelopeRepositoryImpl(
             // `seedScreenshotHydrations`.
             if (contentType == ContentType.IMAGE && !draft.imageUri.isNullOrBlank()) {
                 engine.enqueueScreenshotOcr(envelopeId = id, imageUri = draft.imageUri!!)
+            }
+            // T046 — post-seal ACTION_EXTRACT enqueue. Mirrors the URL_HYDRATE
+            // pattern: pre-filter synchronously (cheap regex pass), then
+            // hand to ContinuationEngine which gates on charger+wifi. The
+            // ActionExtractor proper runs inside the worker via the binder.
+            //
+            // Skip if: kind != REGULAR (DIGEST/DERIVED never propose), text
+            // is empty, or prefilter sees no actionable signal. We do NOT
+            // re-check sensitivity here — the extractor itself does that
+            // again as defense in depth (contract §4 step 2).
+            if (contentType == ContentType.TEXT &&
+                !draft.textContent.isNullOrBlank() &&
+                ActionExtractionPrefilter.shouldExtract(draft.textContent!!)
+            ) {
+                engine.enqueueActionExtract(envelopeId = id)
             }
         }
 
@@ -598,6 +629,118 @@ class EnvelopeRepositoryImpl(
         }
     }
 
+    // ---- Spec 003 v1.1 — Orbit Actions ----
+
+    override fun lookupAppFunction(functionId: String): com.capsule.app.data.ipc.AppFunctionSummaryParcel? {
+        val delegate = actionsDelegate ?: return null
+        return runBlocking { delegate.lookupAppFunction(functionId) }
+    }
+
+    override fun listAppFunctions(appPackage: String): List<com.capsule.app.data.ipc.AppFunctionSummaryParcel> {
+        val delegate = actionsDelegate ?: return emptyList()
+        return runBlocking { delegate.listAppFunctions(appPackage) }
+    }
+
+    override fun recordActionInvocation(
+        executionId: String,
+        proposalId: String,
+        functionId: String,
+        outcome: String,
+        outcomeReason: String?,
+        dispatchedAtMillis: Long,
+        completedAtMillis: Long,
+        latencyMs: Long,
+        episodeId: String?
+    ) {
+        val delegate = actionsDelegate ?: return
+        val parsed = runCatching {
+            com.capsule.app.data.model.ActionExecutionOutcome.valueOf(outcome)
+        }.getOrElse { com.capsule.app.data.model.ActionExecutionOutcome.FAILED }
+        runBlocking {
+            delegate.recordActionInvocation(
+                executionId = executionId,
+                proposalId = proposalId,
+                functionId = functionId,
+                outcome = parsed,
+                outcomeReason = outcomeReason,
+                dispatchedAtMillis = dispatchedAtMillis,
+                completedAtMillis = completedAtMillis,
+                latencyMs = latencyMs,
+                episodeId = episodeId
+            )
+        }
+    }
+
+    override fun markProposalConfirmed(proposalId: String): Boolean {
+        val delegate = actionsDelegate ?: return false
+        return runBlocking { delegate.markProposalConfirmed(proposalId) }
+    }
+
+    override fun markProposalDismissed(proposalId: String): Boolean {
+        val delegate = actionsDelegate ?: return false
+        return runBlocking { delegate.markProposalDismissed(proposalId) }
+    }
+
+    override fun observeProposalsForEnvelope(
+        envelopeId: String,
+        observer: com.capsule.app.data.ipc.IActionProposalObserver
+    ) {
+        actionsDelegate?.observeProposalsForEnvelope(envelopeId, observer)
+    }
+
+    override fun stopObservingProposals(observer: com.capsule.app.data.ipc.IActionProposalObserver) {
+        actionsDelegate?.stopObservingProposals(observer)
+    }
+
+    /**
+     * T044 — entry point for [com.capsule.app.ai.extract.ActionExtractionWorker].
+     * The worker runs in the default WorkManager process; binding to :ml's
+     * EnvelopeRepositoryService and calling this method is the only way
+     * the worker reaches [ActionExtractor] (which holds the OrbitDatabase
+     * reference owned by :ml).
+     *
+     * Outcome encoding (kept simple-string so we don't have to expand the
+     * AIDL parcel surface for one method):
+     *   "PROPOSED:N"            — N rows inserted
+     *   "NO_CANDIDATES"         — extractor produced nothing
+     *   "SKIPPED:<reason>"      — kind/sensitivity gate skipped
+     *   "FAILED:<reason>"       — Nano timeout / exception → caller retries
+     *   "UNAVAILABLE"           — extractor not wired (test/contract config)
+     */
+    override fun extractActionsForEnvelope(envelopeId: String): String {
+        val extractor = actionExtractor ?: return "UNAVAILABLE"
+        return runBlocking {
+            when (val outcome = extractor.extract(envelopeId)) {
+                is ExtractOutcome.NoCandidates -> "NO_CANDIDATES"
+                is ExtractOutcome.Proposed     -> "PROPOSED:${outcome.proposalIds.size}"
+                is ExtractOutcome.Skipped      -> "SKIPPED:${outcome.reason}"
+                is ExtractOutcome.Failed       -> "FAILED:${outcome.reason}"
+            }
+        }
+    }
+
+    // T061 — local-target dispatch for `tasks.createTodo`. Returns the
+    // ids of newly created derived envelopes (in input order); empty
+    // list when delegate is unavailable, parent is missing, or items
+    // array is empty/malformed. See ActionsRepositoryDelegate.
+    override fun createDerivedTodoEnvelope(
+        parentEnvelopeId: String,
+        itemsJson: String,
+        proposalId: String
+    ): List<String> {
+        val delegate = actionsDelegate ?: return emptyList()
+        return runBlocking {
+            delegate.createDerivedTodoEnvelope(parentEnvelopeId, itemsJson, proposalId)
+        }
+    }
+
+    // T064 — checkbox toggle for derived-todo envelopes. Silently
+    // no-ops when envelope/index/json are invalid.
+    override fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
+        val delegate = actionsDelegate ?: return
+        runBlocking { delegate.setTodoItemDone(envelopeId, itemIndex, done) }
+    }
+
     // ---- Helpers ----
 
     private fun computeDayLocal(nowMillis: Long, tzId: String): String {
@@ -666,11 +809,13 @@ class EnvelopeRepositoryImpl(
         dayOfWeekLocal = state.dayOfWeekLocal,
         intentHistoryJson = intentHistoryJson,
         canonicalUrl = latestResult?.canonicalUrl,
-        deletedAtMillis = deletedAt
+        deletedAtMillis = deletedAt,
+        todoMetaJson = todoMetaJson
     )
 
     /** Equality by the underlying IBinder identity so observer lifecycles cancel cleanly. */
-    private data class IBinderKey(val binder: android.os.IBinder)
+    // Lifted to top-level [IBinderKey] in v1.1 (003) so [ActionsRepositoryDelegate]
+    // can share the same wrapper.
 
     companion object {
         const val UNDO_WINDOW_MS: Long = 10_000L
