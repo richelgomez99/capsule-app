@@ -54,11 +54,20 @@ interface LlmProvider {
      * Spec 002 Phase 11 / T123 — produce a sentence-embedding for the cluster
      * engine.
      *
-     * Graceful-degrade contract (mirrors [com.capsule.app.diary.NanoSummariser]):
-     *  - returns `null` on blank/empty input (caller short-circuits),
-     *  - returns `null` when AICore is unavailable, the v1 stub is still
-     *    `TODO`, the call times out, or any [Throwable] escapes the impl,
-     *  - never throws.
+     * Graceful-degrade contract — `embed` returns `null` and **never throws**:
+     *  - blank/empty input → `null` (caller short-circuits),
+     *  - AICore unavailable, v1 stub still `TODO`, call times out, or any
+     *    [Throwable] escapes the impl → `null`,
+     *  - **[com.capsule.app.ai.LlmProviderDiagnostics.forceNanoUnavailable]
+     *    flag set → `null`** (intentional asymmetry vs [summarize] /
+     *    [extractActions], which both throw `NanoUnavailableException` on
+     *    that flag). Rationale: the cluster detection worker (Block 4)
+     *    embeds N envelopes back-to-back per run; throwing per call would
+     *    require try/catch on every iteration and risk fast-failing on the
+     *    first envelope. The worker already pre-checks the flag as a
+     *    top-level kill-switch, so honouring it here as a `null` return is
+     *    safer and cheaper. **Do not "fix" this to throw** — the regression
+     *    test in `NanoLlmProviderEmbedTest` will fail if you do.
      *
      * Implementations run on the `:ml` process and MUST NOT touch the network
      * (Principle II — Local by Default). The returned [EmbeddingResult]
