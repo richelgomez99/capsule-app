@@ -49,4 +49,21 @@ interface LlmProvider {
         registeredFunctions: List<AppFunctionSummary>,
         maxCandidates: Int = 3
     ): ActionExtractionResult
+
+    /**
+     * Spec 002 Phase 11 / T123 — produce a sentence-embedding for the cluster
+     * engine.
+     *
+     * Graceful-degrade contract (mirrors [com.capsule.app.diary.NanoSummariser]):
+     *  - returns `null` on blank/empty input (caller short-circuits),
+     *  - returns `null` when AICore is unavailable, the v1 stub is still
+     *    `TODO`, the call times out, or any [Throwable] escapes the impl,
+     *  - never throws.
+     *
+     * Implementations run on the `:ml` process and MUST NOT touch the network
+     * (Principle II — Local by Default). The returned [EmbeddingResult]
+     * stamps the producing model's label + dimensionality so downstream
+     * cosine math can refuse mismatched vectors (FR-038, FR-039).
+     */
+    suspend fun embed(text: String): EmbeddingResult?
 }

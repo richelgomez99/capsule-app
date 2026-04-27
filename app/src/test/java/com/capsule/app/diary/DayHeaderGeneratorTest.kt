@@ -69,6 +69,8 @@ class DayHeaderGeneratorTest {
             registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
             maxCandidates: Int
         ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
+
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 
     @Test

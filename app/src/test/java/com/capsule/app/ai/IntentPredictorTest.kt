@@ -98,6 +98,7 @@ class IntentPredictorTest {
             registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
             maxCandidates: Int
         ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 
     private class ThrowingProvider(private val cause: Throwable) : LlmProvider {
@@ -114,6 +115,7 @@ class IntentPredictorTest {
             registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
             maxCandidates: Int
         ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 
     private class SlowProvider(private val delayMillis: Long) : LlmProvider {
@@ -131,5 +133,6 @@ class IntentPredictorTest {
             registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
             maxCandidates: Int
         ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 }

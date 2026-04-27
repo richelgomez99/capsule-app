@@ -259,5 +259,7 @@ class DigestComposerTest {
             registeredFunctions: List<AppFunctionSummary>,
             maxCandidates: Int
         ): ActionExtractionResult = error("not used by DigestComposerTest")
+
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 }

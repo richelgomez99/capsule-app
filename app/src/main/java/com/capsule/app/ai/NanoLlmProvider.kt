@@ -64,5 +64,45 @@ class NanoLlmProvider : LlmProvider {
             candidates = emptyList()
         )
     }
+
+    /**
+     * T124 — embedding via AICore (TODO until AICore SDK lands).
+     *
+     * Graceful-degrade contract per [LlmProvider.embed]:
+     *  - blank input → `null` (no AICore call),
+     *  - [LlmProviderDiagnostics.forceNanoUnavailable] flag set → `null`
+     *    (no exception escapes — embedding is a best-effort signal that
+     *    must never crash the cluster worker),
+     *  - any [Throwable] escaping the underlying call → `null`.
+     *
+     * When the AICore embedding API lands, this method will:
+     *  1. early-return `null` for `text.isBlank()`,
+     *  2. invoke the AICore embedding model,
+     *  3. wrap the float[] in [EmbeddingResult] stamped with [MODEL_LABEL]
+     *     and the model's dimensionality,
+     *  4. catch [Throwable] → log + return `null`.
+     */
+    override suspend fun embed(text: String): EmbeddingResult? {
+        if (text.isBlank()) return null
+        if (LlmProviderDiagnostics.forceNanoUnavailable) return null
+        return try {
+            // TODO(US8 — AICore embedding integration): replace with real call.
+            // Returning null until the AICore embedding API is available; the
+            // cluster worker treats null as "no embedding available, skip".
+            null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    companion object {
+        /**
+         * Stamped onto every [EmbeddingResult] this provider produces, and
+         * onto every [com.capsule.app.data.entity.ClusterEntity.modelLabel]
+         * so the worker can refuse to compute similarity across model rev
+         * boundaries (FR-038, FR-039). Bumped when AICore ships a new build.
+         */
+        const val MODEL_LABEL: String = "nano-v4-build-2026-05-01"
+    }
 }
 

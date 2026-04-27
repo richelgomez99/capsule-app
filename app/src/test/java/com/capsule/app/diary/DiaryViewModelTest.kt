@@ -183,6 +183,8 @@ class DiaryViewModelTest {
                 provenance = LlmProvenance.LocalNano,
                 candidates = emptyList()
             )
+
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
     }
 
     private fun newVm(
