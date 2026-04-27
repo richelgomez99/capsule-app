@@ -14,3 +14,13 @@ enum class LlmProvenance {
     ORBIT_MANAGED,
     BYOK
 }
+
+/**
+ * Map the runtime sealed-class provenance from `:ml` ([com.capsule.app.ai.model.LlmProvenance])
+ * down to the persistable enum used on entities.
+ */
+fun com.capsule.app.ai.model.LlmProvenance.toEntityEnum(): LlmProvenance = when (this) {
+    is com.capsule.app.ai.model.LlmProvenance.LocalNano -> LlmProvenance.LOCAL_NANO
+    is com.capsule.app.ai.model.LlmProvenance.OrbitManaged -> LlmProvenance.ORBIT_MANAGED
+    is com.capsule.app.ai.model.LlmProvenance.Byok -> LlmProvenance.BYOK
+}

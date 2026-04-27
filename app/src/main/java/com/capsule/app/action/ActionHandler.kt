@@ -40,7 +40,7 @@ sealed class HandlerResult {
  * terminal outcome in the DB is the executor service's job; handlers
  * just return a [HandlerResult].
  */
-fun interface ActionHandler {
+interface ActionHandler {
     suspend fun handle(
         context: Context,
         skill: AppFunctionSummaryParcel,

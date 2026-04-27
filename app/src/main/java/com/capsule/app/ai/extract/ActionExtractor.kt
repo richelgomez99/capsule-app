@@ -15,6 +15,7 @@ import com.capsule.app.data.entity.IntentEnvelopeEntity
 import com.capsule.app.data.model.ActionProposalState
 import com.capsule.app.data.model.AuditAction
 import com.capsule.app.data.model.SensitivityScope
+import com.capsule.app.data.model.toEntityEnum
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import org.json.JSONException
@@ -109,7 +110,7 @@ class ActionExtractor(
         if (result.candidates.isEmpty()) return ExtractOutcome.NoCandidates
 
         // Step 5–6 — validate, filter, insert + audit in one txn.
-        val provenance = result.provenance
+        val provenance = result.provenance.toEntityEnum()
         val accepted = mutableListOf<ActionProposalEntity>()
         val droppedSensitivityIds = mutableListOf<String>() // function ids dropped for scope mismatch
         val schemaByFunctionId = summaries.associateBy { it.functionId }

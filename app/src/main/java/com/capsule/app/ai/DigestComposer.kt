@@ -2,6 +2,7 @@ package com.capsule.app.ai
 
 import com.capsule.app.ai.model.SummaryResult
 import com.capsule.app.data.model.LlmProvenance
+import com.capsule.app.data.model.toEntityEnum
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -83,7 +84,7 @@ class DigestComposer(
             DigestComposition.Composed(
                 text = result.text.trim(),
                 derivedFromEnvelopeIds = derivedIds,
-                provenance = result.provenance,
+                provenance = result.provenance.toEntityEnum(),
                 locale = result.generationLocale
             )
         }

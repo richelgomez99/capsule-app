@@ -76,7 +76,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 # Google Play Services Location (T081 Activity Recognition wrapper)
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 # AndroidX AppFunctions (003 T002 — agent-callable function registry; Android 15+ system service, compat fallback on 14)
-androidx-appfunctions-runtime = { group = "androidx.appfunctions", name = "appfunctions-runtime", version.ref = "appfunctions" }
+androidx-appfunctions-runtime = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
 androidx-appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 
 [plugins]
