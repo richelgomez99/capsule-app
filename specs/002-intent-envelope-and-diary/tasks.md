@@ -12,6 +12,20 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 — Phase 11 Block 3 (T127–T128) similarity engine landed**
+
+- **T127 SimilarityEngine**: [SimilarityEngine.kt](app/src/main/java/com/capsule/app/cluster/SimilarityEngine.kt) — pure-JVM `object` exposing `cosine`, `bucket4h`, `tokenJaccard`, `isCluster`, `averagePairwiseCosine`, plus the `ClusterCandidate` projection and `EmbeddingDimensionMismatch` exception. Thresholds frozen in `SimilarityEngine.Thresholds` (COSINE 0.7, MIN_DOMAINS 2, JACCARD 0.3, MIN_SIZE 3, BUCKET_WIDTH_MS 4h) per FR-028. **Pairwise (not centroid)** checks in `isCluster` so a single near-duplicate can't drag the whole bucket past threshold by averaging — the spec wants every member to corroborate every other. Cosine returns 0 on either-side zero-vector and throws `EmbeddingDimensionMismatch` on size mismatch (model rev drift signal — Block 4's worker turns this into a `nano_unavailable` audit + skip). Jaccard uses an internal lower-cased noun extractor (regex split, ≥4-char filter, 50-stopword list) — text normalisation is intentionally local to the engine to keep `ai/` decoupled from a NLP dependency.
+
+- **bucket4h algorithm change vs amendment doc**: the doc sketch suggested grid-bucketing (`floor((t - anchor) / 4h)`); implementation switched to **greedy session grouping** (sort by ts; each unbucketed capture opens a window starting at its own ts and absorbs everything within +4h). **Rationale**: grid-bucketing aligned on a fixed anchor (median or first-of-day) loses clusters whose density centre straddles a grid edge — e.g. captures at 14:00/16:00/18:00 split across a 15:00 boundary. Greedy session grouping is what "captures-density centers, NOT wall-clock midnight" (FR-028 verbatim) actually means. DST is automatically handled because comparisons stay in epoch ms. Caught by two failing tests on the first run (`bucket4h groups within four hour window into one bucket` and the DST test); fixed before commit.
+
+- **T128 SimilarityEngineTest**: [SimilarityEngineTest.kt](app/src/test/java/com/capsule/app/cluster/SimilarityEngineTest.kt) — 24 cases. Cosine: identity / orthogonal / opposite / zero / dim-mismatch / known pair (`(1,2)·(2,3) = 0.99227787`). Jaccard: empty / identical / discrimination AI-vs-cooking / threshold-pass on related noun overlap. bucket4h: empty / 3-captures-within-3h-into-one-bucket / 5h-split-into-two / DST 2026-03-08 NYC spring-forward (01:30 EST → 03:30 EDT, 1h elapsed, single bucket). isCluster: 5 rejection paths (n<3, single domain, low cosine, low jaccard, missing embedding) + 1 accept. Threshold edge: helper `pairWithCosine(target)` builds unit vectors `(1,0)` and `(target, sqrt(1-target²))` to assert 0.6999 fails / 0.7000 passes / 0.7001 passes. averagePairwiseCosine 0-for-1 / 1-for-identical. EmbeddingDimensionMismatch is-a IllegalArgumentException.
+
+- **Off-spec additions (deliberate, low-cost)**: `ClusterCandidate` projection + `averagePairwiseCosine` helper + `EmbeddingDimensionMismatch` exception are not in T127's task line but are needed downstream — the worker can't pass entity rows to a pure module without a projection, the audit log wants the per-cluster similarity score, and a typed exception lets the worker distinguish model-rev drift from generic IAE. All three will be referenced by Block 4.
+
+- **Gates**: `./gradlew :app:testDebugUnitTest --tests "*SimilarityEngineTest*"` ✅ 24/24 green.
+
+- **Remaining**: Block 4 (T129–T132) ClusterDetectionWorker next — ⚠ uses `RuntimeFlags.clusterModelLabelLock` which doesn't exist until Block 10. Plan: stub the read with a `const val` placeholder in Block 4 and migrate to `RuntimeFlags` in Block 10, or pull `RuntimeFlags` forward. Will decide at Block 4 entry.
+
 **2026-04-27 — Phase 11 Block 2 follow-up (gate fix-ups)**
 
 Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
