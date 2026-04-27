@@ -1,0 +1,43 @@
+{
+  "id": "research-session-11",
+  "domain": "sports-analytics",
+  "envelopes": [
+    {
+      "envelope_id": "env-11-a",
+      "url": "https://www.espn.com/nfl/story/_/id/42089123/2026-draft-prospect-rankings",
+      "captured_at": "2026-04-25T11:00:00Z",
+      "url_domain": "espn.com",
+      "hydrated_text": "Our final big board for the 2026 NFL Draft has the consensus top three tightly clustered at quarterback, edge rusher, and offensive tackle. The QB at the top is the most heavily-scouted prospect in years, with measurable improvement from his sophomore to junior season in every public charting metric we track — completion percentage above expectation, deep-ball accuracy, and pressure-to-sack conversion all moved in the right direction by meaningful margins.\n\nThe edge rusher is the consensus best non-QB; concerns about his frame at the combine were partially answered by impressive testing numbers, particularly a 4.49 forty at 263 lbs which historically projects to elite pass-rushing production. The offensive tackle is the least controversial of the three: a four-year starter at a Power 5 school with no measurable weaknesses in pass protection or run blocking.\n\nThe board gets significantly muddier in the 4-15 range, where five interior defensive linemen, three wide receivers, and two cornerbacks have closely-bunched grades.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-11-b",
+      "url": "https://www.espn.com/nfl/story/_/id/42091567/free-agency-2026-grades",
+      "captured_at": "2026-04-25T11:48:00Z",
+      "url_domain": "espn.com",
+      "hydrated_text": "The 2026 free-agency period is in the books, with 41 contracts of $25M+ in total value signed across the league. We grade each team's class on a roster-fit basis and find a familiar pattern: teams with strong front offices tend to spend less and address roster weaknesses precisely; teams with weaker front offices tend to overpay for veteran talent at positions where their own internal options were already adequate.\n\nThe class of the offseason was a Super-Bowl-contending team that signed only two players but spent meaningfully on a starting cornerback and a backup quarterback — the two roster holes most exposed in their playoff loss. The worst-graded class belonged to a rebuilding team that signed seven veterans on multi-year deals, locking in cap commitments that will conflict with their next two draft classes.\n\nWe acknowledge that grading free agency before the players have played a snap is inherently speculative; our methodology is to focus on roster fit and contract structure rather than per-player projections.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-11-c",
+      "url": "https://www.espn.com/nfl/story/_/id/42095034/qb-development-2026",
+      "captured_at": "2026-04-25T12:30:00Z",
+      "url_domain": "espn.com",
+      "hydrated_text": "Quarterback development trajectories have become unusually heterogeneous. Of the seven QBs drafted in the first round in 2024, two are now bench-pieces, two are uncertain starters with possible benching ahead, and three look like clear long-term starters. This 43% clear-success rate is in line with historical first-round QB hit rates but feels noteworthy given the unprecedented scouting and developmental resources teams now invest in their first-round picks.\n\nThe variable that best separates the success and bust groups in our retrospective analysis is starting opportunity timing — the three success cases all sat for at least eight games before being asked to start full-time, while the two clearest busts were thrown in immediately after being drafted. Causation is hard to establish given selection effects, but the correlation is consistent with the broader player-development literature on developmental quarterbacks.\n\nWe close with a tentative recommendation: teams that draft a QB without a credible bridge starter to allow at least a half-season redshirt are taking on substantial development risk that the data suggests is hard to overcome.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "[NEGATIVE FIXTURE — all 3 envelopes share url_domain=espn.com so domains_distinct=1 fails FR-028 MIN_DOMAINS=2 check.] (env-11-a)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.78,
+    "domains_distinct": 1,
+    "captured_at_span_hours": 1.5,
+    "expected_outcome": "REJECTED_SINGLE_DOMAIN"
+  },
+  "notes": "NEGATIVE: domains_distinct=1 (all espn.com) fails MIN_DOMAINS=2. Cosine 0.78 and span 1.5h are both healthy — rejection is purely on domain-diversity boundary. Topic is genuinely coherent (NFL roster construction) which makes the test sharper: the engine must reject on diversity even when content is similar."
+}

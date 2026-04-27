@@ -1,0 +1,45 @@
+{
+  "id": "research-session-20",
+  "domain": "cooking",
+  "envelopes": [
+    {
+      "envelope_id": "env-20-a",
+      "url": "https://www.kingarthurbaking.com/blog/2026/04/laminated-doughs-explained",
+      "captured_at": "2026-04-26T18:00:00Z",
+      "url_domain": "kingarthurbaking.com",
+      "hydrated_text": "Laminated doughs — croissant, danish, kouign-amann — are among the highest-skill techniques in home baking. The process of folding cold butter into dough through a series of turns and rests creates the alternating layers that produce flaky, layered final products. We demystify the process and discuss the variables that matter most.\n\nThe key insight is that lamination is fundamentally a temperature-management exercise. The butter must stay cold enough that it remains plastic and pliable rather than melting into the dough; the dough must be just warm enough that it remains extensible and doesn't tear during rolling. Most home-bakery failures happen because the dough warms above the butter's plasticity range during rolling, producing leaked butter and dense final layers rather than crisp separation.\n\nWe walk through three turn schedules — 3-fold, 4-fold, and book-fold — and discuss when each is appropriate. For most home bakers starting out, three 3-folds (27 layers) is the sweet spot: enough lamination to produce visible structure, simple enough to execute reliably, and forgiving of small temperature missteps.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-20-b",
+      "url": "https://www.americastestkitchen.com/recipes/15102-foolproof-puff-pastry",
+      "captured_at": "2026-04-26T19:30:00Z",
+      "url_domain": "americastestkitchen.com",
+      "hydrated_text": "We tested home puff pastry recipes across two years and ten kitchens and developed a workflow that produces reliable results without requiring the marble-slab-and-frigid-kitchen setup of professional bakeries. The recipe makes about 1.5 lbs of dough, enough for several pastry projects.\n\nThe key adaptations from professional methods: (1) use European-style butter (84%+ butterfat) which has a wider plasticity range and is more forgiving of small temperature variations; (2) freeze grated butter into the flour rather than working with a butter block, which makes the first turn substantially easier and reduces the risk of warming; (3) work in 30-minute sessions with 30-minute refrigerator rests between turns, breaking the process into manageable chunks rather than one continuous session.\n\nThe finished dough yields visibly layered, crisp pastry that is indistinguishable from professional results in blind tasting. The total elapsed time is about 4 hours from mixing to ready-to-bake, but only about 60 minutes is active work.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-20-c",
+      "url": "https://www.kingarthurbaking.com/blog/2026/04/croissant-troubleshooting",
+      "captured_at": "2026-04-26T21:00:00Z",
+      "url_domain": "kingarthurbaking.com",
+      "hydrated_text": "Croissant problems fall into a small number of identifiable failure modes, each with characteristic symptoms and a usually-effective fix. We organise the most common issues by visible symptom for easy diagnosis.\n\nDense, doughy interior with no visible layers: the butter melted into the dough during rolling. Cause: dough warmed too much, or butter started too soft. Fix: refrigerate longer between turns, work in a cooler kitchen, use higher-butterfat butter that has a wider plasticity range.\n\nLeaked butter pooling in the pan during baking: the lamination tore open. Cause: butter was too cold and brittle relative to dough, causing the butter layer to crack rather than spread. Fix: rest the dough longer at refrigerator temperature so butter and dough equilibrate before rolling.\n\nFlat, under-risen croissants: under-proofed at the final shape stage. Cause: insufficient final proof, or proof at too cool a temperature. Fix: proof at 75-80 F until the croissants are visibly puffed and jiggle when shaken, typically 2-3 hours.\n\nWe also discuss less common issues (uneven browning, hollow interiors, off flavours) and the diagnostic questions that distinguish them.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Lamination is fundamentally a temperature-management exercise: butter must stay plastic-pliable while dough stays warm enough to remain extensible; most home-baker failures come from the dough warming above butter's plasticity range during rolling. (env-20-a)",
+      "Home puff pastry can match professional results by using high-butterfat European butter, freezing grated butter into flour rather than working with a butter block, and breaking the process into 30-minute work-and-rest sessions. (env-20-b)",
+      "Most croissant failures map to identifiable symptoms with usually-effective fixes: dense interior means melted butter (cool the kitchen, equilibrate longer), leaked butter means cracking from too-cold brittle butter (rest longer to equilibrate), flat results mean under-proofing (proof at 75-80F until visibly puffed). (env-20-a, env-20-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.82,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 3.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "comfortable cluster: 3.0h span, 0.82 cosine, 2 distinct hostnames (kingarthurbaking x2, americastestkitchen x1); topical thread is laminated/puff/croissant technique"
+}

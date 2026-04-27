@@ -1,0 +1,45 @@
+{
+  "id": "research-session-04",
+  "domain": "ai-ml",
+  "envelopes": [
+    {
+      "envelope_id": "env-04-a",
+      "url": "https://openai.com/research/agent-reliability-frameworks",
+      "captured_at": "2026-04-18T10:00:00Z",
+      "url_domain": "openai.com",
+      "hydrated_text": "Agent reliability — the rate at which a multi-step LLM-driven workflow completes a task end-to-end without human intervention — remains stubbornly low for production deployments. We share data from internal pilots of three agent families (web-browsing, code-editing, calendar-management) and find that single-step accuracy in the 90-95% range translates to multi-step success rates below 50% on workflows of 10 or more steps.\n\nThe dominant failure mode is not catastrophic mistakes but tool-call malformation — argument names misspelled, optional fields omitted, JSON schemas violated. Adding a strict validation step that rejects malformed calls and gives the agent a single retry recovers 60% of these failures with negligible latency cost.\n\nThe remaining 40% are genuine reasoning errors: misreading state, choosing the wrong tool, looping indefinitely on a sub-goal. We argue these need a different intervention — explicit state-tracking memory and watchdog monitors — and discuss our prototype implementations.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-04-b",
+      "url": "https://www.anthropic.com/research/computer-use-evals",
+      "captured_at": "2026-04-18T11:14:00Z",
+      "url_domain": "anthropic.com",
+      "hydrated_text": "We expand our computer-use evaluation suite to cover seven new task categories, with particular focus on tasks where the agent must recover from unexpected UI state (modal dialogs appearing, network errors, version drift in third-party apps). Performance gaps between models become significantly larger on these recovery-heavy tasks than on the original happy-path tasks.\n\nA model that scores 78% on the original suite drops to 41% when the same tasks are run with random injected interruptions. The gap is partly explained by training data — most tutorial-style traces are happy-path and so models are systematically under-exposed to recovery patterns. We are working on a synthetic-interruption training pipeline to address this.\n\nWe also discuss benchmark contamination risks for the computer-use category specifically: many popular eval tasks use SaaS apps whose UIs evolve weekly, making historical comparison nearly impossible. We propose pinning the evaluation environment to a specific Docker image and frozen app version to enable longitudinal study.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-04-c",
+      "url": "https://openai.com/blog/post-training-for-agent-tasks",
+      "captured_at": "2026-04-18T12:00:00Z",
+      "url_domain": "openai.com",
+      "hydrated_text": "Post-training for agentic tasks differs from post-training for chat in several practical ways. Chat post-training optimises for response quality on relatively short interactions; agent post-training must optimise for long-horizon credit assignment, where the right action at step 3 only pays off at step 17.\n\nWe describe our pipeline: collect rollouts from a base model on a target task distribution, label them with a sparse outcome reward (success/failure at the end), then run a hybrid PPO/DPO update where the policy gradient signal flows from the outcome reward through a learned step-attribution model. The step-attribution model is the key trick — without it, every action in a successful trajectory gets equal credit, which dilutes the signal so badly that learning collapses on workflows over 6-8 steps.\n\nResults on internal agent evals: 12-15 absolute points improvement over supervised fine-tuning on the same data. We discuss the failure modes we encountered (reward hacking via early termination, distributional drift away from sensible tool sequences) and the regularisers we added to control them.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Multi-step agent reliability degrades sharply with workflow length: single-step accuracy of 90-95% produces end-to-end success rates below 50% for 10+ step workflows, with tool-call malformation (not reasoning errors) being the dominant failure mode. (env-04-a)",
+      "Computer-use agents show large performance gaps on recovery-heavy tasks (UI interruptions, errors) versus happy-path tasks, partly because tutorial-style training traces are over-represented for happy paths. (env-04-b)",
+      "Long-horizon credit assignment is the central post-training challenge for agent tasks, and learned step-attribution models are the key intervention that lets outcome rewards propagate through 10+ step trajectories. (env-04-a, env-04-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.71,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 2.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "boundary case: cosine_min_observed 0.71 sits just above the 0.70 floor — tests the lower edge of FR-028 cosine threshold. Span and domain count are both well inside their respective windows so the rejection-or-pass decision rests on the cosine boundary."
+}

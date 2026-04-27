@@ -1,0 +1,45 @@
+{
+  "id": "research-session-16",
+  "domain": "personal-finance",
+  "envelopes": [
+    {
+      "envelope_id": "env-16-a",
+      "url": "https://www.bogleheads.org/forum/viewtopic.php?t=414112",
+      "captured_at": "2026-04-25T19:00:00Z",
+      "url_domain": "bogleheads.org",
+      "hydrated_text": "Question on emergency-fund sizing in a higher-rate environment. With money market funds yielding ~4.5% and short-term Treasuries similar, the historical opportunity-cost argument for keeping emergency funds small (and equity-heavy) seems weaker than it did when cash yielded 0.5%. Should I be thinking about the appropriate size differently than the standard 3-6 months of expenses?\n\nResponses converged on a few points: (1) the appropriate size is still primarily a function of job-loss probability and time-to-rehire, not yield environment; (2) yield matters at the margin for whether to lean toward 3 vs 6 months but not whether to hold an emergency fund at all; (3) for households with stable dual incomes the lower end of the range remains reasonable.\n\nThe most useful pushback was that 'emergency fund' often conflates two distinct functions — short-term cash flow buffer (1 month) and meaningful loss-of-income insurance (3-6 months) — and that thinking about them separately can clarify the sizing decision. The buffer goes in a high-yield checking-equivalent; the insurance can go in a slightly less liquid but higher-yielding instrument.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-16-b",
+      "url": "https://www.morningstar.com/articles/1220107/cash-management-2026",
+      "captured_at": "2026-04-25T20:00:00Z",
+      "url_domain": "morningstar.com",
+      "hydrated_text": "Cash management for individual investors has become substantially more interesting in the post-2022 rate environment. Five years ago, the practical question was 'where do I put my cash where it loses the least to inflation'; today, the questions are about optimising across multiple meaningfully-different yields and operational frictions.\n\nWe compare four common vehicles in the 2026 environment. Money market mutual funds (Vanguard's VMFXX, Fidelity's SPAXX) yield 4.4-4.7% with check-writing access and same-day liquidity. High-yield savings accounts at online banks yield 4.0-4.5% with full FDIC coverage. Short-term Treasury ETFs (BIL, SGOV) yield 4.5-4.9% with intraday liquidity but a small bid-ask spread cost. I-Bonds at the May 2026 rate yield 3.94% with a one-year lockup and $10k/yr cap.\n\nThe right mix depends on tax bracket (Treasury interest is state-tax-exempt) and predictability of cash needs. For higher-bracket investors in high-tax states, Treasury ETFs and direct Treasuries dominate the comparison.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-16-c",
+      "url": "https://www.bogleheads.org/wiki/Emergency_fund",
+      "captured_at": "2026-04-25T21:00:00Z",
+      "url_domain": "bogleheads.org",
+      "hydrated_text": "An emergency fund is a pool of liquid assets earmarked for unexpected expenses or income disruptions. The conventional sizing recommendation is 3 to 6 months of essential expenses, with the appropriate size within that range determined by job stability, household composition, and the reliability of secondary income sources.\n\nThe purpose of separating an emergency fund from the rest of a portfolio is psychological and operational, not strictly financial. Mixing emergency-fund balances with long-term investments tends to lead either to over-conservative long-term portfolios (because the emergency portion drags down equity allocation) or to inappropriate use of long-term equity for emergency expenses (selling at depressed prices precisely when emergencies tend to coincide with market downturns).\n\nThis wiki page covers vehicle selection, common sizing pitfalls (under-counting expenses, over-relying on credit lines), and the relationship between emergency funds and other forms of insurance (disability, health, unemployment). We update the page periodically as the rate environment shifts.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Emergency fund sizing is primarily a function of job-loss probability and time-to-rehire, not yield environment; the higher-rate environment has shifted vehicle selection more than sizing logic. (env-16-a, env-16-c)",
+      "Cash management vehicle choice in 2026 is meaningful: money market funds, high-yield savings, short-term Treasury ETFs, and I-Bonds yield 3.94-4.9% with materially different tax treatment, liquidity, and operational frictions. (env-16-b)",
+      "Separating an emergency fund from long-term investments is psychological and operational rather than strictly financial: mixing the pools tends to lead either to over-conservative long-term allocation or to inappropriate use of long-term equity for emergencies. (env-16-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.80,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 2.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "comfortable cluster: 2h span, 0.80 cosine, 2 distinct hostnames (bogleheads x2, morningstar x1); topical thread is emergency fund + cash management"
+}

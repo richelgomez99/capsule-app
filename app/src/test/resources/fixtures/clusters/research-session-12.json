@@ -1,0 +1,45 @@
+{
+  "id": "research-session-12",
+  "domain": "sports-analytics",
+  "envelopes": [
+    {
+      "envelope_id": "env-12-a",
+      "url": "https://theathletic.com/5421106/soccer-xg-2026-update",
+      "captured_at": "2026-04-26T10:00:00Z",
+      "url_domain": "theathletic.com",
+      "hydrated_text": "Expected-goals (xG) models in soccer have continued to incrementally improve, with the latest generation incorporating defensive-pressure features extracted from broadcast tracking data. The improvement over previous-generation shot-quality-only models is modest in average prediction but substantial in specific contexts.\n\nThe largest gains come on counter-attacking shots, where defensive pressure (or its absence) is highly diagnostic. Counter-attack shots that previous models would have valued at 0.08-0.12 xG often value at 0.18-0.25 xG when pressure data shows defenders 2+ meters from the shooter. Conversely, shots that previous models valued highly under intuition that 'central, close shots score' are downvalued when pressure data shows defenders draped on the shooter.\n\nThe practical implication is that team-level offensive evaluations are essentially unchanged (counter-attack and possession-buildup goals roughly cancel out for most teams) but individual-player evaluations shift more meaningfully, particularly for players whose primary attacking value is generating shots from broken-field situations.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-12-b",
+      "url": "https://www.baseballprospectus.com/news/article/89876/saber-defense-2026",
+      "captured_at": "2026-04-26T11:00:00Z",
+      "url_domain": "baseballprospectus.com",
+      "hydrated_text": "Defensive metrics in baseball have benefitted enormously from publicly-available Statcast batted-ball tracking, but a stubborn gap remains: outs that are clearly within the player's catch probability are easy to evaluate; close plays where catch probability is in the 0.3-0.7 range remain noisy and the noise compounds over a season.\n\nThe issue is selection bias: a fielder who consistently positions slightly aggressively gets credit for many easy outs and blame for occasional missed-routine plays, while a fielder who positions conservatively rarely fails on routine balls but rarely makes spectacular plays either. Public metrics handle this asymmetrically, with most still under-rewarding aggressive positioning even when the aggressive choice is on average correct.\n\nWe describe a positioning-aware defensive evaluation framework currently under development at multiple front offices and discuss how the public-side metric ecosystem might catch up. The bottleneck is not modelling sophistication but data: positioning data at the level needed is currently proprietary in most leagues.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-12-c",
+      "url": "https://theathletic.com/5425887/nhl-tracking-data-2026",
+      "captured_at": "2026-04-26T12:30:00Z",
+      "url_domain": "theathletic.com",
+      "hydrated_text": "The NHL's player-tracking system entered its fourth full season in 2025-26, and public-facing analytics derived from it have begun to reach methodological maturity. We discuss four metrics that we believe meet the bar of being both grounded in tracking data and genuinely useful for analyst-grade evaluation.\n\nFirst is expected-goal-scoring on individual carries — a metric that values entries by the expected-goals likelihood of the resulting possession, accounting for entry location, defender position, and carrier velocity. Second is defensive-zone-exit pressure, which quantifies how often a defender successfully exits the defensive zone under genuine offensive pressure rather than uncontested. Third is high-danger pass success under tight coverage. Fourth is rush-defence break-up rate normalised by opportunity.\n\nWe note that several lower-tier metrics popularised in the early years of public tracking data have aged poorly and recommend consumers focus on the methodologically-mature subset.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Soccer xG models incorporating defensive-pressure features show modest average gains but substantial gains on counter-attacking shots, shifting individual-player evaluations more than team-level evaluations. (env-12-a)",
+      "Baseball defensive metrics still systematically under-reward aggressive positioning because public metrics treat catch-probability noise asymmetrically; positioning-aware frameworks under development at front offices may close the gap if positioning data becomes public. (env-12-b)",
+      "NHL tracking-derived analytics have reached methodological maturity for a small set of metrics (carry expected-goals, zone-exit pressure, high-danger pass success, rush-defence break-up) while several early-era metrics have aged poorly. (env-12-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.72,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 2.5,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "boundary case: cosine_min 0.72 sits just above 0.70 floor — tests low-cosine boundary. Topical thread is cross-sport advanced analytics maturity; held together by methodological commonality rather than topical identity, which is realistic for cross-sport research sessions."
+}

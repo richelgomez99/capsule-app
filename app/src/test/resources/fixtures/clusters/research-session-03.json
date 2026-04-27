@@ -1,0 +1,43 @@
+{
+  "id": "research-session-03",
+  "domain": "ai-ml",
+  "envelopes": [
+    {
+      "envelope_id": "env-03-a",
+      "url": "https://arxiv.org/abs/2503.04521",
+      "captured_at": "2026-04-17T13:00:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "We present a method for distilling the chain-of-thought behaviour of a large reasoning model into a smaller dense model without access to the teacher's hidden states. The student is trained on the teacher's emitted reasoning traces (sampled at temperature 0.7 to capture diversity) with a curriculum that begins with verified-correct traces and gradually mixes in traces with verified-correct final answers but unverified intermediate steps.\n\nOn GSM8K and MATH, a 1.5B-parameter student trained this way recovers 92% and 78% of the teacher's accuracy respectively — significantly better than supervised fine-tuning on ground-truth solutions alone (which gets 71% and 54%). The gain seems to come from the student inheriting the teacher's heuristics for when to verify, when to backtrack, and when to commit. We release training scripts and a 50k-example trace corpus.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-03-b",
+      "url": "https://arxiv.org/abs/2503.05988",
+      "captured_at": "2026-04-17T14:00:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "Process reward models (PRMs) score individual reasoning steps and have become the dominant approach for verifier-guided search at inference time. We benchmark seven publicly available PRMs across six reasoning datasets and find substantial brittleness: a PRM trained on math word problems generalises poorly to scientific reasoning, and small surface edits to step formatting (numbered vs bulleted, English vs LaTeX) shift PRM scores by 0.3 absolute on a 0-1 scale.\n\nWe propose a calibration protocol — Bootstrap Step Verification — that retrains a PRM on a small target-domain seed plus self-generated steps from a strong base model, and show this closes most of the cross-domain gap. The cost is roughly 3 GPU-hours per target domain; the benefit is that downstream best-of-N selection becomes a real signal rather than noise.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-03-c",
+      "url": "https://arxiv.org/abs/2503.07203",
+      "captured_at": "2026-04-17T15:00:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "Inference-time search methods (best-of-N, tree-of-thoughts, MCTS-style rollouts) are now standard for hard reasoning problems but their compute-vs-accuracy curves have not been systematically compared at fixed total FLOPs. We hold inference budget constant at 64x the single-pass cost across four search methods and three model scales (8B, 32B, 70B).\n\nResults: at 8B scale, MCTS dominates by 4-7 points on competition math; at 32B, best-of-N with a strong PRM is within 1 point of MCTS at 0.4x the wall-clock time; at 70B, all methods converge to within 2 points and differences are statistically insignificant. The takeaway is that search complexity should scale inversely with model capability — strong models benefit most from cheap parallel search, weak models from sequential deliberation.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "[NEGATIVE FIXTURE — cluster engine should reject before reaching summariser. Bullets here are illustrative only of what would be produced if the URL-domain check were removed.] (env-03-a)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.78,
+    "domains_distinct": 1,
+    "captured_at_span_hours": 2.0,
+    "expected_outcome": "REJECTED_SINGLE_DOMAIN"
+  },
+  "notes": "NEGATIVE: all 3 envelopes share url_domain=arxiv.org so domains_distinct=1 fails FR-028 MIN_DOMAINS=2 check. Cosine and span are otherwise healthy (0.78, 2.0h) — the rejection is purely on domain-diversity, which is the boundary the test isolates."
+}

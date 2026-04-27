@@ -1,0 +1,45 @@
+{
+  "id": "research-session-19",
+  "domain": "cooking",
+  "envelopes": [
+    {
+      "envelope_id": "env-19-a",
+      "url": "https://www.seriouseats.com/cast-iron-care-2026-update",
+      "captured_at": "2026-04-25T15:00:00Z",
+      "url_domain": "seriouseats.com",
+      "hydrated_text": "Cast-iron seasoning is one of those topics where internet folklore has accumulated more aggressively than evidence. We re-tested the major claims with a modest experimental setup — five identical pans, parallel treatments, blind cooking-performance assessment — and report which claims hold up.\n\nHolds up: high-smoke-point oils (flaxseed, grapeseed) produce harder, more durable seasoning layers than lower-smoke-point oils (vegetable, olive). Multiple thin coats produce more durable seasoning than one thick coat. Heating the pan to the oil's smoke point and holding it there for 60 minutes per coat is genuinely better than shorter or cooler treatments.\n\nDoesn't hold up: 'never use soap' — modern dish soaps don't strip cured seasoning unless used aggressively; 'never use steel wool' — light steel wool restoration of damaged seasoning patches is fine and arguably preferable to letting damage propagate; 'season with bacon grease specifically' — the specific oil mattering is real, but bacon grease is not optimal among reasonable choices.\n\nWe close with a recommended workflow for both new pan setup and ongoing maintenance.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-19-b",
+      "url": "https://www.foodnetwork.com/recipes/perfect-fried-eggs",
+      "captured_at": "2026-04-25T15:48:00Z",
+      "url_domain": "foodnetwork.com",
+      "hydrated_text": "A well-fried egg sounds like the simplest cooking task imaginable, but technique matters enough that even experienced home cooks frequently produce subpar results. We explain three styles — sunny-side-up, over-easy, and crispy-edged — and what changes between them.\n\nThe common foundation: heat the pan to medium-high before adding fat; use enough fat to coat the pan generously (a tablespoon for one egg is not too much); crack the egg into a small bowl first and then slide it into the pan, which controls landing spread.\n\nFor sunny-side-up, cover the pan briefly with a lid in the last 30-60 seconds to set the white over the yolk without flipping. For over-easy, slide a thin spatula completely under the egg before flipping; partial flips are the most common failure mode. For crispy-edged, use slightly more fat and slightly higher heat, and let the white cook undisturbed for the first minute.\n\nA cast-iron or non-stick pan handles all three styles; carbon steel is great for the crispy-edged style but harder for the gentler styles. The 'best' pan choice depends on which style you make most.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-19-c",
+      "url": "https://www.seriouseats.com/skillet-roasting-vegetables",
+      "captured_at": "2026-04-25T16:30:00Z",
+      "url_domain": "seriouseats.com",
+      "hydrated_text": "Roasting vegetables is one of the highest-flavour-return-per-effort cooking techniques, but a few details separate good results from great ones. We discuss the principles and walk through several variations.\n\nFirst principle: temperature matters more than time. Most vegetables are best roasted at 400-450 F, where the surfaces brown before the interior overcooks. Lower temperatures produce uniformly soft, blandly-flavoured results; higher temperatures risk burning before the interior cooks. The 400-450 F range is a sweet spot reached by surprisingly many vegetables despite their different physical properties.\n\nSecond principle: surface contact with the pan matters. Crowded pans produce steamed-rather-than-roasted vegetables because the moisture released doesn't have anywhere to escape to. Use two pans rather than one over-crowded pan when you have a lot of vegetables to roast.\n\nThird principle: salt timing affects texture. Salt before roasting drives moisture out and produces firmer, more concentrated results; salt after roasting preserves the surface texture but tastes less seasoned. Both are valid, depending on the dish.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Cast-iron seasoning folklore is partly evidence-based (high-smoke-point oils, thin multi-coat application, sustained smoke-point heating) and partly not (modern dish soap, light steel wool restoration, and bacon grease specifically are all over-cautioned). (env-19-a)",
+      "Skillet egg techniques share a foundation (medium-high pan heat, generous fat, slide eggs in from a bowl) but diverge on finishing: lid-cover for sunny-side-up, fully-under spatula for over-easy, undisturbed initial high-heat for crispy-edged. (env-19-b)",
+      "Vegetable roasting success depends on three principles: 400-450F temperature range (lower is bland, higher burns), uncrowded pan to avoid steaming, and intentional salt timing (before for firmer concentrated results, after for surface-textured but less-seasoned). (env-19-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.85,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 1.5,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "tight, comfortable cluster: 1.5h span, 0.85 cosine (highest in corpus); topical thread is stovetop/skillet technique"
+}

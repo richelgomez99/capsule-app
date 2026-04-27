@@ -1,0 +1,45 @@
+{
+  "id": "research-session-02",
+  "domain": "ai-ml",
+  "envelopes": [
+    {
+      "envelope_id": "env-02-a",
+      "url": "https://arxiv.org/abs/2502.07891",
+      "captured_at": "2026-04-16T09:00:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "We revisit the question of whether learned positional encodings still confer an advantage over rotary position embeddings (RoPE) at long context lengths. Across five model scales (350M to 13B) and three context lengths (4k, 32k, 128k), we find that RoPE consistently matches or beats learned encodings on perplexity, but loses to them on a needle-in-haystack retrieval benchmark at 128k context.\n\nThe mechanism appears to be that RoPE's periodic structure allows position embeddings to alias at extreme distances — two tokens 100k positions apart can produce nearly identical attention scores to a token 1k positions away if the rotation lands on a near-identical phase. Learned encodings break this symmetry but pay a per-position parameter cost.\n\nA hybrid scheme — RoPE for the first 90% of layers, learned for the last 10% — recovers most of the long-context retrieval gain at minimal parameter cost. We release pretrained checkpoints with the hybrid scheme and call for a community benchmark that emphasises retrieval at the tail of the context window.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-02-b",
+      "url": "https://www.jmlr.org/papers/v27/26-0102.html",
+      "captured_at": "2026-04-16T11:14:00Z",
+      "url_domain": "jmlr.org",
+      "hydrated_text": "Long-context evaluation has become a moving target. Most published benchmarks (passkey, multi-key NIAH, RULER) saturate within months of release as models adapt their training data. We propose a benchmark generation methodology — Adversarial Context Construction (ACC) — that produces fresh long-context probes from a small held-out seed corpus.\n\nACC operates by sampling a target document, embedding distractor passages drawn from the same domain (so simple lexical retrieval doesn't suffice), and asking the model to answer questions whose evidence is split across non-adjacent passages. Crucially, the distractor density is calibrated per-model: we increase distractor count until accuracy drops to 50%, then report the distractor count as the model's effective long-context capacity.\n\nUnder ACC, current frontier models show effective capacities of 8k-32k tokens despite advertised context windows of 128k-1M. We argue this gap — between nominal and effective context — is the more honest metric and should be reported alongside context length in model cards.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-02-c",
+      "url": "https://arxiv.org/abs/2502.10567",
+      "captured_at": "2026-04-16T12:42:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "We study attention-pattern degradation in long-context transformers using a synthetic recall task: place K key-value pairs uniformly at random in a context of length N, then query a random key and measure recall accuracy. Across all models tested, we observe a U-shaped accuracy curve as a function of where in the context the queried key sits — accuracy is high at the start (recency bias from training) and at the end (last-token attention sink), but drops sharply in the middle.\n\nThe middle-context degradation is well-documented (lost-in-the-middle), but our contribution is to show that it has a clean mechanistic explanation in attention-pattern entropy: at middle positions, attention spreads across many irrelevant tokens, and the signal-to-noise ratio of the relevant key drops below a critical threshold around the 30th-percentile position.\n\nA simple intervention — adding a per-position attention temperature that sharpens attention at known middle positions during inference — recovers 80% of the lost accuracy without retraining. This is a deployment-time fix that requires only the position of expected evidence (often available in agentic pipelines).",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Long-context performance reported in model cards systematically overstates effective capacity, with adversarial benchmarks showing models advertising 128k context windows have effective capacities closer to 8k-32k tokens. (env-02-b)",
+      "Middle-of-context recall degradation has a clean mechanistic explanation in attention-pattern entropy and can be partially mitigated at inference time without retraining. (env-02-c)",
+      "RoPE alone shows aliasing failures at extreme distances; hybrid positional schemes (RoPE plus a small learned-encoding band) recover most long-context retrieval performance at low parameter cost. (env-02-a, env-02-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.75,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 3.7,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "boundary case: span 3.7h sits just inside the 4h window; cosine 0.75 comfortably above 0.70 floor; 2 distinct domains exactly meets MIN_DOMAINS=2"
+}

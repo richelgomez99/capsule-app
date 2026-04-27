@@ -1,0 +1,54 @@
+{
+  "id": "research-session-17",
+  "domain": "cooking",
+  "envelopes": [
+    {
+      "envelope_id": "env-17-a",
+      "url": "https://www.seriouseats.com/sourdough-bread-science-2026",
+      "captured_at": "2026-04-26T14:00:00Z",
+      "url_domain": "seriouseats.com",
+      "hydrated_text": "Sourdough bread, despite the popular framing of it as an ancient and unchanging craft, has been the subject of substantial recent food-science investigation. We synthesise the major findings from the last five years and discuss what they mean for home bakers.\n\nThe most consequential finding is that the dominant lactic acid bacteria in mature sourdough cultures are heterofermentative species that produce both lactic and acetic acid in ratios that depend strongly on hydration and temperature. Bakers who have intuitively learned that 'cold retards make sourer bread' are picking up on a real biochemical phenomenon: cooler temperatures shift the bacterial balance toward higher acetic-acid production, and acetic acid carries a sharper sourness than lactic acid.\n\nThe second is that gluten development in sourdough is meaningfully different from gluten development in commercial-yeasted breads, because the long fermentation produces partial hydrolysis of gluten proteins. This explains why the same total flour-and-water dough behaves differently as a sourdough vs a same-day yeasted bread, and why traditional sourdough techniques (extended autolyse, lower hydration than rumour suggests) are well-tuned to the actual chemistry.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-17-b",
+      "url": "https://www.kingarthurbaking.com/blog/2026/04/sourdough-starter-troubleshooting",
+      "captured_at": "2026-04-26T14:42:00Z",
+      "url_domain": "kingarthurbaking.com",
+      "hydrated_text": "Sourdough starter problems are by far the most common questions we receive from home bakers. We've organised the most frequent issues by symptom and provide a diagnostic flowchart that resolves perhaps 90% of starter complaints without escalating to our test kitchen.\n\nThe single most common issue is what bakers call 'a sluggish starter' — slow rise, weak smell, doughy bread. The cause is almost always either insufficient feeding frequency for the ambient temperature (warmer kitchens need more frequent feeds) or a contamination event that has not yet rebalanced. The fix is straightforward: feed twice daily with a 1:5:5 ratio for three days and most starters return to vigorous activity.\n\nThe second most common is 'a hooch layer' — clear-to-grey liquid on top — which is a sign of under-feeding rather than spoilage. Stir it back in or pour it off (preference is a matter of taste; the bread is fine either way).\n\nWe close with the genuinely-spoiled starter symptoms (pink/orange streaks, fuzzy mould) and the 'discard and restart' protocol that we recommend in those cases.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-17-c",
+      "url": "https://www.foodnetwork.com/recipes/sourdough-pizza-dough",
+      "captured_at": "2026-04-26T15:30:00Z",
+      "url_domain": "foodnetwork.com",
+      "hydrated_text": "This recipe adapts a sourdough bread workflow for pizza dough, producing a more flavourful and chewier crust than commercial-yeast pizza recipes typically achieve. The active prep time is small; the long fermentation does most of the work.\n\nIngredients (makes 4 pizzas): 600g bread flour, 420g water, 100g active sourdough starter, 18g salt, 12g olive oil. Combine flour, water, and starter; rest 30 minutes (autolyse). Add salt and oil; mix to a smooth ball. Bulk ferment 4-6 hours at room temperature with two folds at 30-minute intervals during the first hour. Divide into 4 portions, shape into balls, refrigerate 24-72 hours. Pull out 2 hours before baking.\n\nBake on a preheated stone or steel at the highest temperature your oven supports, ideally 525-550 F. The retarded cold ferment is the key step — it develops more flavour than a same-day approach and makes the dough easier to stretch. Pizzas baked from 48-hour-cold-fermented dough have an audibly crisper crust than 24-hour pizzas in our test kitchen comparisons.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-17-d",
+      "url": "https://www.americastestkitchen.com/recipes/14785-no-knead-sourdough",
+      "captured_at": "2026-04-26T16:30:00Z",
+      "url_domain": "americastestkitchen.com",
+      "hydrated_text": "We developed this no-knead sourdough recipe to give home bakers an entry point that produces consistently good bread without requiring stand-mixer kneading or precise schedule management. After 47 test bakes across nine kitchens, we landed on a workflow that succeeds for first-time sourdough bakers in roughly 80% of attempts, which is a meaningful improvement over the 30-40% success rate we saw with traditional recipes in earlier rounds of testing.\n\nThe key adaptations: (1) use a slightly wetter starter than is conventional (1:1:1 maintenance, fed 4-6 hours before the dough mix) so the starter is reliably at peak; (2) use a single overnight cold retard rather than multiple ambient bulk-ferment-and-fold cycles, removing the hardest-to-time element of traditional workflows; (3) use a Dutch oven for baking, which produces consistent crust without requiring a steam-injection setup.\n\nThe recipe yields a single boule with a chewy, mildly tangy crumb. We provide variations for whole-wheat and rye additions and discuss flour selection in detail.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Sourdough chemistry has been substantially clarified in recent food-science research: heterofermentative bacteria produce lactic-vs-acetic acid in temperature-dependent ratios (cooler retards yield sharper acetic-dominated sourness), and long fermentation partially hydrolyses gluten in ways that change dough behaviour. (env-17-a)",
+      "Most starter problems home bakers report are diagnosable to under-feeding for ambient temperature; the standard fix is twice-daily 1:5:5 feeding for three days, while genuinely-spoiled starters show pink/orange streaks or fuzzy mould and warrant a restart. (env-17-b)",
+      "Cold retarded fermentation (24-72 hours) produces measurably better flavour and easier stretch in pizza doughs and a crisper crust in finished pizzas, with 48-hour retards outperforming 24-hour in test-kitchen comparisons. (env-17-c)",
+      "No-knead Dutch-oven workflows can raise first-time sourdough success rates from 30-40% to roughly 80% by using a slightly wetter starter at peak, a single overnight cold retard, and Dutch-oven baking that removes the steam-injection requirement. (env-17-d)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.78,
+    "domains_distinct": 4,
+    "captured_at_span_hours": 2.5,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "clean cluster: 4 envelopes from 4 distinct cooking-publication hostnames; topical thread is sourdough technique + chemistry"
+}

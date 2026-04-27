@@ -1,0 +1,53 @@
+{
+  "id": "research-session-13",
+  "domain": "personal-finance",
+  "envelopes": [
+    {
+      "envelope_id": "env-13-a",
+      "url": "https://www.bogleheads.org/forum/viewtopic.php?t=412987",
+      "captured_at": "2026-04-27T08:00:00Z",
+      "url_domain": "bogleheads.org",
+      "hydrated_text": "I'm 34, married, no kids yet but planning. Combined income around $280k, currently maxing both 401(k)s and backdoor Roth IRAs, and putting another $30k/yr into a taxable brokerage in a three-fund VTI/VXUS/BND portfolio. Question for the wiser members: at what point should I start prioritising tax efficiency more aggressively? My marginal tax rate is high enough that taxable bonds in the brokerage feel like a slow leak.\n\nResponses below were unanimous on a few points and split on others. Unanimous: hold bonds in tax-advantaged space wherever possible; if you have to hold them in taxable, use municipal bonds (with state-specific funds where applicable). Split: whether to use I-Bonds aggressively at our income level (some say yes, max it; others say the cap of $10k/yr per person makes it not worth the operational complexity).\n\nThe most useful response pointed me to the Bogleheads tax-efficient fund placement wiki page. I had read it years ago but the worked examples there make the present-value cost of poor placement concrete — for a 30-year holding period at our marginal rate, the difference is several percent of terminal portfolio value.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-13-b",
+      "url": "https://www.morningstar.com/articles/1213987/tax-efficient-fund-placement-2026",
+      "captured_at": "2026-04-27T08:42:00Z",
+      "url_domain": "morningstar.com",
+      "hydrated_text": "Tax-efficient fund placement remains one of the highest-return-per-effort optimisations available to taxable individual investors. We update our long-running guide for the 2026 tax environment, which differs from prior years primarily in the treatment of qualified dividends from international funds and in the changed AMT thresholds following the late-2025 tax law changes.\n\nThe core principles are unchanged: hold tax-inefficient assets (taxable bonds, REITs, actively-managed funds with high turnover) in tax-advantaged accounts; hold tax-efficient assets (broad-market index funds, especially total-market and S&P 500 trackers) in taxable accounts where their qualified-dividend treatment and low turnover minimise drag.\n\nWhat has changed is the international-fund calculus. The 2025 tax law tightened qualified-dividend treatment for funds holding pass-through entities common in international structures; investors who previously held VXUS or similar in taxable accounts may want to revisit whether the foreign tax credit benefit still outweighs the now-reduced qualified-dividend treatment for their bracket.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-13-c",
+      "url": "https://www.kitces.com/blog/asset-location-2026-tax-environment",
+      "captured_at": "2026-04-27T09:18:00Z",
+      "url_domain": "kitces.com",
+      "hydrated_text": "Asset location decisions are typically framed as a static optimisation problem, but in practice they evolve as the investor's wealth, income, and tax situation change. We discuss four life-stage transitions that should trigger a re-examination of asset location: marriage (often shifts the optimal placement of municipal bonds), accumulation-to-spending transition (often increases the value of holding equities in taxable for stepped-up basis at death), transition out of high-earning years (may make traditional 401(k) distributions more tax-efficient relative to their accumulation-phase cost), and inheritance receipt (often imports a tax basis problem that interacts with existing placement decisions).\n\nThe headline is that asset-location optimality is path-dependent and re-examination at major life events is more valuable than annual rebalancing of the placement decisions themselves. We provide a checklist of questions to work through at each transition.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-13-d",
+      "url": "https://www.nerdwallet.com/article/investing/tax-loss-harvesting-2026",
+      "captured_at": "2026-04-27T10:00:00Z",
+      "url_domain": "nerdwallet.com",
+      "hydrated_text": "Tax-loss harvesting is one of the few tax-optimisation techniques available to individual investors that has clear, quantifiable, and durable value. We walk through the mechanics step-by-step for readers who have not done it before, with examples drawn from typical brokerage interfaces.\n\nThe two operational risks are the wash-sale rule (no buying a substantially-identical security within 30 days before or after the loss sale) and accidental basis-tracking errors when harvesting across multiple lots. We recommend turning off automatic dividend reinvestment in any account where you plan to harvest losses, since dividend reinvestment can trigger inadvertent wash sales.\n\nFor 2026 specifically, the IRS has not issued substantive new guidance on what counts as 'substantially identical' for ETF pairs, so the long-standing community practice of pairing VTI with ITOT or SCHB for harvesting purposes remains the practical guideline. We caution that this is a policy area where guidance could change without much warning, and recommend checking before any large harvest.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Tax-efficient fund placement remains a high-return-per-effort optimisation: hold tax-inefficient assets (bonds, REITs, high-turnover active) in tax-advantaged accounts, hold tax-efficient broad-market index funds in taxable; the 2025 tax law changed qualified-dividend treatment for international funds and may warrant revisiting VXUS placement decisions. (env-13-a, env-13-b)",
+      "Asset-location optimality is path-dependent: re-examination at major life events (marriage, accumulation-to-spending transition, leaving high-earning years, inheritance) is more valuable than annual placement rebalancing. (env-13-c)",
+      "Tax-loss harvesting has clear quantifiable value but operational risks (wash-sale rule, basis-tracking across lots) require care; turning off dividend reinvestment in harvesting accounts and using established ETF pairs (VTI/ITOT/SCHB) reduces both risks. (env-13-d)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.81,
+    "domains_distinct": 4,
+    "captured_at_span_hours": 2.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "clean cluster: 4 envelopes from 4 distinct personal-finance hostnames; topical thread is tax-aware investing for high-marginal-rate individual investors"
+}
