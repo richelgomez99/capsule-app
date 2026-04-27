@@ -12,6 +12,19 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 — Phase 11 T140 hostile injection corpus landed (parallel agent, Block 6 substrate)**
+
+Pre-built [cluster-summariser-attacks.json](app/src/test/resources/fixtures/injections/cluster-summariser-attacks.json) so Block 6 (`ClusterSummariserHostileTest.kt`) has a corpus to consume the moment it lands; without it, the demo-day-critical prompt-injection guard would have shipped stubbed.
+
+- **25 attacks across all 8 required families** (per Phase 11 T140 + design doc §Hostile QA): direct-override (5), tag-injection (4), markdown-link-exfil (4), citation-forgery (3), encoding-evasion (3), system-prompt-echo (2), multi-turn-premise (2), refusal-hijack (2). Family slugs lowercased + hyphenated for groupBy consumption.
+- **Three expected_outcome bins** so the test can route by validator layer: `REJECTED` (sanitizer drops/replaces — direct overrides, tag injections, citation-forgery imperatives, multi-turn premise, system-prompt echo, refusal hijack, zero-width / homoglyph evasion); `NEUTRALIZED` (sanitizer passes through but the model can't act on the encoded payload — ROT13 only); `PASSED_BUT_REJECTED_AT_OUTPUT` (sanitizer can't reasonably tell at input time so the output validator catches the artefact downstream — exfil links + cross-cluster citation forgery).
+- **Coverage cross-checks against spec FRs**: inj-014/inj-015/inj-016 directly probe FR-039 (citation contract); inj-021 specifically probes FR-030 (modelLabel stamping) via a multi-turn-premise framing that asks the model to drop `model_label_seen`; inj-022 / inj-023 probe FR-027 bullet-count invariant via refusal hijack; inj-006 / inj-009 / inj-024 probe role-confusion at the prompt boundary (angle tags, fenced blocks, ChatML special tokens).
+- **Schema is self-documenting**: top-level `purpose` + `schema` blocks describe the contract so Block 6's test author can read the file standalone without hunting through tasks.md. IDs are `inj-001…inj-025` zero-padded so future additions slot in cleanly.
+- **JSON validity gate**: `python3 -m json.tool` ✅; family histogram + sequential-ID check ✅ (script in commit). Total = 25 ≥ 25 floor; every family ≥ 2 ✅.
+- **Coupling note flagged for agent 1 (Block 6 author)**: the corpus assumes a two-stage pipeline (PromptSanitizer at input + output validator at output). If Block 6 implements a single-stage sanitizer that catches everything at input, the 4 `PASSED_BUT_REJECTED_AT_OUTPUT` entries still pass — they'd just elevate to `REJECTED` — so the corpus over-specifies in a safe direction. If Block 6 splits the responsibilities differently (e.g. sanitizer only handles structural attacks, output validator handles citation/exfil), the per-attack `expected_outcome` may need a one-line tweak per attack but the corpus itself remains usable.
+
+- **Gates**: file-only change; no compile/test gate to run. Consumed at Block 6.
+
 **2026-04-27 — androidTest compile gap closed (Block 4 prerequisite)**
 
 Phase 11's instrumented coverage is high-stakes: Block 4 (T130–T131 ClusterDetectionWorker) gates FR-030 modelLabel-boundary, the most demo-critical guard in the engine; Block 13 (T169 Pixel 9 Pro acceptance) re-runs every androidTest. Both depend on `compileDebugAndroidTestKotlin` being green. It wasn't — and would have left the entire Phase 11 instrumented suite unverified going into Demo Day. Fixed before opening Block 4.
