@@ -257,8 +257,10 @@ class Spec001SmokeTest {
         )
         vm.onBubbleDragEnd(screenWidth, bubble)
         // Snap is launched on the main dispatcher pinned in @Before; flush it.
+        // advanceUntilIdle() is an extension on TestScope (the runTest receiver),
+        // not a top-level function — must be unqualified inside runTest { }.
         kotlinx.coroutines.test.runTest {
-            kotlinx.coroutines.test.advanceUntilIdle()
+            advanceUntilIdle()
         }
         // Final state may still be mid-animation if dispatcher wasn't advanced
         // by runTest above (snap is on viewModelScope, not the test scope), so

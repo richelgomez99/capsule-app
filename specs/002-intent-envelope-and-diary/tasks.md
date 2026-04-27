@@ -12,6 +12,29 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 — androidTest compile gap closed (Block 4 prerequisite)**
+
+Phase 11's instrumented coverage is high-stakes: Block 4 (T130–T131 ClusterDetectionWorker) gates FR-030 modelLabel-boundary, the most demo-critical guard in the engine; Block 13 (T169 Pixel 9 Pro acceptance) re-runs every androidTest. Both depend on `compileDebugAndroidTestKotlin` being green. It wasn't — and would have left the entire Phase 11 instrumented suite unverified going into Demo Day. Fixed before opening Block 4.
+
+Six pre-existing breakages on base `7e71780` resolved (none Phase-11-introduced; all 003 v1.1 interface-evolution misses + one typo):
+
+- **`SoftDeleteRetentionWorkerTest.kt:1`** — file started with `apackage` (typo), causing a cascade of "Syntax error: Expecting a top level declaration" + the misleading "Unresolved reference 'SoftDeleteRetentionWorker'" (the class is in the same package; once the keyword parsed, the reference resolved). One-character fix.
+- **`AppFunctionRegistryTest.kt:134`** — referenced `SensitivityScope.CALENDAR_WRITE`; production enum is `PUBLIC | PERSONAL | SHARE_DELEGATED` only. Calendar writes already map to `PERSONAL` in [BuiltInAppFunctionSchemas.kt](app/src/main/java/com/capsule/app/action/BuiltInAppFunctionSchemas.kt) — switched the test to `PERSONAL` to match.
+- **`Spec001SmokeTest.kt:261`** — called `kotlinx.coroutines.test.advanceUntilIdle()` as a top-level function. It's an extension on `TestScope` (the `runTest` block receiver); must be unqualified inside `runTest { advanceUntilIdle() }`. Drops one package-prefix.
+- **`ActionExtractorTest.FakeLlm` + `TrackingLlm`** — same Block-2 collateral pattern as `UrlHydrateWorkerTest` (already fixed in `3d71582`): missing `embed(text): EmbeddingResult?` override. Added `= null` stubs.
+- **`ActionExtractorTest`'s `LlmProvenance` import** — pointed at `data.model.LlmProvenance` (enum with `LOCAL_NANO`); 4 of 5 use sites pass to `ActionExtractionResult(provenance = ...)` which expects `ai.model.LlmProvenance` (sealed, `LocalNano` object). Re-imported `ai.model.LlmProvenance`, replaced 4 use sites with `LocalNano`, and fully qualified the one remaining `data.model.LlmProvenance.LOCAL_NANO` site (line 237) where the value is asserted against the Room column type. Same dual-LlmProvenance trap [DigestComposerTest](app/src/test/java/com/capsule/app/ai/DigestComposerTest.kt) hit in Block 1.
+- **`ScreenshotObserverTest.RecordingRepository` + `ScreenshotUrlExtractWorkerTest.RecordingRepository`** — both `IEnvelopeRepository.Stub()` impls were missing 11 of the 003 v1.1 IPC additions (`lookupAppFunction`, `listAppFunctions`, `recordActionInvocation`, `markProposalConfirmed`, `markProposalDismissed`, `observeProposalsForEnvelope`, `stopObservingProposals`, `extractActionsForEnvelope`, `createDerivedTodoEnvelope`, `setTodoItemDone`, `runWeeklyDigest`). Added `error("unused")` / `null` / `mutableListOf()` stubs matching the existing capture-test idiom of "every other method errors so mis-use is loud".
+
+**Gates**: `./gradlew :app:compileDebugAndroidTestKotlin` ✅ (warnings only, all pre-existing `getParcelableExtra` deprecations). `./gradlew :app:testDebugUnitTest` ✅ 301/302 (only `DateTimeParserTest.isoUtcConvertsToZone` failing — known-issue pre-existing JVM-tz bug per `3d71582`). [OrbitDatabaseMigrationV2toV3Test](app/src/androidTest/java/com/capsule/app/data/OrbitDatabaseMigrationV2toV3Test.kt) now compiles end-to-end and is ready to run on Pixel 9 Pro at T169 (or any earlier device session).
+
+**Block 4 entry checklist (handoff to ClusterDetectionWorker work):**
+- `:ml` process anchor — worker MUST run in `:ml`, not `:ui` (cross-process binder); manifest declares the worker's `processName=":ml"`.
+- WAL read-only snapshot during the embedding loop — no write transaction held while iterating; otherwise the 7am capture-seal blocks behind the worker.
+- modelLabel boundary gate at top of `run()`: `if (currentModelLabel != RuntimeFlags.clusterModelLabelLock) return Result.success()` — silent skip with an audit row, never crashes (FR-030).
+- WorkManager constraints: `setRequiresCharging(true)` + `setRequiredNetworkType(NetworkType.UNMETERED)` + `setRequiresBatteryNotLow(true)`, anchored to 03:00 local.
+- Audit trail: `CONTINUATION_SCHEDULED` + `CONTINUATION_COMPLETED` with `ContinuationType.CLUSTER_DETECT` (already wired in Block 1).
+- `RuntimeFlags.clusterModelLabelLock` doesn't exist until Block 10 — Block 4 will use a `const val MODEL_LABEL_LOCK = NanoLlmProvider.MODEL_LABEL` placeholder and wire `RuntimeFlags` in Block 10.
+
 **2026-04-27 — Phase 11 Block 3 (T127–T128) similarity engine landed**
 
 - **T127 SimilarityEngine**: [SimilarityEngine.kt](app/src/main/java/com/capsule/app/cluster/SimilarityEngine.kt) — pure-JVM `object` exposing `cosine`, `bucket4h`, `tokenJaccard`, `isCluster`, `averagePairwiseCosine`, plus the `ClusterCandidate` projection and `EmbeddingDimensionMismatch` exception. Thresholds frozen in `SimilarityEngine.Thresholds` (COSINE 0.7, MIN_DOMAINS 2, JACCARD 0.3, MIN_SIZE 3, BUCKET_WIDTH_MS 4h) per FR-028. **Pairwise (not centroid)** checks in `isCluster` so a single near-duplicate can't drag the whole bucket past threshold by averaging — the spec wants every member to corroborate every other. Cosine returns 0 on either-side zero-vector and throws `EmbeddingDimensionMismatch` on size mismatch (model rev drift signal — Block 4's worker turns this into a `nano_unavailable` audit + skip). Jaccard uses an internal lower-cased noun extractor (regex split, ≥4-char filter, 50-stopword list) — text normalisation is intentionally local to the engine to keep `ai/` decoupled from a NLP dependency.

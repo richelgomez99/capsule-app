@@ -131,7 +131,10 @@ class AppFunctionRegistryTest {
             argsSchemaJson = "{\"type\":\"object\"}",
             sideEffects = AppFunctionSideEffect.EXTERNAL_INTENT,
             reversibility = Reversibility.EXTERNAL_MANAGED,
-            sensitivityScope = SensitivityScope.CALENDAR_WRITE
+            // CALENDAR_WRITE was speculative; the production enum has
+            // PUBLIC / PERSONAL / SHARE_DELEGATED only. Calendar writes
+            // align to PERSONAL (matches BuiltInAppFunctionSchemas).
+            sensitivityScope = SensitivityScope.PERSONAL
         )
         registry.registerAll(listOf(initial))
         val v1 = registry.lookupLatest("calendar.createEvent")!!

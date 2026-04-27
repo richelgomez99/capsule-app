@@ -176,5 +176,35 @@ class ScreenshotUrlExtractWorkerTest {
             failureReason: String?
         ) = error("unused")
         override fun retryHydration(envelopeId: String) = error("unused")
+
+        // ---- Spec 003 v1.1 IPC additions (unused by URL-extract tests). ----
+        override fun lookupAppFunction(functionId: String): com.capsule.app.data.ipc.AppFunctionSummaryParcel? = null
+        override fun listAppFunctions(appPackage: String): MutableList<com.capsule.app.data.ipc.AppFunctionSummaryParcel> = mutableListOf()
+        override fun recordActionInvocation(
+            executionId: String,
+            proposalId: String,
+            functionId: String,
+            outcome: String,
+            outcomeReason: String,
+            dispatchedAtMillis: Long,
+            completedAtMillis: Long,
+            latencyMs: Long,
+            episodeId: String?
+        ) = error("unused")
+        override fun markProposalConfirmed(proposalId: String): Boolean = error("unused")
+        override fun markProposalDismissed(proposalId: String): Boolean = error("unused")
+        override fun observeProposalsForEnvelope(
+            envelopeId: String,
+            observer: com.capsule.app.data.ipc.IActionProposalObserver
+        ) = error("unused")
+        override fun stopObservingProposals(observer: com.capsule.app.data.ipc.IActionProposalObserver) = error("unused")
+        override fun extractActionsForEnvelope(envelopeId: String): String = error("unused")
+        override fun createDerivedTodoEnvelope(
+            parentEnvelopeId: String,
+            itemsJson: String,
+            proposalId: String
+        ): MutableList<String> = error("unused")
+        override fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) = error("unused")
+        override fun runWeeklyDigest(targetDayLocal: String): String = error("unused")
     }
 }

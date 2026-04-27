@@ -21,7 +21,7 @@ import com.capsule.app.data.model.ActivityState
 import com.capsule.app.data.model.AppCategory
 import com.capsule.app.data.model.AuditAction
 import com.capsule.app.data.model.EnvelopeKind
-import com.capsule.app.data.model.LlmProvenance
+import com.capsule.app.ai.model.LlmProvenance
 import com.capsule.app.data.model.SensitivityScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -234,7 +234,12 @@ class ActionExtractorTest {
         assertEquals("calendar.createEvent", proposal.functionId)
         assertEquals(ActionProposalState.PROPOSED, proposal.state)
         assertEquals(0.78f, proposal.confidence, 0.0001f)
-        assertEquals(LlmProvenance.LOCAL_NANO, proposal.provenance)
+        // proposal.provenance is the data.model.LlmProvenance enum (Room column),
+        // not the ai.model.LlmProvenance sealed type.
+        assertEquals(
+            com.capsule.app.data.model.LlmProvenance.LOCAL_NANO,
+            proposal.provenance
+        )
         assertEquals(args, proposal.argsJson)
 
         // Exactly one ACTION_PROPOSED audit row tied to the envelope.
@@ -401,12 +406,14 @@ class ActionExtractorTest {
             maxCandidates: Int
         ): ActionExtractionResult = onExtract(registeredFunctions)
 
+        override suspend fun embed(text: String): com.capsule.app.ai.EmbeddingResult? = null
+
         companion object {
-            fun empty() = FakeLlm { ActionExtractionResult(LlmProvenance.LOCAL_NANO, emptyList()) }
+            fun empty() = FakeLlm { ActionExtractionResult(LlmProvenance.LocalNano, emptyList()) }
             fun fail() = FakeLlm { error("synthetic nano failure") }
             fun delaying(delayMillis: Long) = FakeLlm {
                 delay(delayMillis)
-                ActionExtractionResult(LlmProvenance.LOCAL_NANO, emptyList())
+                ActionExtractionResult(LlmProvenance.LocalNano, emptyList())
             }
             fun singleCandidate(
                 functionId: String,
@@ -415,7 +422,7 @@ class ActionExtractorTest {
                 candidateScope: SensitivityScope = SensitivityScope.PERSONAL
             ) = FakeLlm { _ ->
                 ActionExtractionResult(
-                    provenance = LlmProvenance.LOCAL_NANO,
+                    provenance = LlmProvenance.LocalNano,
                     candidates = listOf(
                         ActionCandidate(
                             functionId = functionId,
@@ -433,7 +440,7 @@ class ActionExtractorTest {
     }
 
     private class TrackingLlm : FakeLlm({ _ ->
-        ActionExtractionResult(LlmProvenance.LOCAL_NANO, emptyList())
+        ActionExtractionResult(LlmProvenance.LocalNano, emptyList())
     }) {
         var callCount: Int = 0
         override suspend fun extractActions(
