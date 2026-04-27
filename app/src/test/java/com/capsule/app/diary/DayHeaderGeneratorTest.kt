@@ -61,6 +61,14 @@ class DayHeaderGeneratorTest {
                 provenance = LlmProvenance.LocalNano
             )
         }
+
+        override suspend fun extractActions(
+            text: String,
+            contentType: String,
+            state: com.capsule.app.data.entity.StateSnapshot,
+            registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
+            maxCandidates: Int
+        ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
     }
 
     @Test

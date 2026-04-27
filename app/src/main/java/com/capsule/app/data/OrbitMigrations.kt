@@ -137,3 +137,61 @@ internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
         )
     }
 }
+
+/**
+ * v3 (002 amendment Phase 11 — Cluster Engine T120):
+ *   - adds `cluster` + `cluster_member` tables with FK CASCADE on both
+ *     parents (cluster.id and intent_envelope.id).
+ *   - adds the four indexes per FR-026..FR-040: state filter,
+ *     time-bucket range scan, and member-by-envelope reverse lookup.
+ *
+ * Procedural orphan-trigger NOT used here. FK CASCADE handles row
+ * deletes; the count-based DISMISS rule (FR-038 — "surviving members
+ * < 3 → auto-DISMISS reason=orphaned") lives in app code (T153) since
+ * Room aggregations don't compose with FK triggers.
+ *
+ * Migration is purely additive — every v2 query continues unchanged.
+ */
+internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // 1. cluster — agent-detected grouping with modelLabel stamping per
+        //    Principle IX (LLM Sovereignty).
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS cluster (
+                id TEXT PRIMARY KEY NOT NULL,
+                cluster_type TEXT NOT NULL,
+                state TEXT NOT NULL,
+                timeBucketStart INTEGER NOT NULL,
+                timeBucketEnd INTEGER NOT NULL,
+                similarityScore REAL NOT NULL,
+                model_label TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                stateChangedAt INTEGER NOT NULL,
+                dismissedAt INTEGER
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_cluster_state ON cluster(state)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_cluster_time_bucket ON cluster(timeBucketStart, timeBucketEnd)")
+
+        // 2. cluster_member — composite PK + double FK CASCADE so a hard
+        //    delete on either parent (cluster or envelope) cleans up the
+        //    junction row without leaving dangling references. The
+        //    surviving-count check that drives FR-038 lives in app code.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS cluster_member (
+                clusterId TEXT NOT NULL,
+                envelopeId TEXT NOT NULL,
+                memberIndex INTEGER NOT NULL,
+                PRIMARY KEY(clusterId, envelopeId),
+                FOREIGN KEY(clusterId) REFERENCES cluster(id) ON DELETE CASCADE,
+                FOREIGN KEY(envelopeId) REFERENCES intent_envelope(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_cluster_member_clusterId ON cluster_member(clusterId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_cluster_member_envelope ON cluster_member(envelopeId)")
+    }
+}

@@ -41,5 +41,25 @@ enum class AuditAction {
     /** WeeklyDigestWorker ran but produced nothing (sparse window, already exists, fallback failure). */
     DIGEST_SKIPPED,
     /** A DIGEST or DERIVED envelope was soft-deleted because all its source envelopes were deleted. */
-    ENVELOPE_INVALIDATED
+    ENVELOPE_INVALIDATED,
+
+    // 002 amendment Phase 11 additions — cluster engine (T117):
+    /** ClusterDetectionWorker produced a new cluster row. */
+    CLUSTER_FORMED,
+    /** Cluster transitioned from FORMING -> SURFACED (visible in Diary). */
+    CLUSTER_SURFACED,
+    /** User tapped any action affordance on the cluster card. */
+    CLUSTER_TAPPED,
+    /** Cluster transitioned to ACTING (Nano inference in flight). Persisted BEFORE inference per FR-012-031. */
+    CLUSTER_ACTING,
+    /** Cluster reached terminal ACTED — Summarize bullets rendered with citations. */
+    CLUSTER_ACTED,
+    /** Nano inference returned error/null/timeout, or sanitizer rejected the output. */
+    CLUSTER_FAILED,
+    /** User dismissed the cluster card (swipe or ×). */
+    CLUSTER_DISMISSED,
+    /** Cluster aged out (>7 days SURFACED without action) per FR-039. */
+    CLUSTER_AGED_OUT,
+    /** Cluster auto-dismissed because surviving member count fell below 3 (FR-038). */
+    CLUSTER_ORPHANED
 }

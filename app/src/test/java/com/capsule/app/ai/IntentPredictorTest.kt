@@ -91,6 +91,13 @@ class IntentPredictorTest {
         override suspend fun summarize(text: String, maxTokens: Int): SummaryResult = error("unused")
         override suspend fun scanSensitivity(text: String): SensitivityResult = error("unused")
         override suspend fun generateDayHeader(dayIsoDate: String, envelopeSummaries: List<String>): DayHeaderResult = error("unused")
+        override suspend fun extractActions(
+            text: String,
+            contentType: String,
+            state: com.capsule.app.data.entity.StateSnapshot,
+            registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
+            maxCandidates: Int
+        ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
     }
 
     private class ThrowingProvider(private val cause: Throwable) : LlmProvider {
@@ -100,6 +107,13 @@ class IntentPredictorTest {
         override suspend fun summarize(text: String, maxTokens: Int): SummaryResult = error("unused")
         override suspend fun scanSensitivity(text: String): SensitivityResult = error("unused")
         override suspend fun generateDayHeader(dayIsoDate: String, envelopeSummaries: List<String>): DayHeaderResult = error("unused")
+        override suspend fun extractActions(
+            text: String,
+            contentType: String,
+            state: com.capsule.app.data.entity.StateSnapshot,
+            registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
+            maxCandidates: Int
+        ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
     }
 
     private class SlowProvider(private val delayMillis: Long) : LlmProvider {
@@ -110,5 +124,12 @@ class IntentPredictorTest {
         override suspend fun summarize(text: String, maxTokens: Int): SummaryResult = error("unused")
         override suspend fun scanSensitivity(text: String): SensitivityResult = error("unused")
         override suspend fun generateDayHeader(dayIsoDate: String, envelopeSummaries: List<String>): DayHeaderResult = error("unused")
+        override suspend fun extractActions(
+            text: String,
+            contentType: String,
+            state: com.capsule.app.data.entity.StateSnapshot,
+            registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
+            maxCandidates: Int
+        ): com.capsule.app.ai.model.ActionExtractionResult = error("unused")
     }
 }

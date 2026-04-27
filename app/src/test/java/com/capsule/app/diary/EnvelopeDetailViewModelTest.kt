@@ -1,5 +1,8 @@
 package com.capsule.app.diary
 
+import com.capsule.app.action.ipc.ActionExecuteRequestParcel
+import com.capsule.app.action.ipc.ActionExecuteResultParcel
+import com.capsule.app.data.ipc.ActionProposalParcel
 import com.capsule.app.data.ipc.AuditEntryParcel
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
@@ -64,6 +67,15 @@ class EnvelopeDetailViewModelTest {
             return envelope ?: error("no envelope stubbed")
         }
         override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> = emptyList()
+
+        // 003 v1.1 — stub-only; not exercised by these envelope-detail tests.
+        override fun observeProposals(envelopeId: String): Flow<List<ActionProposalParcel>> = emptyFlow()
+        override suspend fun markProposalConfirmed(proposalId: String): Boolean = false
+        override suspend fun markProposalDismissed(proposalId: String): Boolean = false
+        override suspend fun executeAction(request: ActionExecuteRequestParcel): ActionExecuteResultParcel =
+            error("executeAction not stubbed")
+        override suspend fun cancelWithinUndoWindow(executionId: String): Boolean = false
+        override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {}
     }
 
     @Test

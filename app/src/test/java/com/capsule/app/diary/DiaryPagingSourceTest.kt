@@ -33,6 +33,17 @@ class DiaryPagingSourceTest {
             calls++
             return allDays.drop(offset).take(limit)
         }
+
+        // 003 v1.1 — stub-only; not exercised by paging tests.
+        override fun observeProposals(envelopeId: String) =
+            kotlinx.coroutines.flow.flowOf(emptyList<com.capsule.app.data.ipc.ActionProposalParcel>())
+        override suspend fun markProposalConfirmed(proposalId: String): Boolean = false
+        override suspend fun markProposalDismissed(proposalId: String): Boolean = false
+        override suspend fun executeAction(
+            request: com.capsule.app.action.ipc.ActionExecuteRequestParcel
+        ): com.capsule.app.action.ipc.ActionExecuteResultParcel = error("unused")
+        override suspend fun cancelWithinUndoWindow(executionId: String): Boolean = false
+        override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {}
     }
 
     @Test

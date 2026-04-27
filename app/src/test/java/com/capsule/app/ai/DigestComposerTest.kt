@@ -229,13 +229,13 @@ class DigestComposerTest {
                 SummaryFixture.OK -> SummaryResult(
                     text = "This week was about reading articles.",
                     generationLocale = "en-US",
-                    provenance = LlmProvenance.LOCAL_NANO
+                    provenance = com.capsule.app.ai.model.LlmProvenance.LocalNano
                 )
                 SummaryFixture.THROW -> error("AICore unavailable")
                 SummaryFixture.BLANK -> SummaryResult(
                     text = "   ",
                     generationLocale = "en-US",
-                    provenance = LlmProvenance.LOCAL_NANO
+                    provenance = com.capsule.app.ai.model.LlmProvenance.LocalNano
                 )
             }
         }

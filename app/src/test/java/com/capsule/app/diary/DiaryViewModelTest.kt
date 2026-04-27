@@ -171,6 +171,18 @@ class DiaryViewModelTest {
             generationLocale = "en",
             provenance = LlmProvenance.LocalNano
         )
+        // 003 v1.1 — stub-only; not exercised by these tests.
+        override suspend fun extractActions(
+            text: String,
+            contentType: String,
+            state: com.capsule.app.data.entity.StateSnapshot,
+            registeredFunctions: List<com.capsule.app.ai.model.AppFunctionSummary>,
+            maxCandidates: Int
+        ): com.capsule.app.ai.model.ActionExtractionResult =
+            com.capsule.app.ai.model.ActionExtractionResult(
+                provenance = LlmProvenance.LocalNano,
+                candidates = emptyList()
+            )
     }
 
     private fun newVm(

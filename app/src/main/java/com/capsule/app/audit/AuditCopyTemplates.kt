@@ -44,6 +44,15 @@ object AuditCopyTemplates {
             AuditAction.DIGEST_GENERATED  -> formatDigestGenerated(extras, fallback)
             AuditAction.DIGEST_SKIPPED    -> formatDigestSkipped(extras, fallback)
             AuditAction.ENVELOPE_INVALIDATED -> formatEnvelopeInvalidated(extras, fallback)
+            AuditAction.CLUSTER_FORMED    -> formatClusterFormed(extras, fallback)
+            AuditAction.CLUSTER_SURFACED  -> "Surfaced a cluster"
+            AuditAction.CLUSTER_TAPPED    -> "You tapped a cluster card"
+            AuditAction.CLUSTER_ACTING    -> "Summarising your cluster…"
+            AuditAction.CLUSTER_ACTED     -> formatClusterActed(extras, fallback)
+            AuditAction.CLUSTER_FAILED    -> formatClusterFailed(extras, fallback)
+            AuditAction.CLUSTER_DISMISSED -> "You dismissed a cluster card"
+            AuditAction.CLUSTER_AGED_OUT  -> "Cluster aged out"
+            AuditAction.CLUSTER_ORPHANED  -> "Cluster auto-dismissed — too many sources removed"
             else -> fallback
         }
     }
@@ -122,6 +131,34 @@ object AuditCopyTemplates {
         return when (reason) {
             "lost_provenance" -> "Removed digest — all sources deleted"
             else              -> "Invalidated ($reason)"
+        }
+    }
+
+    private fun formatClusterFormed(extras: JSONObject?, fallback: String): String {
+        val count = extras?.optInt("memberCount", -1) ?: -1
+        val type = extras?.optString("clusterType")?.takeIf { it.isNotBlank() }
+        return when {
+            count > 0 && type == "RESEARCH_SESSION" -> "Noticed a research session ($count captures)"
+            count > 0                               -> "Noticed a cluster ($count captures)"
+            else                                    -> "Noticed a cluster"
+        }
+    }
+
+    private fun formatClusterActed(extras: JSONObject?, fallback: String): String {
+        val bullets = extras?.optInt("bulletCount", -1) ?: -1
+        return if (bullets > 0) "Summarised your cluster ($bullets bullets)"
+               else "Summarised your cluster"
+    }
+
+    private fun formatClusterFailed(extras: JSONObject?, fallback: String): String {
+        val reason = extras?.optString("reason")?.takeIf { it.isNotBlank() } ?: return "Cluster summary failed"
+        return when (reason) {
+            "nano_unavailable"     -> "On-device AI unavailable"
+            "nano_timeout"         -> "On-device AI timed out"
+            "uncited_output"       -> "Rejected — agent didn't cite its sources"
+            "prompt_injection"     -> "Rejected — suspicious source content"
+            "model_label_mismatch" -> "Skipped — firmware drift detected"
+            else                   -> "Cluster summary failed ($reason)"
         }
     }
 

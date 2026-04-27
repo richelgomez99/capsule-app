@@ -8,5 +8,12 @@ enum class ContinuationType {
     /** User-initiated; no scheduling constraints; dispatches an Intent via `:capture`. */
     ACTION_EXECUTE,
     /** Periodic Sunday 06:00 local; produces 0..1 DIGEST envelope per Sunday. */
-    WEEKLY_DIGEST
+    WEEKLY_DIGEST,
+    /**
+     * 002 amendment Phase 11 (T118) — `ClusterDetectionWorker` runs.
+     * Audited via `CONTINUATION_SCHEDULED` / `CONTINUATION_COMPLETED`
+     * with this type so the cluster pipeline shares the existing
+     * continuation observability surface.
+     */
+    CLUSTER_DETECT
 }
