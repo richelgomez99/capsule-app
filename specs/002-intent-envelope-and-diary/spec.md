@@ -560,10 +560,23 @@ envelope's hydrated text).
   tap; orphan auto-`DISMISSED` if surviving members < 3. Detailed state
   contract in spec 012 §Cluster lifecycle state machine.
 - **FR-032 (citation enforcement)**: `ClusterSummariser` MUST require
-  every output bullet to cite source envelope ID(s). Bullets without
-  citations are rejected (return `null`); the card transitions to
-  `FAILED`. Citations render as Berkeley Mono 10 sp `--ink-faint`
-  trailing superscripts (¹²³) with a reference list at card foot.
+  every output bullet to cite source envelope ID(s). The model-output
+  validation surface is the parenthetical token form `(env-id)` /
+  `(env-id, env-id, ...)` appearing in bullet text; the output filter
+  MUST validate BOTH (a) **presence** — every bullet contains ≥ 1
+  parenthetical citation token — AND (b) **cluster-membership** — every
+  cited `env-id` is present in `cluster_member.envelopeId` for the
+  source cluster. A bullet that fails either check causes the entire
+  summariser output to be rejected (return `null`); the card transitions
+  to `FAILED`. Cluster-membership validation is non-negotiable for
+  demo-day credibility: the literal presence-only reading admits a
+  citation-forgery attack (Nano hallucinating `(env-99)` against a
+  4-member cluster `{env-01-a..d}`), and the canonical hostile QA test
+  `ClusterSummariserHostileTest.kt` MUST cover this family (T140 corpus
+  `inj-015` + similar). Citations render as Berkeley Mono 10 sp
+  `--ink-faint` trailing superscripts (¹²³) with a reference list at
+  card foot; the parenthetical form is the on-wire model contract, the
+  superscript form is the rendered presentation.
 - **FR-033 (output bounds)**: Summarize output MUST be ≤ 3 bullets,
   each ≤ 240 characters. Truncate exceeding output with `…`.
 - **FR-034 (prompt-injection guard)**: `ClusterSummariser` MUST sanitize

@@ -12,6 +12,22 @@
 
 ## Status / Adjustments log
 
+**2026-04-27 — FR-032 tightened to require citation cluster-membership (spec edit, Block 6 prerequisite)**
+
+Citation-enforcement FR was the strongest finding from the T140 + T158 read-tandem. The literal pre-edit text of FR-032 said "every output bullet [must] cite source envelope ID(s)" — presence-only. Nothing in the spec required cited `env-id` tokens to be members of the source cluster. That admits a citation-forgery attack: Nano hallucinating `(env-99)` against a 4-member cluster `{env-01-a..d}` would pass the literal check and render on stage with a fabricated citation. T140 corpus `inj-015` was already authored to treat this as `PASSED_BUT_REJECTED_AT_OUTPUT`, but the spec didn't back the corpus.
+
+- **Renumbering correction**: prior status entries (T140 + T158 below) referenced this as "FR-039". They were wrong — FR-039 is audit logging. The citation-enforcement FR is **FR-032**. Both prior status entries are left as-historical-record; agent 1 / Block 6 author should treat all "FR-039 citation-presence" references in those entries as meaning **FR-032 citation enforcement**. No corpus content changes (the corpus was always correct against the substantive intent; only the FR ID was off).
+- **Spec edit**: FR-032 now requires the output filter to validate BOTH (a) parenthetical-token presence AND (b) cluster-membership of every cited `env-id` against `cluster_member.envelopeId`. Either failure rejects the entire output and transitions the card to `FAILED`. Model-output validation surface is the parenthetical `(env-id)` form; UI rendering as Berkeley Mono superscripts is unchanged (parenthetical = on-wire model contract, superscript = presentation).
+- **Block 6 contract**: `ClusterSummariserHostileTest.kt` MUST cover the citation-forgery family explicitly — at minimum `inj-015` from the T140 corpus and at least one symmetric variant. The test asserts that an output containing a parenthetical citation referencing an `env-id` not in the cluster's member set is rejected end-to-end (return null, card → FAILED, audit row written).
+- **Gate**: file-only spec change in `specs/002-intent-envelope-and-diary/spec.md`. No code touched; agent 1 picks this up at Block 6.
+
+**Cleanup items deferred to v1.1 (non-blocking, tracked here so they don't get lost):**
+1. **Fixture schema**: make `expectedSummary` optional in the fixture JSON schema, present only when `expected_outcome == POSITIVE`. Today every NEGATIVE fixture carries a `[NEGATIVE FIXTURE — ...]` placeholder bullet so JSON parses; cleaner to let the schema reflect reality and the eval runner branch on outcome at load time. Touches: `cluster-fixtures-contract.md` (schema), T159 `ClusterEvalRunner` (loader logic), 4 negative fixture files (drop the placeholder block). Defer to v1.1; doesn't block May 4 eval since the placeholder is benign.
+2. **Greedy-vs-grid-bucket marker**: Block 3 (`35edfda`) committed greedy session bucketing; if anyone later reverts to grid-bucketing, the T158 span-boundary fixtures (07, 15) need re-anchoring. Marker only — no edit needed today; flag in `research.md` if/when grid-bucketing is reconsidered.
+3. **T159 `--calibrate` flag (cosine-drift mitigation)**: T158 fixtures declare `cosine_min_observed: 0.71/0.72` against an *assumed* Nano embedding; the live Nano embedder on May 4 may produce different cosines on the same prose. To distinguish oracle drift from engine regression, T159 `ClusterEvalRunner` should expose a `--calibrate` mode that runs the embedding pass once across the fixture corpus, computes actual cosine minima, and prints fixture-vs-declared deltas. If any POSITIVE fixture's measured cosine drops below 0.70 the operator either tightens the fixture's prose or flips its expected outcome to `REJECTED_LOW_COSINE` for that run with a logged note. **This is a flag on the T159 runner agent 1 will write, not a separate task** — fold into Block 11.
+
+---
+
 **2026-04-27 — Phase 11 T158 synthetic golden corpus landed (parallel agent, May 4 measurement substrate)**
 
 Pre-built [research-session-{01..20}.json](app/src/test/resources/fixtures/clusters/) so agent 1's T165 precision/recall measurement on May 4 has a fully-spec'd fixture set the moment the engine is ready. Without this, the D-AS-WRITTEN stretch decision on T171–T173 promotion would fire against an empty corpus.
