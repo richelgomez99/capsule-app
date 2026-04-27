@@ -201,6 +201,84 @@ Plus KG edges: `derives_from` (envelope → envelope) and `derived_for_cluster` 
 
 ---
 
+## Cluster Lifecycle State Machine (added 2026-04-26 via /autoplan)
+
+Spec 012's primary state machine is the **envelope** resolution state machine (Saved → Acknowledged → In motion → Resolved, plus Abandoned/Snoozed). The **cluster** state machine is a separate lifecycle for the cluster-suggestion-engine surface (spec 002 amendment §FR-026..FR-040). Clusters are not envelopes — they are agent-detected groupings that produce derived envelopes when their actions fire.
+
+**States** (8 total):
+
+```
+                          [ClusterDetectionWorker writes row]
+                                       │
+                                       ▼
+                                   ┌────────┐
+                                   │FORMING │  (transient, in-worker, never on disk)
+                                   └───┬────┘
+                                       │ commit single transaction
+                                       ▼
+                                  ┌──────────┐
+                       ┌─────────▶│ SURFACED │  (default state on disk)
+                       │          └────┬─────┘
+                       │               │ user taps card
+                       │               ▼
+                       │           ┌────────┐
+                       │   ┌──────▶│ TAPPED │
+                       │   │       └────┬───┘
+                       │   │            │ Summarize call begins (state persisted to disk)
+                       │   │            ▼
+                       │   │        ┌────────────┐
+                       │   │        │ ACTING     │
+                       │   │        └─┬────┬─────┘
+                       │   │ success  │    │ Nano error / timeout
+                       │   │          ▼    ▼
+                       │   │     ┌──────┐ ┌────────┐
+                       │   │     │ACTED │ │ FAILED │ retry → ACTING (max 3)
+                       │   │     └──────┘ └────┬───┘ third failure → DISMISSED
+                       │   │                   │
+                       │   │ user dismiss      │
+                       │   ◀────────────────────┘
+                       │
+                       │ 7d aging-out from SURFACED with no tap
+                       ▼
+                  ┌──────────┐               ┌────────────┐
+                  │ AGED_OUT │               │ DISMISSED  │
+                  └──────────┘               └────────────┘
+                                                   ▲
+                                                   │ orphan-cleanup: from
+                                                   │ any state if surviving
+                                                   │ members < 3 (audit
+                                                   │ entry: reason=orphaned)
+```
+
+**Functional requirements**:
+
+- **FR-012-028 (cluster state machine enforcement)**: System MUST enforce the 8-state cluster lifecycle at the data layer. Forbidden transitions (e.g., `DISMISSED → ACTING`, `AGED_OUT → SURFACED`) MUST be rejected with audit logging via the `CLUSTER_*` enum values per spec 002 FR-039.
+- **FR-012-029 (FORMING is in-worker only)**: `FORMING` is a transient state inside `ClusterDetectionWorker`'s embedding-and-similarity loop. It MUST NOT be written to disk. Persistence happens only on commit-to-`SURFACED` inside a single Room transaction; partial-batch failures leave nothing.
+- **FR-012-030 (SURFACED is default on-disk state)**: Clusters that pass the FR-028 threshold heuristic AND the FR-030 modelLabel boundary gate are persisted with `state=SURFACED`. The Diary's `ClusterRepository.observeSurfacedToday()` query filters on `state IN ('SURFACED', 'TAPPED', 'ACTING', 'ACTED', 'FAILED')` AND surviving-members ≥ 3.
+- **FR-012-031 (ACTING is disk-persisted)**: When the user taps Summarize, the cluster transitions to `ACTING` and the new state is **written to disk before** Nano inference begins. This guarantees that backgrounding the app mid-inference resumes correctly: on foreground, the user sees either the ACTED result OR a "tap to retry" affordance, never a frozen ACTING ellipsis.
+- **FR-012-032 (FAILED retry bounds)**: A cluster MAY transition `FAILED → ACTING` up to 3 times via the user's ↻ retry affordance (per spec 010 FR-010-024). On the 3rd FAILED, the next user dismiss automatically transitions to `DISMISSED`; no further retry is offered. This bound prevents unbounded retry loops on persistent Nano failures.
+- **FR-012-033 (dismissal-during-ACTING is a no-op)**: User-initiated dismiss during `ACTING` state is visually rejected (no-op). Once `ACTING` transitions to `ACTED` or `FAILED`, dismiss becomes available again. This prevents Nano inference from being orphaned mid-call and prevents UI race conditions.
+- **FR-012-034 (AGED_OUT timeout)**: A cluster in `SURFACED` state for ≥ 7 calendar days with no `TAPPED` transition MUST transition to `AGED_OUT` on the next `ClusterDetectionWorker` run. The card no longer renders. Audit log records the transition.
+- **FR-012-035 (orphan auto-DISMISS)**: When `SoftDeleteRetentionWorker` (002 T085) cascades a hard-delete to `ClusterMember` rows, any cluster with surviving members < 3 MUST auto-transition to `DISMISSED` with audit `CLUSTER_ORPHANED reason=members_below_minimum`. The transition is allowed from any prior state (including `ACTED`).
+- **FR-012-036 (cluster ACTED does not auto-resolve sources)**: Per FR-012-006, the *Summarize* action does NOT auto-resolve source envelopes — only the cluster transitions to `ACTED`. The derived summary envelope is created per FR-012-011. Source envelopes remain in their pre-action resolution state. Reading-through inference may advance them to `Acknowledged` separately (a future FR).
+- **FR-012-037 (cluster cross-product with envelope resolution)**: When a cluster reaches all-resolved at the envelope level (every member envelope's `resolution_state == Resolved`), the cluster card MUST NOT re-surface even if dismissal hadn't occurred. Per FR-012-019, the cluster has cleared. The cluster row remains in `DISMISSED` state with audit reason `cleared_via_envelope_resolution`.
+
+**Cluster vs envelope state machines — relationship**:
+
+The two state machines are independent but coupled through the `cluster_member` join table and the derived-envelope provenance edges (per FR-012-011, FR-012-013). Practically:
+
+| Action | Cluster transition | Source envelopes | Derived envelope |
+|---|---|---|---|
+| `SURFACED → DISMISSED` (user dismiss) | DISMISSED | unchanged | none created |
+| `ACTING → ACTED` (Summarize succeeds) | ACTED | unchanged | new derived envelope (`derived_via='cluster_summarize'`) |
+| `ACTING → ACTED` (SaveAsList stretch, v1.1) | ACTED | partial-resolve to `In motion` per FR-012-006 | new derived envelope |
+| envelope hard-delete | orphan auto-DISMISS if surviving < 3 | one fewer member | unchanged (decoupled lifecycle per FR-012-011) |
+| every cluster transition | logged as `CLUSTER_*` | not affected | not affected |
+
+The relationship is: cluster state machine governs **the agent's offer**, envelope state machine governs **the user's loop**. They intersect when an action fires; they decouple at every other moment. This separation is load-bearing — it lets the demo's "agent leads → user closes" beat be two distinct visual moments that share an event but live in different state systems.
+
+---
+
 ## Visual Treatment (cross-references)
 
 - design.md §3.6 (Iconography) — the wax-seal fill-state extension. Requires design.md amendment to add a "Resolution states" sub-section after the existing wax-seal vocabulary.

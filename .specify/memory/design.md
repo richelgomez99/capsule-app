@@ -509,31 +509,59 @@ speaks*. Surfaces the morning after a research-session cluster forms.
 Two-or-three inline actions (e.g., for research-session: *Summarize*,
 *Open All*, *Save as Structured Reading List*).
 
-**Placement.** Inside §4.5's composition list, between item #2 (Day
-header paragraph) and item #3 (Thin rule). The day header remains the
-Diary's hero; the cluster-suggestion card is a secondary agent voice
-beneath it. No card means no slot — when no cluster has formed
-overnight, the day header runs straight into the thin rule as today.
+**Placement.** **REVISED per /autoplan design review 2026-04-26 (UC2 Option A):**
+On cluster days, the cluster-suggestion card renders **above** the day header
+inside §4.5's composition list (between item #1 Date marker and item #2 Day header
+paragraph). Rationale: the day header (Fraunces 34 sp) is a 2:1 type ratio against
+the card body (Newsreader italic 16 sp); placing the day header first makes it the
+visual hero and buries the agent card below. On cluster days, the agent moment is
+the *event*; the day header is *steady-state*. Events outrank steady-state in the
+diary's attention hierarchy. **On non-cluster days, placement is unchanged** — day
+header runs straight into thin rule as today; no card means no slot. The card's
+appearance therefore changes the day's visual hierarchy, which is correct: the
+agent has spoken, that's the day's most important fact.
 
 **Composition** (top-to-bottom inside the card):
 
 1. **Agent-voice mark** — a NEW glyph reserved exclusively for
    agent-spoken surfaces, drawn via the same `Canvas.drawPath`
    mechanism as the four envelope wax seals (§ 3.6) but visually
-   distinct. Recommended: ✦ (six-pointed star) at 14 sp in
-   `--ink-accent-cluster` (a new accent token; lock by April 30
-   alongside `AgentVoiceMark` lint allow-list, spec 010 FR-010-019).
-   Hangs in the margin column, right-aligned, like a wax seal.
+   distinct. **LOCKED (per /autoplan design review 2026-04-26):
+   ✦ (six-pointed star)** at 14 sp in `--ink-accent-cluster` (a new
+   accent token; locked April 30 deadline alongside `AgentVoiceMark`
+   lint allow-list, spec 010 FR-010-019). Hangs in the margin column,
+   right-aligned, like a wax seal. Lock-rationale: the glyph is the
+   product's first agent-identity mark — every week it remains
+   "recommended" is a week designers chase alternative glyphs
+   instead of testing motion + accent token rendering.
 2. **Card body** — Newsreader italic 16 sp, content column, ≤ 2
-   sentences. Lead with the cluster's *what*: *"You had a research
-   session on Founder Mode this weekend. 4 captures across Twitter,
-   Safari, and a podcast app."* Italic distinguishes agent voice from
-   day-header (which is Fraunces non-italic). The italic is the
-   product's tonal mark for "this is the agent talking."
-3. **Action row** — Geist 12 sp small caps, content column,
-   left-aligned. Action labels separated by typographic mid-dot (`·`)
-   in `--ink-dim`. Example: `SUMMARIZE · OPEN ALL · SAVE AS LIST`. No
-   button chrome. Touch targets pad to ≥ 48 dp per FR-010-016.
+   sentences. **Lead with temporal specificity using Orbit-only
+   material** (per /autoplan design review 2026-04-26): rather than
+   generic "you had a research session" template prose, surface the
+   timestamps + capture rhythm only Orbit knows. Canonical example:
+   *"Saturday morning, between 9:14 and 11:02, you came back to
+   Founder Mode four times — across Twitter, Safari, and a podcast
+   app."* The specificity of time + return-frequency is the moat
+   made tactile — Substack has serif italic; only Orbit knows when
+   you opened Twitter four times in 108 minutes. Italic distinguishes
+   agent voice from day-header (which is Fraunces non-italic). The
+   italic is the product's tonal mark for "this is the agent talking."
+3. **Action row** — **Geist 14 sp regular weight, sentence case** (revised
+   per /autoplan design review 2026-04-26 TD1 Option A — was 12 sp small caps).
+   Content column, left-aligned, `--ink` color (not `--ink-dim`). Action labels
+   separated by **vertical hairline rules**: `│` (1 px hairline, `--rule` color,
+   height matches cap-height) between labels, NOT mid-dots. Mid-dot (`·`) is
+   reserved for the metadata separator elsewhere in the product (§4.6 envelope
+   card, §4.7 settings); reusing it here would teach users this row is metadata,
+   not actions. Hairline rules parse the row as 3 distinct affordances. Example:
+   `Summarize │ Open all │ Save as list`. No button chrome. Touch targets pad
+   to ≥ 48 dp per FR-010-016. **Rationale for the typography revision:** at
+   12 sp small caps, the action row reads as "publication subtitle" not "agent
+   call-to-action" — and disappears on a 4K projector at Demo Day. 14 sp regular
+   sentence-case reads as a verb the audience can clearly see when tapped, which
+   is structurally required for the agent-led wow moment to land. The product's
+   Quiet Almanac aesthetic survives via the absence of button chrome, hairline
+   rules, no `--ink-dim`, and Geist itself — small caps was the wrong vehicle.
 4. **Dismiss affordance** — small typographic close (`×` in Geist 14
    sp, `--ink-dim`, top-right of card body row, 48 dp touch target)
    OR swipe-to-dismiss horizontally. Dismissal is per
@@ -548,6 +576,18 @@ horizontal alignment (no separate gutter).
 **Stacking.** Max 2 cards per Diary day in v1. If 3+ clusters form
 overnight, the lowest-confidence cluster cards drop below a "more"
 fold (deferred to v1.1 — flag in spec 010 D5).
+
+**Bullet output length** (added per /autoplan eng review 2026-04-26):
+Summarize action returns ≤ 3 bullets, each ≤ 240 characters. If Nano
+output exceeds either bound, truncate to the bound and append `…`. The
+card has no max-height — it grows to fit ≤ 3 bullets. **Citations
+required:** every bullet MUST cite the source envelope_id(s) it
+synthesized from, rendered as a Berkeley Mono 10 sp `--ink-faint`
+trailing reference (e.g. `…Founder Mode four times. ¹²³` where ¹²³ are
+1-indexed references to the cluster's member envelopes, listed at card
+foot in metadata strip style). Bullets without citations are rejected
+by `ClusterSummariser` and the card transitions to FAILED state. This
+is the structural answer to hallucinated synthesis on stage.
 
 **Motion.** Card fades in over §3.3 *short* duration when first
 rendered on a fresh diary open. No directional motion. Reduce-motion
@@ -564,7 +604,48 @@ cluster_id; visually they only appear once on the day they form.
 patiently in the diary; the user finds it when they open Orbit.
 Principle V (silence is a feature) is constitutionally enforced
 here. No avatar (the agent doesn't have a face). No Material
-Surface elevation. No purple. No emoji.
+Surface elevation. No purple. No emoji. **No italic for emphasis
+inside agent body copy** (per /autoplan design review 2026-04-26):
+italic is already spent as the agent-voice contract, so emphasis
+inside agent prose is unavailable. If a word inside the agent body
+needs emphasis, restructure the sentence to lead with it instead.
+
+**States** (added per /autoplan design review 2026-04-26 — load-bearing
+for stage demo on May 22, where 2-3s of inflight silence reads as
+"is it broken?"):
+
+1. **Inflight (during Nano 4 inference, ~2-3s after tap).** Action
+   labels in the action row are replaced by an animated ellipsis in
+   Newsreader italic 14 sp `--ink-dim`: `…` cycling at 600ms intervals.
+   The agent-voice mark (✦) does not animate — it remains anchored.
+   No spinner (banned). No skeleton shimmer (Material chrome).
+2. **Inference error.** Body copy is replaced by Newsreader italic
+   16 sp: *"Orbit couldn't reach all 4 captures. Try again?"* with a
+   single ↻ retry affordance in Geist 12 sp small caps where the
+   action labels were. Same retry mechanism: tap → return to inflight
+   state → on success render output, on second failure show a single
+   line in Berkeley Mono 10 sp `--ink-faint`: *"Retried. Try again
+   later, or open captures individually."*
+3. **Stale (card is > 6h old when user opens Orbit).** Append a
+   timestamp marker to the action row's right margin: Berkeley Mono
+   10 sp `· 9:14A` in `--ink-faint`. Honest signal that the suggestion
+   was generated earlier; not stale-as-broken, just stale-as-aged.
+4. **Repeat-tap.** Debounce 1 second. Second tap during inflight is a
+   visual no-op (the inflight ellipsis continues; no double-spinner,
+   no queue indicator).
+5. **Slow / incomplete URL hydration.** If Summarize fires on a cluster
+   where one of the constituent URL captures never hydrated (offline at
+   capture time, ContentResolver returned 0 bytes, or domain-blocked),
+   the body copy soft-degrades: *"3 of 4 captures synthesized. The 4th
+   couldn't be reached."* The card never lies about how many sources
+   the synthesis covered.
+6. **Post-dismissal trace.** When the user dismisses (× or swipe),
+   the card collapses leaving a single-line trace at the same Diary
+   position: Berkeley Mono 10 sp `--ink-faint`, *"Cluster dismissed
+   · 9:14A"*. Persistent for the day. This is honest (no false
+   "agent learned"), auditable (matches the audit-log surface §4.8),
+   and gives the user a pixel-level signal that dismissal was
+   received. Trust comes from observability, not from promises.
 
 ### 4.6 Envelope card — expanded (spec 002, US2 + US3)
 
