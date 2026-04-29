@@ -124,9 +124,69 @@ interface ClusterDao {
 
     @Query("SELECT state, COUNT(*) AS n FROM cluster GROUP BY state")
     suspend fun countByState(): List<ClusterStateCount>
+
+    /**
+     * T129 — input feed for `ClusterDetectionWorker`. Returns one row
+     * per surviving (non-archived, non-deleted) envelope from the
+     * lookback window that has at least one hydrated
+     * [com.capsule.app.data.entity.ContinuationResultEntity] with a
+     * non-null summary at least [minSummaryLength] characters long
+     * (FR-026 — only fully-hydrated URL captures with enough body to
+     * embed reach the worker).
+     *
+     * The latest result wins on multi-hydration via `MAX(producedAt)`
+     * — re-hydrations should not multiply candidacy.
+     *
+     * NOT a member of any cluster yet: clusters are append-only in
+     * v1.1 (T127 design), so we exclude already-clustered envelope ids
+     * to keep the worker idempotent without locking.
+     */
+    @Query(
+        """
+        SELECT e.id            AS envelopeId,
+               e.createdAt     AS createdAtMillis,
+               cr.domain       AS domain,
+               cr.summary      AS summary
+        FROM intent_envelope e
+        INNER JOIN (
+            SELECT envelopeId, domain, summary,
+                   MAX(producedAt) AS latestAt
+            FROM continuation_result
+            WHERE summary IS NOT NULL
+            GROUP BY envelopeId
+        ) cr ON cr.envelopeId = e.id
+        WHERE e.createdAt >= :sinceMillis
+          AND e.isDeleted = 0
+          AND e.isArchived = 0
+          AND LENGTH(cr.summary) >= :minSummaryLength
+          AND e.id NOT IN (SELECT envelopeId FROM cluster_member)
+        ORDER BY e.createdAt ASC
+        """
+    )
+    suspend fun findClusterCandidates(
+        sinceMillis: Long,
+        minSummaryLength: Int
+    ): List<ClusterCandidateRow>
 }
 
 data class ClusterStateCount(val state: String, val n: Int)
+
+/**
+ * Row projection for [ClusterDao.findClusterCandidates]. Mirrors
+ * [com.capsule.app.cluster.SimilarityEngine.ClusterCandidate] so the
+ * detector can map straight across without a second projection step.
+ *
+ * `domain` is nullable because text captures and pre-hydration URL
+ * captures both lack a hostname; the detector treats `null` as its own
+ * synthetic domain when computing `MIN_DOMAINS` (the cluster-quality
+ * bar in `SimilarityEngine.isCluster`).
+ */
+data class ClusterCandidateRow(
+    val envelopeId: String,
+    val createdAtMillis: Long,
+    val domain: String?,
+    val summary: String
+)
 
 /**
  * Materialised projection: one cluster + the (cluster_member, envelope)

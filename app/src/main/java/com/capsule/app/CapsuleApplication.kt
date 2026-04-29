@@ -41,6 +41,7 @@ class CapsuleApplication : Application(), Configuration.Provider {
             scheduleSoftDeleteRetention()
             scheduleAuditLogRetention()
             scheduleWeeklyDigest()
+            scheduleClusterDetection()
             registerDebugDumpReceiverIfDebug()
         }
         // T025 — :ml process owns the AppFunction registry. Register the
@@ -164,6 +165,58 @@ class CapsuleApplication : Application(), Configuration.Provider {
         } else {
             candidate
         }
+        return java.time.Duration.between(now, anchor)
+    }
+
+    /**
+     * T132 (spec 002 amendment Phase 11) — schedule the daily
+     * cluster-detection scan. Anchored to 03:00 local time so the
+     * window is deep into off-hours and well away from the 07:00
+     * capture-seal flush. Per Principle IV the worker requires
+     * charging + UNMETERED + battery-not-low: cluster detection runs
+     * Nano embedding inference over potentially dozens of envelopes,
+     * which is too expensive to wake the radio for.
+     *
+     * 24h period, KEEP policy: WorkManager dedupes by unique-work
+     * name, so a re-launch never collapses a still-running run or
+     * shifts the next-fire anchor.
+     */
+    private fun scheduleClusterDetection() {
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(androidx.work.NetworkType.UNMETERED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+        val initialDelay = computeInitialDelayToLocalTime(
+            now = java.time.ZonedDateTime.now(java.time.ZoneId.systemDefault()),
+            targetLocalTime = java.time.LocalTime.of(3, 0)
+        )
+        val request = PeriodicWorkRequestBuilder<com.capsule.app.cluster.ClusterDetectionWorker>(
+            repeatInterval = 1,
+            repeatIntervalTimeUnit = TimeUnit.DAYS,
+            flexTimeInterval = 2,
+            flexTimeIntervalUnit = TimeUnit.HOURS
+        )
+            .setConstraints(constraints)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.capsule.app.cluster.ClusterDetectionWorker.UNIQUE_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    /**
+     * T132 helper — daily anchor at [targetLocalTime]. Today's
+     * [targetLocalTime] if still ahead of [now], otherwise tomorrow's.
+     */
+    internal fun computeInitialDelayToLocalTime(
+        now: java.time.ZonedDateTime,
+        targetLocalTime: java.time.LocalTime
+    ): java.time.Duration {
+        val candidate = now.with(targetLocalTime)
+        val anchor = if (!candidate.isAfter(now)) candidate.plusDays(1) else candidate
         return java.time.Duration.between(now, anchor)
     }
 
