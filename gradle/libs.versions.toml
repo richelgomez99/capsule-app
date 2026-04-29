@@ -26,6 +26,8 @@ mlkitTextRecognition = "16.0.1"
 coilCompose = "2.7.0"
 playServicesLocation = "21.3.0"
 appfunctions = "1.0.0-alpha01"
+supabaseKt = "3.6.0"
+ktor = "3.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -78,6 +80,11 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 # AndroidX AppFunctions (003 T002 — agent-callable function registry; Android 15+ system service, compat fallback on 14)
 androidx-appfunctions-runtime = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
 androidx-appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
+# Supabase Kotlin SDK (014 T014-019b — :net process only; enforced by Constitution Principle II + grep gate)
+supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabaseKt" }
+supabase-auth-kt = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
+# Ktor client engine for supabase-kt (3.x requires Ktor 3.x)
+ktor-client-android = { group = "io.ktor", name = "ktor-client-android", version.ref = "ktor" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

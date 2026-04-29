@@ -29,6 +29,42 @@ val cloudGatewayUrl: String = run {
     }
 }
 
+// Spec 014 T014-019b — Supabase SDK config sourced from local.properties.
+// SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are NOT secrets (publishable key is
+// the public anon key); when missing we warn-but-emit-empty so :net code can
+// detect absence at runtime and skip wiring the SDK (NoSessionAuthStateBinder
+// path remains intact). DEBUG_SUPABASE_EMAIL / DEBUG_SUPABASE_PASSWORD are
+// debug-only test credentials — release variant is forced empty below.
+val localProps: Properties = Properties().apply {
+    val propsFile = rootProject.file("local.properties")
+    if (propsFile.exists()) {
+        propsFile.inputStream().use { load(it) }
+    }
+}
+fun localProp(key: String): String = localProps.getProperty(key)?.trim().orEmpty()
+val supabaseUrl: String = run {
+    val v = localProp("supabase.url")
+    if (v.isEmpty()) {
+        logger.warn(
+            "[capsule-app] supabase.url not set in local.properties — " +
+                "SDK wiring will be skipped at runtime (T014-019b).",
+        )
+    }
+    v
+}
+val supabasePublishableKey: String = run {
+    val v = localProp("supabase.publishable.key")
+    if (v.isEmpty()) {
+        logger.warn(
+            "[capsule-app] supabase.publishable.key not set in local.properties — " +
+                "SDK wiring will be skipped at runtime (T014-019b).",
+        )
+    }
+    v
+}
+val debugSupabaseEmail: String = localProp("supabase.debug.email")
+val debugSupabasePassword: String = localProp("supabase.debug.password")
+
 android {
     namespace = "com.capsule.app"
     compileSdk {
@@ -54,6 +90,11 @@ android {
         // Spec 014 T014-016 — non-secret cloud config, sourced from
         // local.properties (or Day-1 placeholder fallback above).
         buildConfigField("String", "CLOUD_GATEWAY_URL", "\"$cloudGatewayUrl\"")
+
+        // Spec 014 T014-019b — Supabase SDK config (publishable key is public,
+        // not a secret). Empty values cause :net to skip SDK wiring at runtime.
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
 
     buildTypes {
@@ -63,6 +104,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // T014-019b — release MUST NOT carry debug seed credentials. Forced
+            // empty even if local.properties happens to define them.
+            buildConfigField("String", "DEBUG_SUPABASE_EMAIL", "\"\"")
+            buildConfigField("String", "DEBUG_SUPABASE_PASSWORD", "\"\"")
+        }
+        debug {
+            // T014-019b — debug-only test credentials for one-shot seeding from
+            // DebugSupabaseSeed. Empty by default; populate in local.properties.
+            buildConfigField("String", "DEBUG_SUPABASE_EMAIL", "\"$debugSupabaseEmail\"")
+            buildConfigField("String", "DEBUG_SUPABASE_PASSWORD", "\"$debugSupabasePassword\"")
         }
     }
     compileOptions {
@@ -120,6 +171,13 @@ dependencies {
     // OkHttp + Readability4J (:net process only — enforced by OrbitNoHttpClientOutsideNet lint rule)
     implementation(libs.okhttp)
     implementation(libs.readability4j)
+
+    // Supabase Kotlin SDK (T014-019b — :net process only; package import gate
+    // verified by `grep -r io.github.jan-tennert.supabase app/src` matching
+    // only app/src/{main,debug}/java/com/capsule/app/net/).
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth.kt)
+    implementation(libs.ktor.client.android)
 
     // ML Kit text recognition — T075 OcrEngine (on-device, Latin script bundled model)
     implementation(libs.mlkit.text.recognition)

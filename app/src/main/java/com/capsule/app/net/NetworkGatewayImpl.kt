@@ -1,12 +1,19 @@
 package com.capsule.app.net
 
+import android.content.Context
 import android.os.Binder
 import android.os.Process
+import android.util.Log
+import com.capsule.app.BuildConfig
 import com.capsule.app.ai.gateway.LlmGatewayRequest
 import com.capsule.app.ai.gateway.LlmGatewayResponse
 import com.capsule.app.net.ipc.FetchResultParcel
 import com.capsule.app.net.ipc.LlmGatewayRequestParcel
 import com.capsule.app.net.ipc.LlmGatewayResponseParcel
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.createSupabaseClient
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -37,6 +44,7 @@ import javax.net.ssl.SSLHandshakeException
  */
 class NetworkGatewayImpl(
     private val client: OkHttpClient,
+    private val appContext: Context? = null,
     private val validator: UrlValidator = UrlValidator(requireHttps = true),
     private val extractor: ReadabilityExtractor = ReadabilityExtractor(),
     private val clock: () -> Long = { System.currentTimeMillis() },
@@ -44,8 +52,60 @@ class NetworkGatewayImpl(
     private val myUidProvider: () -> Int = { Process.myUid() },
     private val auditSink: AuditSink? = null,
     private val disabled: () -> Boolean = { false },
-    private val gatewayClient: LlmGatewayClient = LlmGatewayClient(client = client),
+    gatewayClient: LlmGatewayClient? = null,
 ) {
+
+    /**
+     * Spec 014 T014-019b — lazily-initialised Supabase client. `null` when
+     * either:
+     *  - [appContext] is not supplied (legacy unit-test constructions), or
+     *  - `BuildConfig.SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` are blank
+     *    (operator hasn't populated `local.properties` yet — we keep the
+     *    NoSession path live so the rest of the app continues to function).
+     *
+     * The SDK MUST stay confined to this process per Constitution Principle
+     * II; any leak is caught by the grep gate documented on T014-019b.
+     */
+    val supabaseClient: SupabaseClient? by lazy { buildSupabaseClient() }
+
+    private val gatewayClient: LlmGatewayClient = gatewayClient ?: run {
+        val sb = supabaseClient
+        if (sb != null) {
+            LlmGatewayClient(
+                client = client,
+                authStateBinder = SupabaseAuthStateBinder {
+                    sb.auth.currentSessionOrNull()?.accessToken
+                },
+            )
+        } else {
+            LlmGatewayClient(client = client)
+        }
+    }
+
+    private fun buildSupabaseClient(): SupabaseClient? {
+        val ctx = appContext ?: return null
+        val url = BuildConfig.SUPABASE_URL
+        val key = BuildConfig.SUPABASE_PUBLISHABLE_KEY
+        if (url.isBlank() || key.isBlank()) {
+            Log.w(
+                TAG,
+                "supabase config missing; skipping SDK wiring " +
+                    "(populate supabase.url / supabase.publishable.key in local.properties)",
+            )
+            return null
+        }
+        return try {
+            createSupabaseClient(supabaseUrl = url, supabaseKey = key) {
+                install(Auth) {
+                    sessionManager = EncryptedSessionManager(ctx)
+                    alwaysAutoRefresh = true
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "failed to init supabase client: ${t.javaClass.simpleName}")
+            null
+        }
+    }
 
     /** Minimal audit seam; a richer [com.capsule.app.audit] wiring lands via merge zone. */
     fun interface AuditSink {
@@ -289,6 +349,7 @@ class NetworkGatewayImpl(
         internal const val MAX_REDIRECTS: Int = 5
         internal const val MAX_BODY_BYTES: Int = 2 * 1024 * 1024
         internal const val HOST_COOLDOWN_MS: Long = 60_000L
+        private const val TAG: String = "NetworkGatewayImpl"
 
         private val GATEWAY_JSON: Json = Json {
             classDiscriminator = "type"
