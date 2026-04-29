@@ -60,6 +60,7 @@ class ClusterDetectionWorker(
          * [com.capsule.app.ai.LlmProviderDiagnostics.forceNanoUnavailable].
          */
         @Volatile
+        // CLUSTER-LOCAL-PIN: migrated in Phase 11 Block 4
         var llmFactory: () -> LlmProvider = { NanoLlmProvider() }
     }
 }
