@@ -22,8 +22,8 @@ export const StateSnapshotSchema = z.object({
 });
 
 export const AppFunctionSummarySchema = z.object({
-  id: z.string(),
-  name: z.string(),
+  id: z.string().max(256),
+  name: z.string().max(256),
   schema: z.record(z.unknown()),
 });
 
@@ -36,35 +36,47 @@ export const ActionProposalSchema = z.object({
 
 // --- Per-payload schemas ---
 
+// Text size caps (bytes ~ chars for JSON). Defense-in-depth: prevent a
+// compromised or buggy caller from forcing huge upstream LLM bills, and
+// make the request shape explicit. Embed/summarize allow longer inputs;
+// classify/scan/extract are short-text paths.
+const TEXT_MAX_LONG = 32_000;
+const TEXT_MAX_SHORT = 8_000;
+const TEXT_MAX_EXTRACT = 64_000;
+const SUMMARIZE_MAX_TOKENS = 512;
+const MAX_REGISTERED_FUNCTIONS = 64;
+const MAX_ENVELOPE_SUMMARIES = 200;
+const ENVELOPE_SUMMARY_MAX = 4_000;
+
 export const EmbedPayloadSchema = z.object({
-  text: z.string(),
+  text: z.string().max(TEXT_MAX_LONG),
 });
 
 export const SummarizePayloadSchema = z.object({
-  text: z.string(),
-  maxTokens: z.number().int().positive(),
+  text: z.string().max(TEXT_MAX_LONG),
+  maxTokens: z.number().int().positive().max(SUMMARIZE_MAX_TOKENS),
 });
 
 export const ExtractActionsPayloadSchema = z.object({
-  text: z.string(),
-  contentType: z.string(),
+  text: z.string().max(TEXT_MAX_EXTRACT),
+  contentType: z.string().max(256),
   state: StateSnapshotSchema,
-  registeredFunctions: z.array(AppFunctionSummarySchema),
+  registeredFunctions: z.array(AppFunctionSummarySchema).max(MAX_REGISTERED_FUNCTIONS),
   maxCandidates: z.number().int().min(1),
 });
 
 export const ClassifyIntentPayloadSchema = z.object({
-  text: z.string(),
-  appCategory: z.string(),
+  text: z.string().max(TEXT_MAX_SHORT),
+  appCategory: z.string().max(256),
 });
 
 export const GenerateDayHeaderPayloadSchema = z.object({
   dayIsoDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "dayIsoDate must be YYYY-MM-DD"),
-  envelopeSummaries: z.array(z.string()),
+  envelopeSummaries: z.array(z.string().max(ENVELOPE_SUMMARY_MAX)).max(MAX_ENVELOPE_SUMMARIES),
 });
 
 export const ScanSensitivityPayloadSchema = z.object({
-  text: z.string(),
+  text: z.string().max(TEXT_MAX_SHORT),
 });
 
 // --- Root request schema (discriminated union) ---
