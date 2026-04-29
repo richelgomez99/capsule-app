@@ -56,7 +56,7 @@
   - **Commit**: `feat(ai/gateway): add @Serializable DTO mirrors for AIDL wire format`
   - **Depends on**: T013-003, T013-004
 
-- [ ] **T013-006** [P] [Phase A] Create `LlmGatewayRequestParcel` + sibling AIDL parcelable declaration.
+- [X] **T013-006** [P] [Phase A] Create `LlmGatewayRequestParcel` + sibling AIDL parcelable declaration.
   - **Files**: `app/src/main/java/com/capsule/app/net/ipc/LlmGatewayRequestParcel.kt` (NEW); `app/src/main/aidl/com/capsule/app/net/ipc/LlmGatewayRequestParcel.aidl` (NEW)
   - **Acceptance**: Kotlin data class implements `android.os.Parcelable` with single `payloadJson: String` field, manual `writeToParcel`/`CREATOR` mirroring [`FetchResultParcel.kt`](../../app/src/main/java/com/capsule/app/net/ipc/FetchResultParcel.kt). AIDL stub contains exactly `parcelable LlmGatewayRequestParcel;` in package `com.capsule.app.net.ipc`. `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `feat(net/ipc): add LlmGatewayRequestParcel (Parcelable + AIDL stub)`
