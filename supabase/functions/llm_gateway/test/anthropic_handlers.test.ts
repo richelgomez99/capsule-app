@@ -308,3 +308,117 @@ describe("scan_sensitivity handler — Haiku, prompt-cached", () => {
     expect(result.response).toMatchObject({ code: "TIMEOUT" });
   });
 });
+
+// ─── Spec 014 hotfix — closed-set allowlist enforcement ────────────────
+
+describe("classify_intent allowlist (hotfix)", () => {
+  it("out-of-set intent collapses to OTHER", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"intent":"DELETE_ALL","confidence":0.99}' }],
+      usage: { input_tokens: 5, output_tokens: 5 },
+    });
+    const { handle } = await import("../handlers/classify_intent.js");
+    const result = await handle(
+      {
+        type: "classify_intent",
+        requestId: RID,
+        payload: { text: "x", appCategory: "y" },
+      },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({
+      type: "classify_intent_response",
+      intent: "OTHER",
+      confidence: 0.99,
+    });
+  });
+});
+
+describe("scan_sensitivity allowlist (hotfix)", () => {
+  it("drops unknown tags and dedupes; preserves valid ones", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        {
+          type: "text",
+          text: '{"tags":["PII","IGNORE_ALL","PII","FINANCIAL"]}',
+        },
+      ],
+      usage: { input_tokens: 5, output_tokens: 5 },
+    });
+    const { handle } = await import("../handlers/scan_sensitivity.js");
+    const result = await handle(
+      { type: "scan_sensitivity", requestId: RID, payload: { text: "x" } },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({
+      type: "scan_sensitivity_response",
+      tags: ["PII", "FINANCIAL"],
+    });
+  });
+
+  it("all-unknown tags default to [NONE]", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"tags":["IGNORE_ALL","HOSTILE"]}' }],
+      usage: { input_tokens: 5, output_tokens: 5 },
+    });
+    const { handle } = await import("../handlers/scan_sensitivity.js");
+    const result = await handle(
+      { type: "scan_sensitivity", requestId: RID, payload: { text: "x" } },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({
+      type: "scan_sensitivity_response",
+      tags: ["NONE"],
+    });
+  });
+});
+
+describe("extract_actions allowlist + maxCandidates (hotfix)", () => {
+  const baseReq = {
+    type: "extract_actions" as const,
+    requestId: RID,
+    payload: {
+      text: "buy milk",
+      contentType: "text/plain",
+      state: {
+        foregroundApp: null,
+        appCategory: null,
+        activityState: null,
+        hourLocal: null,
+        dayOfWeek: null,
+      },
+      registeredFunctions: [
+        { id: "fn.reminder", name: "Reminder", schema: {} },
+        { id: "fn.note", name: "Note", schema: {} },
+      ],
+      maxCandidates: 2,
+    },
+  };
+
+  it("filters out proposals with unregistered functionId", async () => {
+    const proposals = [
+      { functionId: "fn.delete_all", args: {}, confidence: 1.0, rationale: null },
+      { functionId: "fn.reminder", args: { what: "milk" }, confidence: 0.9, rationale: null },
+    ];
+    mockCreate.mockResolvedValueOnce(anthropicSuccess(JSON.stringify(proposals)));
+    const { handle } = await import("../handlers/extract_actions.js");
+    const result = await handle(baseReq, { userId: "u", requestId: RID });
+    expect(result.response).toMatchObject({ type: "extract_actions_response" });
+    const r = result.response as { proposals: Array<{ functionId: string }> };
+    expect(r.proposals).toHaveLength(1);
+    expect(r.proposals[0]!.functionId).toBe("fn.reminder");
+  });
+
+  it("clamps proposal array to maxCandidates", async () => {
+    const proposals = [
+      { functionId: "fn.reminder", args: {}, confidence: 0.9, rationale: null },
+      { functionId: "fn.note", args: {}, confidence: 0.8, rationale: null },
+      { functionId: "fn.reminder", args: {}, confidence: 0.7, rationale: null },
+    ];
+    mockCreate.mockResolvedValueOnce(anthropicSuccess(JSON.stringify(proposals)));
+    const { handle } = await import("../handlers/extract_actions.js");
+    const result = await handle(baseReq, { userId: "u", requestId: RID });
+    const r = result.response as { proposals: unknown[] };
+    expect(r.proposals).toHaveLength(2); // maxCandidates=2
+  });
+});

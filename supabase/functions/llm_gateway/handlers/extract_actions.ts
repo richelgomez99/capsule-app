@@ -52,7 +52,18 @@ export async function handle(
     if (!parsed.success) {
       return malformed(req.requestId);
     }
-    const proposals: ActionProposalJson[] = parsed.data;
+    // Spec 014 hotfix — enforce the per-request registeredFunctions allowlist
+    // and clamp to maxCandidates. Without this filter a prompt-injected
+    // payload can land an unregistered functionId on the Android side.
+    // Drop unknown ids; preserve order from the model.
+    const allowedIds = new Set(
+      req.payload.registeredFunctions.map((f) => f.id),
+    );
+    const filtered = parsed.data.filter((p) => allowedIds.has(p.functionId));
+    const proposals: ActionProposalJson[] = filtered.slice(
+      0,
+      req.payload.maxCandidates,
+    );
 
     return {
       response: {

@@ -18,6 +18,7 @@ import {
   failureToErrorCode,
   failureToMessage,
 } from "../lib/models.js";
+import { sanitizeSensitivityTags } from "../lib/allowlists.js";
 
 const SYSTEM_PREFIX =
   "You scan short text for sensitivity tags. " +
@@ -53,12 +54,16 @@ export async function handle(
     ) {
       return malformed(req.requestId, cacheHit, tokensIn, tokensOut);
     }
+    // Spec 014 hotfix — closed-set allowlist filter. Drops unknown tags,
+    // dedupes, defaults to ["NONE"] when nothing valid remains. Prevents
+    // hostile or hallucinated tags from crossing the handler boundary.
+    const tags = sanitizeSensitivityTags(obj.tags as string[]);
 
     return {
       response: {
         type: "scan_sensitivity_response",
         requestId: req.requestId,
-        tags: obj.tags as string[],
+        tags,
         modelLabel: MODEL_HAIKU_LABEL,
       },
       model: MODEL_HAIKU,

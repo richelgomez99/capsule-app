@@ -19,6 +19,7 @@ import {
   failureToErrorCode,
   failureToMessage,
 } from "../lib/models.js";
+import { sanitizeIntent } from "../lib/allowlists.js";
 
 // Stable system prefix — eligible for ephemeral cache. Variable per-call
 // fields (text, appCategory) live in the user message so the prefix hashes
@@ -66,11 +67,17 @@ export async function handle(
       return malformed(req.requestId, cacheHit, tokensIn, tokensOut);
     }
 
+    // Spec 014 hotfix — collapse out-of-set intent labels to OTHER. The
+    // system prompt enumerates six labels but Haiku occasionally returns
+    // synonyms or prompt-injected strings; closed-set enforcement happens
+    // here, AFTER schema validation.
+    const intent = sanitizeIntent(obj.intent);
+
     return {
       response: {
         type: "classify_intent_response",
         requestId: req.requestId,
-        intent: obj.intent,
+        intent,
         confidence: obj.confidence,
         modelLabel: MODEL_HAIKU_LABEL,
       },
