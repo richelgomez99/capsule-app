@@ -28,3 +28,4 @@ build_output.log
 
 # Edge function deps (spec 014)
 supabase/functions/llm_gateway/node_modules/
+supabase/functions/llm_gateway/.env.local
