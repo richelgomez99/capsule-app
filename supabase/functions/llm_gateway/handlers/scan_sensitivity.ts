@@ -40,8 +40,9 @@ export async function handle(
     });
 
     let raw: unknown;
+    const stripped = stripCodeFence(text);
     try {
-      raw = JSON.parse(text);
+      raw = JSON.parse(stripped);
     } catch {
       return malformed(req.requestId, cacheHit, tokensIn, tokensOut);
     }
@@ -105,4 +106,15 @@ function malformed(
     tokensOut,
     cacheHit,
   };
+}
+
+/**
+ * Strip ```json ... ``` or ``` ... ``` markdown fences that some models
+ * include despite "JSON only" instructions. Returns the inner content
+ * trimmed of whitespace.
+ */
+function stripCodeFence(s: string): string {
+  const trimmed = s.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return fenced && fenced[1] ? fenced[1].trim() : trimmed;
 }

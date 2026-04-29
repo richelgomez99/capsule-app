@@ -180,8 +180,9 @@ export default async function handler(req: Request): Promise<Response> {
       errorCode: "INTERNAL",
     };
     emitOperatorLog(audit);
-    // Fire-and-forget; audit failure does NOT degrade the response.
-    void recordAuditRow(audit);
+    // Audit failure does NOT degrade the response (recordAuditRow never
+    // throws). Awaited so the Edge runtime doesn't terminate the insert.
+    await recordAuditRow(audit);
     return errorResponse(
       "INTERNAL",
       "handler exception",
@@ -193,8 +194,9 @@ export default async function handler(req: Request): Promise<Response> {
   const latencyMs = Math.round(performance.now() - start);
   const audit = buildAuditInput(userId, requestEnvelope, result, latencyMs);
   emitOperatorLog(audit);
-  // Fire-and-forget; audit insert failure must NOT change the user-facing
-  // response per FR-014-014.
-  void recordAuditRow(audit);
+  // Audit insert failure must NOT change the user-facing response per
+  // FR-014-014. recordAuditRow swallows its own errors and emits one bounded
+  // log line; awaiting ensures the Edge runtime doesn't terminate the insert.
+  await recordAuditRow(audit);
   return wireResponse(result.response);
 }

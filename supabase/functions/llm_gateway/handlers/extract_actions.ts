@@ -44,7 +44,7 @@ export async function handle(
 
     let raw: unknown;
     try {
-      raw = JSON.parse(text);
+      raw = JSON.parse(stripCodeFence(text));
     } catch {
       return malformed(req.requestId);
     }
@@ -101,4 +101,10 @@ function malformed(requestId: string): HandlerResult {
     tokensOut: 0,
     cacheHit: false,
   };
+}
+
+function stripCodeFence(s: string): string {
+  const trimmed = s.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return fenced && fenced[1] ? fenced[1].trim() : trimmed;
 }
