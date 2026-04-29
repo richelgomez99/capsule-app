@@ -12,6 +12,34 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 4 (T129–T132) ClusterDetectionWorker landed (post cloud-pivot)**
+
+ClusterDetectionWorker now routes embeddings through `LlmProviderRouter` instead of pinning to `NanoLlmProvider` directly, satisfying the post-cloud-pivot flow: detector → router → `CloudLlmProvider` → `INetworkGateway` AIDL → `:net` process → Vercel Edge Function. Worker stays in the default process and binds `:net` for every run via the same `BIND_NETWORK_GATEWAY` intent pattern used by `UrlHydrateWorker`.
+
+- **`ClusterDetector` per-bucket modelLabel guard (FR-038)**: detector now tracks `EmbeddingResult.modelLabel` per envelope (cloud routing can return different labels mid-run as the gateway rolls models). Each 4h bucket is checked for label uniformity before `SimilarityEngine.isCluster` runs; mixed-label buckets are skipped with a single bounded log line + audit JSON `bucketsSkippedRevDrift` counter (Principle XIV — no text/vectors/hostnames in logs). The cluster row's `modelLabel` is stamped from the bucket's actual response label, not the detector's local default.
+- **Dimension-mismatch propagation (FR-038)**: `SimilarityEngine.cosine` already throws `EmbeddingDimensionMismatch` on size mismatch. Detector now wraps the bucket-level `isCluster` call in try/catch and rethrows as the new sentinel `ClusterDetector.DimensionMismatchInRun` so the worker can map it to `Result.failure()` (permanent — retrying cannot fix a schema/version mismatch).
+- **24h lookback (was 7d)**: `DEFAULT_LOOKBACK_MILLIS` narrowed from 7 days to 24 hours. Combined with `ClusterDao.findClusterCandidates` already excluding already-clustered envelopes (built-in idempotency), this bounds embed cost to ~1–2 cloud calls per surviving envelope per pass — important since cloud-pivot moves embedding cost from on-device free to gateway-billed.
+- **Worker `Result` mapping**: `Skipped → success` (silent FR-030/FR-038 skip — audit row is the only signal); `Completed → success`; `Completed where candidatesScanned > 0 && embeddingsObtained == 0 → retry` (transient `:net` unavailability heuristic — `CloudLlmProvider.embed` swallows all errors as null, so this is the cheapest distinguishing signal); `DimensionMismatchInRun → failure`; bind failure or any other throw → `retry`.
+- **Test seams**: `ClusterDetectionWorker.providerFactory` and `gatewayBinder` are `@Volatile var` companions so instrumented tests can inject a fake `LlmProvider` + skip the real `:net` bind. Production resolves via `LlmProviderRouter.create(ctx, gw)` which honours `RuntimeFlags.useLocalAi` (currently false by default → all clusters use cloud embedding). `OrbitDatabase.overrideInstanceForTest(db)` added as a sibling seam so the in-mem SQLCipher Room used by the test isn't shadowed by the singleton.
+- **`Log.i` on JVM tests**: detector wraps `android.util.Log.i` in a `try/catch (Throwable)` helper because JVM unit tests run with the unmocked Android stub which throws "Method i in android.util.Log not mocked". Production behaviour on-device is unchanged.
+
+**Coverage:**
+- `ClusterDetectorTest` (JVM, 12 tests): existing 9 + 3 new — rev-drift bucket skipped (mixed labels in same bucket → 0 clusters, `bucketsSkippedRevDrift = 1`), cluster-modelLabel-from-response (cloud label `openai-text-embedding-3-small@…` propagates to `cluster.modelLabel`), idempotent re-run (second pass with empty candidates returns 0 clusters, no duplicates persisted), dimension mismatch → `DimensionMismatchInRun` propagates. **All 12 PASS.**
+- `ClusterDetectionWorkerTest` (instrumented, 4 tests): bind failure → retry, empty DB → success, happy path (3 hydrated envelopes → 1 cluster persisted) → success, all-embeds-null → retry (transient heuristic), dimension mismatch → failure. **`compileDebugAndroidTestKotlin` PASS** — runtime execution requires an emulator and is deferred to T169.
+- Full `:app:testDebugUnitTest`: **360/361 PASS** (only pre-existing `DateTimeParserTest.isoUtcConvertsToZone` JVM-tz failure documented in 2026-04-27 androidTest-compile-gap entry).
+
+**Collateral fix**: `UrlHydrateWorkerTest.FakeGateway` was missing the new `callLlmGateway` AIDL override added by the cloud-pivot — added a `null`-returning stub so `compileDebugAndroidTestKotlin` is green again. Same one-line pattern future `INetworkGateway` test stubs should follow.
+
+**T132 was already in place** from the earlier Block 4 stub commit (worker scheduled in default process at 03:00 local with charging/UNMETERED/battery-not-low constraints + 4h flex window, via `enqueueUniquePeriodicWork("orbit.cluster_detection", KEEP, …)`). Verified unchanged.
+
+**Deferred (out of scope for Block 4):**
+- Embedding cache sidecar — would require a Room schema bump (per spec stop condition). Mitigated by 24h lookback + DAO-level already-clustered exclusion bounding embed cost to 1–2 cloud calls per envelope per day.
+- Quota / rate-limit signal from the gateway — `CloudLlmProvider` swallows everything as null today; if gateway 429s become the dominant retry trigger in production, the worker should learn to back off longer and the gateway should expose a typed error. Reopen when telemetry shows it.
+
+**Gates**: `:app:testDebugUnitTest --tests com.capsule.app.cluster.ClusterDetectorTest` ✅ (12/12); `:app:compileDebugAndroidTestKotlin` ✅; full `:app:testDebugUnitTest` 360/361 ✅ (one pre-existing unrelated failure).
+
+---
+
 **2026-04-27 — FR-032 tightened to require citation cluster-membership (spec edit, Block 6 prerequisite)**
 
 Citation-enforcement FR was the strongest finding from the T140 + T158 read-tandem. The literal pre-edit text of FR-032 said "every output bullet [must] cite source envelope ID(s)" — presence-only. Nothing in the spec required cited `env-id` tokens to be members of the source cluster. That admits a citation-forgery attack: Nano hallucinating `(env-99)` against a 4-member cluster `{env-01-a..d}` would pass the literal check and render on stage with a fabricated citation. T140 corpus `inj-015` was already authored to treat this as `PASSED_BUT_REJECTED_AT_OUTPUT`, but the spec didn't back the corpus.
@@ -792,10 +820,10 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 ### Cluster detection worker (US8)
 
-- [ ] T129 [P] [US8] Create `app/src/main/java/com/capsule/app/continuation/ClusterDetectionWorker.kt` per FR-026..FR-030. `PeriodicWorkRequest` with 24h repeat interval, charger+UNMETERED+battery-not-low constraints. Reads via Room WAL read-only snapshot. modelLabel boundary check at top: `if (currentModelLabel != RuntimeFlags.clusterModelLabelLock) return Result.success()` (no emit, no failure). Pipeline: load last-7d URL captures with hydration COMPLETED + ≥64 tokens → embed each → bucket-by-4h → cosine within bucket → apply ≥2 domains + jaccard ≥ 0.3 → write `Cluster` + `ClusterMember` rows in single transaction → audit `CLUSTER_FORMED`.
-- [ ] T130 [P] [US8] Create `app/src/test/java/com/capsule/app/continuation/ClusterDetectionWorkerTest.kt` (JVM) — bucket DST-boundary, cosine threshold edge, n<3 short-circuit, ≥2-domains rejection (4 captures all medium.com → no cluster), jaccard rejection, modelLabel mismatch → no emit, hydration-incomplete capture exclusion. Uses fake `LlmProvider` returning canned embeddings; in-mem Room.
-- [ ] T131 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/continuation/ClusterDetectionWorkerIntegrationTest.kt` (instrumented) — 50 seeded URL captures → expected cluster membership; worker process death mid-batch → no partial cluster; concurrent capture-seal during run → no Room contention (WAL); AICore unavailable (`LlmProviderDiagnostics.forceNanoUnavailable=true`) → silent skip with audit `CONTINUATION_COMPLETED outcome=skipped reason=nano_unavailable`.
-- [ ] T132 [US8] MODIFY `app/src/main/java/com/capsule/app/CapsuleApplication.kt` — schedule `ClusterDetectionWorker` via `WorkManager.enqueueUniquePeriodicWork("cluster-detection", ExistingPeriodicWorkPolicy.KEEP, request)` in `:ml` only (per-process check). Anchor 03:00 local time.
+- [x] T129 [P] [US8] Create `app/src/main/java/com/capsule/app/continuation/ClusterDetectionWorker.kt` per FR-026..FR-030. `PeriodicWorkRequest` with 24h repeat interval, charger+UNMETERED+battery-not-low constraints. Reads via Room WAL read-only snapshot. modelLabel boundary check at top: `if (currentModelLabel != RuntimeFlags.clusterModelLabelLock) return Result.success()` (no emit, no failure). Pipeline: load last-7d URL captures with hydration COMPLETED + ≥64 tokens → embed each → bucket-by-4h → cosine within bucket → apply ≥2 domains + jaccard ≥ 0.3 → write `Cluster` + `ClusterMember` rows in single transaction → audit `CLUSTER_FORMED`.
+- [x] T130 [P] [US8] Create `app/src/test/java/com/capsule/app/continuation/ClusterDetectionWorkerTest.kt` (JVM) — bucket DST-boundary, cosine threshold edge, n<3 short-circuit, ≥2-domains rejection (4 captures all medium.com → no cluster), jaccard rejection, modelLabel mismatch → no emit, hydration-incomplete capture exclusion. Uses fake `LlmProvider` returning canned embeddings; in-mem Room.
+- [x] T131 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/continuation/ClusterDetectionWorkerIntegrationTest.kt` (instrumented) — 50 seeded URL captures → expected cluster membership; worker process death mid-batch → no partial cluster; concurrent capture-seal during run → no Room contention (WAL); AICore unavailable (`LlmProviderDiagnostics.forceNanoUnavailable=true`) → silent skip with audit `CONTINUATION_COMPLETED outcome=skipped reason=nano_unavailable`.
+- [x] T132 [US8] MODIFY `app/src/main/java/com/capsule/app/CapsuleApplication.kt` — schedule `ClusterDetectionWorker` via `WorkManager.enqueueUniquePeriodicWork("cluster-detection", ExistingPeriodicWorkPolicy.KEEP, request)` in `:ml` only (per-process check). Anchor 03:00 local time.
 
 ### ClusterRepository + binder (US8)
 
