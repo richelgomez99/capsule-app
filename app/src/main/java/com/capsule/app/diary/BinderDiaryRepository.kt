@@ -9,12 +9,17 @@ import com.capsule.app.action.ActionExecutorService
 import com.capsule.app.action.ipc.ActionExecuteRequestParcel
 import com.capsule.app.action.ipc.ActionExecuteResultParcel
 import com.capsule.app.action.ipc.IActionExecutor
+import com.capsule.app.data.ClusterCardModel
+import com.capsule.app.data.ClusterMemberRef
 import com.capsule.app.data.ipc.ActionProposalParcel
+import com.capsule.app.data.ipc.ClusterCardParcel
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.ipc.IActionProposalObserver
+import com.capsule.app.data.ipc.IClusterObserver
 import com.capsule.app.data.ipc.IEnvelopeObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
+import com.capsule.app.data.model.ClusterState
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -228,5 +233,35 @@ class BinderDiaryRepository(
     override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {
         val repo = connect()
         withContext(Dispatchers.IO) { repo.setTodoItemDone(envelopeId, itemIndex, done) }
+    }
+
+    // ---- Spec 002 Phase 11 Block 9 — Cluster surface (T148) ---------------
+
+    override fun observeClusters(): Flow<List<ClusterCardModel>> = callbackFlow {
+        val repo = connect()
+        val observer = object : IClusterObserver.Stub() {
+            override fun onClustersChanged(clusters: MutableList<ClusterCardParcel>?) {
+                val mapped = clusters?.map { it.toModel() } ?: emptyList()
+                trySend(mapped)
+            }
+        }
+        repo.observeClusters(observer)
+        awaitClose {
+            runCatching { repo.stopObservingClusters(observer) }
+        }
+    }
+
+    private fun ClusterCardParcel.toModel(): ClusterCardModel {
+        val members = memberEnvelopeIds.zip(memberIndices) { id, idx ->
+            ClusterMemberRef(envelopeId = id, memberIndex = idx)
+        }
+        return ClusterCardModel(
+            clusterId = clusterId,
+            state = ClusterState.valueOf(state),
+            timeBucketStart = timeBucketStart,
+            timeBucketEnd = timeBucketEnd,
+            modelLabel = modelLabel,
+            members = members
+        )
     }
 }
