@@ -632,3 +632,8 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 
 - `cloud-pivot` branch: 19 new commits since T014-001 (38 since spec/003 fork), local-only. Not pushed.
 - No deploys executed. No external API calls made (all Anthropic/OpenAI clients mocked in tests).
+
+### 2026-04-29 — Migration 00000003 applied to prod
+
+`cost_per_user_daily` view created in Supabase project `omohxxhsjrqpkwfxbkau` via psql + `00000003_cost_per_user_daily.sql`. Query returns 0 rows as expected (Edge Function not yet deployed; no `cloud_llm_call` audit rows exist). T014-015's prod deployment side is done; the migration file itself was committed in `98e708e`.
+
