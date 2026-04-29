@@ -567,3 +567,67 @@ All tasks above conform to the required format:
 - `Depends on:` lines added wherever ordering is not implicit.
 
 Verified by manual scan 2026-04-29.
+
+---
+
+## Status Log
+
+### 2026-04-29 — Phases A–H complete, Phase I pending user credentials
+
+Local implementation lands all 19 Android-and-server-code tasks. Deployment + live E2E (T014-020/021) and final closeout (T014-022) require user-supplied secrets and Vercel project access — paused at the T014-019/T014-020 boundary per NFR-014-001 ("no `git push`, no live deploy without explicit user approval").
+
+| Task | Status | Commit |
+|------|--------|--------|
+| T014-001 | [x] | `c50932a` |
+| T014-002 | [x] | `857c422` |
+| T014-003 | [x] | `4b0e22b` |
+| T014-004 | [x] | `8130425` |
+| T014-005 | [x] | `bc99e9e` |
+| T014-006 | [x] | `d4a65c4` |
+| T014-007 | [x] | `48a9eda` |
+| T014-008 | [x] | `2da4671` |
+| T014-009 | [x] | `1367fc3` |
+| T014-010 | [x] | `21c59a3` |
+| T014-011 | [x] | `9be8f2c` |
+| T014-012 | [x] | `e6360a4` |
+| T014-013 | [x] | `2f9df1d` |
+| T014-014 | [x] | `91bdc24` |
+| T014-015 | [x] | `98e708e` |
+| T014-016 | [x] | `3dcd8e3` |
+| T014-017 | [x] | `9581f1f` |
+| T014-018 | [x] | `6f1bfc5` |
+| T014-019 | [x] | `f9dc273` |
+| T014-020 | [ ] | (deploy — needs user credentials) |
+| T014-021 | [ ] | (live E2E — depends on T014-020) |
+| T014-022 | [ ] | (closeout — depends on T014-021) |
+
+### Verification matrix at handoff (2026-04-29)
+
+- `npx tsc --noEmit` (Edge Function): PASS
+- `npx vitest run` (Edge Function unit tests): PASS
+- `./gradlew :app:compileDebugKotlin :app:compileDebugUnitTestKotlin --no-daemon`: PASS
+- `./gradlew :app:testDebugUnitTest --tests "*LlmGatewayClientAuth*"`: PASS (5/5)
+- `grep -r "gateway.example.invalid" app/src`: 0 matches (placeholder lives only in `app/build.gradle.kts` as fallback)
+- `git status`: clean
+- `git log --oneline 3534960..f9dc273` shows 19 atomic commits, one per `T014-NNN`
+
+### Deviations recorded
+
+1. **Supabase Kotlin SDK not yet wired** — `SupabaseAuthStateBinder` accepts a `() -> String?` lambda shim. Adding `gotrue-kt` and an `Application`-scoped `SupabaseClient` is a follow-up unblock; until then production calls return `Error(UNAUTHORIZED)` because `NoSessionAuthStateBinder` is the default. Suggested follow-up task ID: T014-019b or fold into next spec.
+2. **No Hilt in repo** — task descriptions mentioning `@Binds` / `AuthModule.kt` were satisfied via the existing manual-DI pattern (constructor-injected defaults).
+3. **`LlmGatewayClient` lives at `com.capsule.app.net.LlmGatewayClient`**, not the `com.capsule.app.ai.gateway.LlmGatewayClient` path quoted in tasks.md. Used the actual location.
+4. **W1 spec drift fixed** during analyze pass — `requestId` added to `details_json` field listing in spec.md FR-014-013, US-3 Independent Test, and SC-014-005 (audit-row-contract.md and data-model.md were already correct).
+
+### What user must provide to unblock T014-020
+
+1. `vercel login` (or `VERCEL_TOKEN` env var) on this machine.
+2. New Vercel project (suggested name: `orbit-llm-gateway`) and team/scope decision.
+3. Five production env vars on Vercel: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`.
+4. Confirm or change Vercel deploy region (currently `iad1` in `vercel.json`).
+5. Apply migration `00000003_cost_per_user_daily.sql` to prod Supabase (`omohxxhsjrqpkwfxbkau`) before audit rows start landing.
+6. Decision on when Supabase Kotlin SDK lands in Android (deviation #1 unblocker).
+
+### Operational confirmation
+
+- `cloud-pivot` branch: 19 new commits since T014-001 (38 since spec/003 fork), local-only. Not pushed.
+- No deploys executed. No external API calls made (all Anthropic/OpenAI clients mocked in tests).
