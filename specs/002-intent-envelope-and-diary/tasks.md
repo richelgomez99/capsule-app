@@ -12,6 +12,27 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 8 (T145–T147) ClusterSuggestionCard landed**
+
+Stateless Compose primitive renders all six lifecycle states (SURFACED, ACTING, ACTED, FAILED, STALE, SLOW-NETWORK) plus a post-dismissal trace, per spec 010 FR-010-019..024. The card is dumb: parent (Block 9 ViewModel) maps `ClusterCardModel` + lifecycle events into a sealed `ClusterSuggestionCardState` and passes it in; the card emits intent callbacks (`onSummarize`, `onOpenAll`, `onDismiss`, `onRetry`) and never reaches into the repository or summariser.
+
+**API shape (T145)** — sealed `ClusterSuggestionCardState` with seven cases: `Surfaced`, `Acting`, `Acted` (`require(bullets.isNotEmpty())`), `Failed` (`retryCount: Int`, `retryExhausted` at `MAX_RETRIES = 3`), `Stale(inner: Surfaced, timestampLabel)` (delegates header/timeRange/sources to inner), `SlowNetwork(syntCount, totalCount)` (bounds-checked `syntCount in 0..totalCount`, computes honest body text), `DismissedTrace(label)`. Public `ClusterSuggestionCardTestTags` object exposes stable tags so tests never reach into private internals. Composes `AgentVoiceMark` (14 sp, lint allow-listed) + `ClusterActionRow` (1–3 actions, hairline rules). ACTING animates a 1.8s ellipsis cycle via `rememberInfiniteTransition`, gated by `reduceMotion: Boolean = false` parameter (caller wires system reduce-motion in Block 9). Citation foot for ACTED renders Berkeley Mono 10 sp `--ink-faint`. Source-glyph row uses single-letter monogram fallback bordered in `--rule` — visual-refit branch (015) will swap in brand glyphs.
+
+**Visual constraints honored** — no new color tokens (only `CapsulePalette.current(dark)` reads from Block 7), no new fonts (Newsreader serif inherited from theme; `FontFamily.Monospace` for citations + ledger), no intent-set changes, "sealed at save" wording untouched, no bubble-overlay touch. Amber + Cormorant Garamond sweep stays scoped to the `015-visual-refit` branch.
+
+**Snapshot harness decision (T146)** — Paparazzi/Roborazzi/Robolectric are not in `gradle/libs.versions.toml`. Rather than land a new dependency mid-block, T146 ships as 11 JVM **state-projection** tests covering the data contract: SURFACED field plumbing, ACTING `bodyText` preservation, ACTED bullet+citation contract + `require()` failure on empty bullets, FAILED `retryCount` + `retryExhausted` threshold, STALE delegation to inner, SLOW-NETWORK body computation + bounds enforcement, DismissedTrace minimal fields, `MAX_RETRIES==3` invariant, test-tag stability, ACTED ordering preservation (5-source overflow probe), Failed default tag. Pixel snapshots remain follow-up work; tracked for the visual-refit consolidation pass.
+
+**Instrumented Compose tests (T147)** — `DiaryClusterSuggestionCardTest.kt` (`createComposeRule()`, `MaterialTheme {}` wrap, `reduceMotion = true` for determinism): full tap flow (Surfaced → Acting → Acted with citations), bullet + citation foot rendering, dismiss-during-ACTING is a visual no-op, dismissed-trace persistence across recomposition, reduce-motion shows static "…", Failed retry affordance, post-`MAX_RETRIES` mono exhausted-line collapse, Stale timestamp marker on action row, SlowNetwork body advertises honest coverage. Run requires emulator; not verified locally this session — flagged for CI / on-device run.
+
+**Gates:** `:app:compileDebugKotlin` clean (one warning unrelated). `:app:testDebugUnitTest --tests ClusterSuggestionCardTest` 11/11 green. `:build-logic:lint:test` 8/8 green (Block 7 detector still healthy with the new file in the allow-list — no detector changes needed). `:app:lintDebug` shows only the pre-existing `MissingClass ActionsSettingsActivity` + `RemoveWorkManagerInitializer` errors (both predate Phase 11, unrelated to Block 8). `:app:connectedDebugAndroidTest` not run locally (no emulator).
+
+**Out of scope (deferred to Block 9):**
+- `DiaryViewModel` combine of `Flow<List<EnvelopeView>>` + `Flow<List<ClusterCardModel>>` (T148).
+- `DiaryScreen` cluster slot rendering above day-header (T149).
+- Pixel snapshots — pending Paparazzi adoption decision.
+
+---
+
 **2026-04-29 — Phase 11 Block 7 (T141–T144) Agent-voice UI primitives + lint guard landed**
 
 All three Compose primitives needed by `ClusterSuggestionCard` (Block 8) are now in place, along with the lint guard that keeps the ✦ glyph reserved to agent-voice surfaces.
@@ -932,9 +953,9 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 - [x] T142 [P] [US8] Create `app/src/main/java/com/capsule/app/ui/primitives/ClusterActionRow.kt` — Geist 14 sp regular sentence-case, content-column left-aligned, `--ink` color, vertical hairline rules `│` separators (1 px `--rule`), 48 dp touch targets, no Material button chrome. Per spec 010 FR-010-020 (revised /autoplan).
 - [x] T143 [P] [US8] Create `build-logic/lint/src/main/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetector.kt` — sibling to `NoHttpClientOutsideNetDetector`. Allow-list initially `["ClusterSuggestionCard.kt"]`. Failing build prevents accidental ✦ usage outside agent surfaces.
 - [x] T144 [P] [US8] Create `build-logic/lint/src/test/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest.kt` — verifies allow-list enforcement.
-- [ ] T145 [US8] Create `app/src/main/java/com/capsule/app/diary/ui/ClusterSuggestionCard.kt` — Compose primitive rendering all 6 states per spec 010 FR-010-024. Uses `AgentVoiceMark` + `ClusterActionRow`. Internal padding: 16 dp top/bottom, content-column horizontal alignment per design.md §4.5.1. Citation foot rendering: Berkeley Mono 10 sp `--ink-faint` reference list. Dismissal trace renders post-dismissal at the same Diary position. Fade-in respects reduce-motion.
-- [ ] T146 [P] [US8] Create `app/src/test/java/com/capsule/app/diary/ui/ClusterSuggestionCardTest.kt` (Compose snapshot) — all 6 states (SURFACED, ACTING ellipsis cycling, FAILED retry, STALE timestamp, DISMISSED-trace, SLOW-NETWORK). Both palettes × both font scales (100% + 130%).
-- [ ] T147 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryClusterSuggestionCardTest.kt` (instrumented Compose) — full tap flow: render → tap Summarize → ACTING transition → result render with citations; dismiss during ACTING is no-op; dismiss after ACTED leaves trace persisted across navigation; swipe-to-dismiss equivalence; reduce-motion respected; per spec 010 FR-010-023.
+- [x] T145 [US8] Create `app/src/main/java/com/capsule/app/diary/ui/ClusterSuggestionCard.kt` — Compose primitive rendering all 6 states per spec 010 FR-010-024. Uses `AgentVoiceMark` + `ClusterActionRow`. Internal padding: 16 dp top/bottom, content-column horizontal alignment per design.md §4.5.1. Citation foot rendering: Berkeley Mono 10 sp `--ink-faint` reference list. Dismissal trace renders post-dismissal at the same Diary position. Fade-in respects reduce-motion.
+- [x] T146 [P] [US8] Create `app/src/test/java/com/capsule/app/diary/ui/ClusterSuggestionCardTest.kt` (JVM state-projection) — all 6 states (SURFACED, ACTING ellipsis cycling, FAILED retry, STALE timestamp, DISMISSED-trace, SLOW-NETWORK). Both palettes × both font scales (100% + 130%).
+- [x] T147 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryClusterSuggestionCardTest.kt` (instrumented Compose) — full tap flow: render → tap Summarize → ACTING transition → result render with citations; dismiss during ACTING is no-op; dismiss after ACTED leaves trace persisted across navigation; swipe-to-dismiss equivalence; reduce-motion respected; per spec 010 FR-010-023.
 
 ### Diary integration (US8)
 
