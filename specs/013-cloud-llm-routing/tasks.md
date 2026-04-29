@@ -76,7 +76,7 @@
 
 **Independent test**: `./gradlew :app:generateDebugAidl` produces stubs containing `callLlmGateway`; no production call site is yet using them.
 
-- [ ] **T013-008** [Phase B] Extend `INetworkGateway.aidl` with `callLlmGateway(in LlmGatewayRequestParcel) → LlmGatewayResponseParcel` (FR-013-005).
+- [X] **T013-008** [Phase B] Extend `INetworkGateway.aidl` with `callLlmGateway(in LlmGatewayRequestParcel) → LlmGatewayResponseParcel` (FR-013-005).
   - **Files**: [`app/src/main/aidl/com/capsule/app/net/ipc/INetworkGateway.aidl`](../../app/src/main/aidl/com/capsule/app/net/ipc/INetworkGateway.aidl)
   - **Acceptance**: AIDL adds the new method exactly as in [data-model.md §3](data-model.md). `fetchPublicUrl` signature is unchanged. Imports for the two new parcels are added. `./gradlew :app:generateDebugAidl` produces stubs; `find app/build/generated/aidl_source_output_dir -name "INetworkGateway*.java" | xargs grep -l "callLlmGateway"` returns ≥ 1 file. `NetworkGatewayImpl.kt` will fail to compile until T013-013; that is expected.
   - **Commit**: `feat(net/ipc): extend INetworkGateway AIDL with callLlmGateway (FR-013-005)`
