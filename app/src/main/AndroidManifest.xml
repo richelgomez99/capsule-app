@@ -21,6 +21,20 @@
     <!-- Exact alarm for OEM kill recovery -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Network: scoped to :net process only. Enforced by OrbitNoHttpClientOutsideNet lint rule. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- App usage stats for AppCategory detection -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Activity Recognition for StateSnapshot -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!-- T073: ScreenshotObserver watches the user's screenshot folder. Min SDK 33
+         so only the post-API-33 flavour is required. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <queries>
         <package android:name="androidx.test.services" />
     </queries>
@@ -36,8 +50,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Capsule">
 
+        <!-- :ui process (default) -->
+        <!-- T052/T053: DiaryActivity is the launcher entry point for User Story 2. -->
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".diary.DiaryActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Capsule">
@@ -47,14 +63,111 @@
             </intent-filter>
         </activity>
 
+        <!-- MainActivity demoted to deep-link-only setup/permissions screen. -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T096: OnboardingActivity — first-run only, routed from DiaryActivity. -->
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T103b: ReducedModeActivity — read-only Diary when capture perms declined. -->
+        <activity
+            android:name=".onboarding.ReducedModeActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T070: SettingsActivity — deep-link only (opened from Diary). -->
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T091a: TrashActivity — opened from Settings. -->
+        <activity
+            android:name=".settings.TrashActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T091: AuditLogActivity — "What Orbit did today". -->
+        <activity
+            android:name=".audit.AuditLogActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- T055b: EnvelopeDetailActivity — launched from EnvelopeCard tap.
+             Not exported; internal explicit-intent only. -->
+        <activity
+            android:name=".diary.EnvelopeDetailActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".diary.DiaryActivity"
+            android:theme="@style/Theme.Capsule" />
+
+        <!-- :capture process -->
         <service
             android:name=".service.CapsuleOverlayService"
+            android:process=":capture"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent user-interactive floating overlay for explicit clipboard capture triggered by user tap. Requires continuous foreground presence to render TYPE_APPLICATION_OVERLAY window." />
         </service>
+
+        <!-- :ml process — encrypted Room DB owner, AI inference -->
+        <service
+            android:name=".data.ipc.EnvelopeRepositoryService"
+            android:process=":ml"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_ENVELOPE_REPOSITORY" />
+                <action android:name="com.capsule.app.action.BIND_AUDIT_LOG" />
+            </intent-filter>
+        </service>
+
+        <!-- :net process — sole network egress -->
+        <service
+            android:name=".net.NetworkGatewayService"
+            android:process=":net"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_NETWORK_GATEWAY" />
+            </intent-filter>
+        </service>
+
+        <!-- 003 v1.1: ActionExecutorService runs in :capture (no-network process).
+             Bound by :ui via "com.capsule.app.action.BIND_ACTION_EXECUTOR".
+             See specs/003-orbit-actions/contracts/action-execution-contract.md §2.
+             No new permissions are added by 003 — see T099. -->
+        <service
+            android:name=".action.ActionExecutorService"
+            android:process=":capture"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.capsule.app.action.BIND_ACTION_EXECUTOR" />
+            </intent-filter>
+        </service>
+
+        <!-- 003 v1.1: ActionsSettingsActivity — deep-link only (opened from Settings → Actions). -->
+        <activity
+            android:name=".settings.ActionsSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:parentActivityName=".settings.SettingsActivity"
+            android:theme="@style/Theme.Capsule" />
 
         <receiver
             android:name=".service.RestartReceiver"

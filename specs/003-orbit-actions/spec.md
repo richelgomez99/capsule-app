@@ -2,8 +2,9 @@
 
 **Status**: STUB — full PRD to be drafted after v1 (spec 002) ships and stabilizes
 **Target release**: v1.1
-**Depends on**: spec 002 complete; spec 005 optional (BYOK improves quality)
+**Depends on**: spec 002 complete (incl. v1 cluster-suggestion engine, 2026-04-26 amendment); spec 005 optional (BYOK improves quality); **spec 012 (Resolution Semantics — confirmed Orbit Actions are canonical resolution triggers per spec 012 FR-012-005)**
 **Governing document**: `.specify/memory/constitution.md` — adheres to Principles I, VII, IX
+**Last amended**: 2026-04-26 (relationship to v1 cluster-suggestion engine clarified after office-hours pivot)
 
 ---
 
@@ -16,6 +17,25 @@ Orbit Actions turns captured text into structured, user-confirmed actions that l
 3. **Weekly digest** — extend the day-header paragraph feature into a weekly summary that surfaces every Sunday morning.
 
 This feature is the first time Orbit *writes to external apps* on the user's behalf. It is bounded by a strict rule: **no silent writes, ever.** Every action is presented as a chip with a preview and requires explicit user confirmation before being executed.
+
+---
+
+## Relationship to v1 cluster-suggestion engine
+
+The v1 cluster-suggestion engine (spec 002, 2026-04-26 amendment) and Orbit Actions (this spec, v1.1) are **orthogonal layers on the Diary**, not competing systems:
+
+| | v1 cluster-suggestion engine (spec 002) | v1.1 Orbit Actions (this spec) |
+|---|---|---|
+| **Granularity** | Operates on a *cluster* of captures (research-session, task, etc.) | Operates on a *single envelope* (one capture) |
+| **Action target** | Internal to Orbit (summary, structured list, open-all) | External apps (Calendar, To-do, share) |
+| **Trigger** | Cluster forms → suggestion card surfaces next morning | Envelope text matches an extraction template (flight confirmation, list of imperatives, etc.) |
+| **External writes** | Never. All cluster actions stay on-device, in Orbit. | Yes, via Android intents. The first place Orbit writes to external apps. |
+| **UI surface** | Suggestion card at the top of the diary day | Inline action chip directly under the relevant envelope |
+| **Audit** | Episode written on accept/reject of suggestion | Episode written on accept/reject of action |
+
+**They can coexist on the same Diary day.** A research-session cluster's suggestion card surfaces at the top ("Want a summary?"), while individual envelopes within that cluster may *also* have Orbit Actions chips ("Add to calendar — Flight UA437 May 22 14:15").
+
+**The agent (v1.2, spec 008) combines both.** When the full agent lands, it will be able to look at a cluster's contents, notice an embedded flight confirmation, and propose a single composite plan ("Save reading list AND add the flight to your calendar"). Until then (v1 and v1.1), the two layers operate independently and the user composes the workflow themselves.
 
 ---
 
@@ -60,6 +80,8 @@ This feature is the first time Orbit *writes to external apps* on the user's beh
 - Which external to-do apps to first-class (Google Tasks, TickTick, Todoist, local-only)?
 - What date-parse library handles fuzzy "next Tuesday at 3pm"? Does Nano do it well enough, or do we need a structured parser on top?
 - Do we want a generic "Custom action template" where power users can define regex → intent mappings?
+- **Diary surface coordination with the v1 cluster-suggestion card.** When a research-session cluster contains an envelope with a flight-confirmation Orbit Action chip, the same Diary day shows both the cluster card AND the per-envelope action chip. Visual stacking: cluster card always at top? Per-envelope action chips inline under each envelope? Or a unified "actionable" lane? Defer this to design.md (and spec 010 visual polish, 2026-04-26 amendment) since it's an information-architecture call, not a functional one.
+- **Cluster-suggestion's "Save as Structured List" action vs. Orbit Actions to-do extraction.** Both produce list-shaped output. In v1, cluster-suggestion's structured-list action operates on a cluster of envelopes; Orbit Actions to-do extraction operates on a single envelope's text. They produce different list types (one is "your week of saves grouped by topic," the other is "the imperatives I extracted from this one screenshot"). v1.2 agent reconciles these; v1.1 ships them as separate, non-overlapping affordances.
 
 ---
 

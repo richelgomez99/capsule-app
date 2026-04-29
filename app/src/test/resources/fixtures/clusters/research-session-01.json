@@ -1,0 +1,53 @@
+{
+  "id": "research-session-01",
+  "domain": "ai-ml",
+  "envelopes": [
+    {
+      "envelope_id": "env-01-a",
+      "url": "https://arxiv.org/abs/2501.12345",
+      "captured_at": "2026-04-15T14:23:00Z",
+      "url_domain": "arxiv.org",
+      "hydrated_text": "We introduce a sparse mixture-of-experts variant that decouples routing capacity from parameter count, allowing a 70B-parameter model to activate only 12B parameters per token at inference time. The router is trained with an auxiliary load-balancing loss that penalises both expert dropout (an expert receiving zero tokens in a batch) and expert saturation (a single expert routing more than 30% of tokens). On the standard reasoning suite (MMLU, GSM8K, HumanEval), the sparse variant matches a dense 34B baseline at 0.42x the inference FLOPs.\n\nThe key engineering trade-off is the all-to-all communication step. We profile this on an 8-GPU H100 node and find that with topology-aware expert placement (co-locating experts that frequently co-activate), latency drops by 38%. We release the routing weights and the placement heuristic as part of the open-source release.\n\nAblations show that capacity factor 1.25 is the sweet spot for our 64-expert configuration; below 1.0 the model drops 3.1 points on MMLU due to dropped tokens, and above 1.5 the all-to-all cost dominates. Future work extends this to multimodal routing where expert specialisation by modality is hypothesised but not yet measured.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-01-b",
+      "url": "https://openai.com/research/scaling-mixture-of-experts",
+      "captured_at": "2026-04-15T15:08:00Z",
+      "url_domain": "openai.com",
+      "hydrated_text": "Mixture-of-experts (MoE) architectures have become the dominant scaling strategy for frontier language models, but their training dynamics remain poorly understood compared to dense transformers. We share findings from a 12-month effort to characterise the loss landscape of MoE models at scale.\n\nThree results stand out. First, expert specialisation emerges abruptly around 2e21 training FLOPs — before this point, experts are interchangeable; after, they encode distinct linguistic phenomena (syntax routing, named-entity routing, code-vs-prose routing). Second, the optimal number of experts scales sub-linearly with parameter count: doubling parameters justifies only a 1.4x increase in expert count. Third, router stability is the dominant failure mode; runs that diverge almost always do so via router collapse, where one expert absorbs more than 80% of routing weight within ~500 steps.\n\nWe also discuss inference-time routing tricks, including speculative routing (running the top-2 experts in parallel and picking the higher-confidence output) and routing distillation (training a smaller, dense model from the routing decisions of a larger MoE). Both reduce serving cost without measurable quality regression on our internal evals.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-01-c",
+      "url": "https://www.anthropic.com/research/expert-routing-interpretability",
+      "captured_at": "2026-04-15T16:14:00Z",
+      "url_domain": "anthropic.com",
+      "hydrated_text": "What does an expert in a mixture-of-experts model actually learn? We apply standard interpretability tools — sparse autoencoders, activation patching, and direct logit attribution — to the experts of a 32-expert MoE model and find a surprisingly clean specialisation structure.\n\nRoughly 60% of experts develop interpretable specialisations: one handles arithmetic, two handle multilingual translation (Chinese and Spanish respectively), four are code experts (one each for Python, JavaScript, SQL, and a generic 'syntax' expert), and a dozen handle topical domains (medical, legal, scientific, casual conversation). The remaining 40% are 'generalist' experts that activate uniformly across input types and seem to encode lower-level features (token-level repetition handling, formatting tokens, end-of-sequence prediction).\n\nNotably, the routing decisions are not always semantically clean — we find a consistent failure mode where the router sends mathematical word problems to the language expert that matches the surface dialect rather than to the arithmetic expert, costing ~4 points on GSM8K. This suggests routing should condition on more than the immediate token embedding; we're exploring routing on a small auxiliary network's output instead.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-01-d",
+      "url": "https://distill.pub/2026/visualising-moe-routing",
+      "captured_at": "2026-04-15T16:53:00Z",
+      "url_domain": "distill.pub",
+      "hydrated_text": "An interactive walkthrough of how tokens flow through a 16-expert mixture-of-experts model. We render every routing decision in a small 350M-parameter model trained on a curated subset of the Pile, allowing readers to type their own input and watch which experts activate.\n\nThree exhibits make the article's core points concrete. The first lets readers compare routing for grammatically identical sentences in different domains ('the patient presented with' vs 'the defendant presented with' vs 'the function presented with') — the same surface form routes to medical, legal, and code experts respectively, demonstrating that routing happens after substantial contextual processing in earlier layers. The second exhibit shows routing instability under paraphrase: small surface edits (synonym swap, comma insertion) rarely change which experts activate, but punctuation changes occasionally flip routing dramatically.\n\nThe third exhibit visualises the all-to-all communication step as a bipartite graph between GPUs. Readers can drag tokens between expert assignments and watch the communication cost recompute live; this gives an intuition for why expert co-placement matters more than raw bandwidth in real deployments. We hope this complements the more formal treatments in concurrent work.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "Sparse mixture-of-experts can match dense baselines at roughly 0.4x inference FLOPs by activating only a fraction of parameters per token, with capacity factor 1.25 emerging as the practical sweet spot for 64-expert configurations. (env-01-a)",
+      "Expert specialisation in MoE models emerges abruptly during training around 2e21 FLOPs and produces interpretable role-based experts (arithmetic, code, multilingual) for roughly 60% of slots, with the remaining 40% acting as generalists. (env-01-b, env-01-c)",
+      "The dominant inference-time bottleneck is the all-to-all communication step between experts, and topology-aware expert co-placement reduces this cost by 30-40% in profiled deployments. (env-01-a, env-01-d)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.78,
+    "domains_distinct": 4,
+    "captured_at_span_hours": 2.5,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "clean cluster: 4 envelopes, 4 distinct hostnames, all envelopes pass FR-028 thresholds comfortably; topical thread is MoE architecture/routing"
+}

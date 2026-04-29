@@ -1,0 +1,43 @@
+{
+  "id": "research-session-07",
+  "domain": "climate",
+  "envelopes": [
+    {
+      "envelope_id": "env-07-a",
+      "url": "https://www.nasa.gov/news/sea-level-rise-2025-update",
+      "captured_at": "2026-04-21T06:00:00Z",
+      "url_domain": "nasa.gov",
+      "hydrated_text": "Global mean sea level reached 110 mm above the 1993 satellite-altimetry baseline at the close of 2025, with the rate of rise over the last decade accelerating to 4.8 mm/yr from a long-term mean of 3.4 mm/yr. The acceleration is driven primarily by ice-sheet contributions, with thermal expansion contributing a roughly steady 1.4 mm/yr.\n\nGreenland mass loss in 2025 was 312 Gt, slightly below the 2010-2020 mean, reflecting an unusually cool summer in west Greenland. Antarctic mass loss was 178 Gt, near the long-term average, with continued mass gain in East Antarctica partially offsetting losses in West Antarctica and the Antarctic Peninsula. The mass-balance signal in Antarctica remains noisier than in Greenland because surface accumulation interannual variability is high.\n\nProjections through 2100 remain tightly bounded by the AR6 likely-range under low and intermediate emission scenarios, but the right-tail (high-end) projections under high-emission scenarios have widened slightly as new evidence on marine ice cliff instability has accumulated.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-07-b",
+      "url": "https://www.carbonbrief.org/q-a-marine-heatwaves-2025",
+      "captured_at": "2026-04-21T08:30:00Z",
+      "url_domain": "carbonbrief.org",
+      "hydrated_text": "Marine heatwaves in 2025 broke records across multiple basins. The Mediterranean experienced its longest continuous heatwave on record (147 days above the 90th-percentile threshold), the North Pacific 'Blob 4.0' reached temperatures 4.8 C above climatology in late summer, and the South Atlantic experienced an unprecedented winter heatwave that researchers are still working to attribute.\n\nEcological impacts have been severe in several locations. Coral bleaching in the Caribbean was the most extensive on record at the time of writing (early 2026), with mortality assessments ongoing. Pacific seabird breeding failures attributable to forage-fish collapse have been documented at six monitored colonies. Fisheries impacts vary widely by species and region; the most economically significant is the closure of the Northern California Dungeness crab fishery for an unprecedented third consecutive year due to harmful algal bloom conditions.\n\nClimate model attribution suggests virtually all of these events are now substantially more likely under current warming than under pre-industrial conditions, with the South Atlantic event being the only one for which attribution is still active research.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-07-c",
+      "url": "https://www.nasa.gov/news/grace-fo-mission-extension",
+      "captured_at": "2026-04-21T10:12:00Z",
+      "url_domain": "nasa.gov",
+      "hydrated_text": "GRACE-FO mission operations have been extended through 2030, ensuring continuity of the satellite gravimetry record critical to ice-sheet mass-balance and groundwater-storage monitoring. The follow-on mission, GRACE-3, remains on schedule for 2027 launch, with a planned 12-month overlap window to enable inter-satellite calibration.\n\nThe extended record will be especially valuable for detecting acceleration in groundwater depletion in major aquifers, where the signal-to-noise ratio is improving with time as the long-term trend grows large relative to interannual hydrological variability. California's Central Valley, the North China Plain, and the Indo-Gangetic basin remain the largest documented depletion signals; new high-rate depletion has emerged in the East African Rift Valley aquifers since 2018.\n\nThe mission extension was funded through a partnership with the German Aerospace Center (DLR) and the European Space Agency. We acknowledge the budget pressure on Earth-observation programmes globally and the importance of international cost-sharing arrangements like this one.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "[NEGATIVE FIXTURE — span 4.2h exceeds 4h bucket window. Cluster engine should reject before reaching the summariser per FR-028.] (env-07-a)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.79,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 4.2,
+    "expected_outcome": "REJECTED_4H_BUCKET"
+  },
+  "notes": "NEGATIVE: span 4.2h fails FR-028 4-hour bucket. Cosine and domain count are otherwise healthy (0.79, 2 domains) — rejection is purely on the temporal-bucket boundary."
+}

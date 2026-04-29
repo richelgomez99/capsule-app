@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Capsule"
 include(":app")
+include(":build-logic:lint")

@@ -8,6 +8,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+**/build/
+*.log
+build_log.txt
+build_output.log
 
 # Editor / tool caches
 .vscode/
@@ -16,7 +20,12 @@ local.properties
 .cursor/mcp-cache/
 .cursor/logs/
 .cursor/history/
+.kotlin/
 
 # Private working notes (never push)
 .specify/memory/linkedin*.md
 .specify/memory/*private*
+
+# Edge function deps (spec 014)
+supabase/functions/llm_gateway/node_modules/
+supabase/functions/llm_gateway/.env.local

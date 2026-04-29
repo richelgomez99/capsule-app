@@ -1,0 +1,43 @@
+{
+  "id": "research-session-15",
+  "domain": "personal-finance",
+  "envelopes": [
+    {
+      "envelope_id": "env-15-a",
+      "url": "https://www.morningstar.com/articles/1218003/529-vs-utma-comparison",
+      "captured_at": "2026-04-24T13:00:00Z",
+      "url_domain": "morningstar.com",
+      "hydrated_text": "Choosing between a 529 college savings plan and a UTMA custodial account for a child's education savings continues to be one of the most common reader questions. Both vehicles have meaningful changes following the 2025 tax law: 529s gained more permissive rollover-to-Roth-IRA mechanics, while UTMA accounts saw a tightening of the kiddie-tax computation that affects high-balance accounts.\n\nThe broad guidance is unchanged: 529s remain better for funds intended specifically for qualified education expenses; UTMAs remain better for funds that might serve broader purposes (graduate school, gap year, business start, etc.) but at the cost of less favourable financial-aid treatment when the child applies to college.\n\nWe walk through the two vehicles' financial-aid treatment in detail, since this is the dimension where reader confusion is highest. UTMA assets are reported as the student's assets and assessed at 20% in the federal financial-aid formula. 529 assets owned by a custodial parent are assessed at no more than 5.64%. The difference compounds across multiple aid years.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-15-b",
+      "url": "https://www.nerdwallet.com/article/investing/529-state-comparison-2026",
+      "captured_at": "2026-04-24T15:00:00Z",
+      "url_domain": "nerdwallet.com",
+      "hydrated_text": "Choosing the best 529 plan for your situation requires considering both the state-of-residence tax benefit (if your state offers one) and the underlying plan quality. The Morningstar 529 ratings remain the most comprehensive third-party assessment of plan quality.\n\nFor 2026, the highest-rated plans are Utah's my529, Pennsylvania's PA529 Investment Plan, and Virginia's Virginia529 — these earned Gold ratings from Morningstar based on a combination of low fees, broad investment options, and strong stewardship. Many state plans without a Gold rating are nonetheless the right choice for residents because the state-of-residence tax deduction outweighs marginal fee differences.\n\nNon-residents of Utah, PA, or Virginia who don't have a state-tax deduction in their home state should generally use one of the Gold-rated plans rather than their home-state plan. The exception is families planning to move states during the savings horizon; the operational complexity of switching plans usually doesn't pay off.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-15-c",
+      "url": "https://www.morningstar.com/articles/1219556/529-rollover-roth-2026",
+      "captured_at": "2026-04-24T17:06:00Z",
+      "url_domain": "morningstar.com",
+      "hydrated_text": "The 529-to-Roth-IRA rollover provision, which took effect for 2024, has been refined in 2026 IRS guidance and warrants a fresh look. The headline rules: a 529 must have been open for at least 15 years, contributions and earnings within the last 5 years are not eligible to roll, the lifetime cap per beneficiary is $35,000, and rollovers are subject to the annual Roth IRA contribution limit ($7,000 for 2026, $8,000 if catch-up applies).\n\nThe newly-clarified items in the 2026 guidance include: rollovers count against the beneficiary's annual Roth contribution limit (so a beneficiary cannot also make a regular Roth contribution that year if they roll the maximum), the 15-year clock generally restarts if the beneficiary changes (with limited exceptions), and the rollover is not subject to the income limits that otherwise apply to Roth contributions.\n\nWe walk through three planning scenarios where this provision can be valuable: over-funded 529s where the beneficiary completes education with a balance remaining, beneficiaries whose careers end up not requiring the full 529 balance, and intentional overfunding where the family expects the rollover provision to be the primary use case.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "[NEGATIVE FIXTURE — span 4.1h exceeds 4h bucket window. Cluster engine should reject before reaching summariser per FR-028.] (env-15-a)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.78,
+    "domains_distinct": 2,
+    "captured_at_span_hours": 4.1,
+    "expected_outcome": "REJECTED_4H_BUCKET"
+  },
+  "notes": "NEGATIVE: span 4.1h fails FR-028 4h bucket. Cosine 0.78 and domains_distinct=2 are both healthy — rejection is purely on the temporal-bucket boundary (just over). Topic is genuinely coherent (529/UTMA education savings) which makes the test sharper."
+}

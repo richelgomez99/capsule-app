@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.capsule.app.permission.BatteryOptimizationGuide
 import com.capsule.app.permission.OverlayPermissionHelper
+import com.capsule.app.permission.UsageAccessHelper
 import com.capsule.app.service.CapsuleOverlayService
 import com.capsule.app.service.ServiceHealthMonitor
 import com.capsule.app.service.ServiceHealthStatus
@@ -57,6 +58,7 @@ class MainActivity : ComponentActivity() {
 
     private var isServiceEnabled by mutableStateOf(false)
     private var hasOverlayPermission by mutableStateOf(false)
+    private var hasUsageAccess by mutableStateOf(false)
 
     private val overlayPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
 
         isServiceEnabled = prefs.getBoolean("service_enabled", false)
         hasOverlayPermission = OverlayPermissionHelper.canDrawOverlays(this)
+        hasUsageAccess = UsageAccessHelper.hasUsageAccess(this)
 
         setContent {
             CapsuleTheme {
@@ -92,6 +95,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hasOverlayPermission = OverlayPermissionHelper.canDrawOverlays(this)
+        hasUsageAccess = UsageAccessHelper.hasUsageAccess(this)
     }
 
     @Composable
@@ -172,6 +176,42 @@ class MainActivity : ComponentActivity() {
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
+
+                // Usage Access — special permission needed so
+                // StateSnapshotCollector can resolve which app was in
+                // the foreground at capture time. Without it every
+                // envelope is threaded as "Unknown source".
+                if (!hasUsageAccess) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Usage Access (optional)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Lets Orbit attribute captures to the app you copied from (Messages, Chrome, etc.). Without this, everything is labelled \"Unknown source\".",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                startActivity(UsageAccessHelper.buildUsageAccessIntent())
+                            }) {
+                                Text("Grant Usage Access")
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Service health indicator
                 ServiceHealthCard()

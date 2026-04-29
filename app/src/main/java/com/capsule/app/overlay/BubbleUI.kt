@@ -4,7 +4,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -93,5 +95,42 @@ fun BubbleUI(
                 contentDescription = "Capture clipboard"
             )
         }
+    }
+}
+
+@Composable
+fun DismissTargetUI(
+    isActive: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (isActive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    }
+    val contentColor = if (isActive) {
+        MaterialTheme.colorScheme.onError
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val elevation = if (isActive) {
+        FloatingActionButtonDefaults.elevation(defaultElevation = 10.dp)
+    } else {
+        FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
+    }
+
+    FloatingActionButton(
+        onClick = { },
+        modifier = modifier.size(72.dp),
+        shape = CircleShape,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        elevation = elevation
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Dismiss overlay",
+            tint = contentColor
+        )
     }
 }

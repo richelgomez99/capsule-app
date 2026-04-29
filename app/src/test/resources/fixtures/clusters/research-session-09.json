@@ -1,0 +1,54 @@
+{
+  "id": "research-session-09",
+  "domain": "sports-analytics",
+  "envelopes": [
+    {
+      "envelope_id": "env-09-a",
+      "url": "https://fivethirtyeight.com/features/nba-shot-quality-2025-26",
+      "captured_at": "2026-04-23T18:00:00Z",
+      "url_domain": "fivethirtyeight.com",
+      "hydrated_text": "Shot-quality models in the NBA have matured to the point where individual shot-by-shot expected-points values agree across the major public models to within 0.05 points per shot in 95% of attempts. We use this convergence to revisit a question the analytics community has debated since the start of the three-point revolution: are teams shooting too many threes, too few, or about right?\n\nThe surprising finding is that the league-wide three-point rate (39.4% of attempts in 2025-26) is now within 1 percentage point of the rate predicted by a simple optimisation model that maximises expected points per possession given league-average personnel. The era of clearly-suboptimal shot selection is over for most teams.\n\nWhat varies, and varies substantially, is execution: teams in the top quintile of shot-creation skill convert their threes at 38.2%, while bottom-quintile teams convert at 32.1%. Closing this gap rather than tilting shot mix is now the binding constraint for offensive improvement at most teams.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-09-b",
+      "url": "https://theathletic.com/5234812/nba-2025-26-defensive-metrics",
+      "captured_at": "2026-04-23T18:55:00Z",
+      "url_domain": "theathletic.com",
+      "hydrated_text": "Public defensive metrics in the NBA have lagged offensive metrics for the obvious reason that defensive contributions are diffuse and hard to attribute. We compare the four leading public defensive frameworks — DARKO defensive impact, EPM defensive component, Dunks & Threes' D-RAPM, and Cleaning the Glass on/off — and find substantial disagreement at the individual-player level.\n\nThe correlation matrix among these four frameworks averages 0.62, lower than the 0.83 we computed for offensive metrics. The largest disagreements concentrate on big men in switch-heavy schemes, where rim protection and perimeter mobility trade off in ways that different metrics weight differently.\n\nA simple ensemble — an unweighted average of all four — outperforms any individual metric in out-of-sample prediction of team defensive rating from individual lineups. We argue that consumers of defensive metrics should generally use ensemble rather than spotlight a single 'best' framework, given the genuine modelling uncertainty.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-09-c",
+      "url": "https://www.espn.com/nba/story/_/id/41527890/playoff-shot-creation",
+      "captured_at": "2026-04-23T20:00:00Z",
+      "url_domain": "espn.com",
+      "hydrated_text": "Playoff basketball has historically required different skills than regular-season basketball — most prominently, the ability to create high-quality shots against a set defence. We quantify this 'playoff drop' for individual creators using six years of high-frequency tracking data and find that the average top-50 creator's expected-points-per-shot drops by 0.07 in the playoffs, but with substantial variance.\n\nThe creators whose values hold up best in the postseason share three traits: a top-quartile mid-range pull-up rate (countering the long-closeout strategies playoff defences employ), top-quartile pick-and-roll separation generation, and below-average reliance on transition.\n\nWe also find that shot-creation playoff drop is largely independent of physical attributes (height, weight, reach) and largely correlated with skill attributes that can be measured in the regular season. This suggests that team-construction philosophies that prioritise 'playoff archetypes' should be quantified rather than relied on as scouting intuition.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-09-d",
+      "url": "https://www.baseballprospectus.com/news/article/89234/dh-rule-five-year-review",
+      "captured_at": "2026-04-23T21:00:00Z",
+      "url_domain": "baseballprospectus.com",
+      "hydrated_text": "Although this article is nominally about the universal designated hitter rule's five-year impact on the National League, the underlying analytical question — how to estimate counterfactual offensive output under a rule change — is broadly applicable to any sport contemplating a structural change.\n\nWe estimate the universal DH increased NL run-scoring by 0.42 runs per game on average, with substantial heterogeneity by team based on bench depth and pitcher hitting talent (the loss of which mattered marginally less than expected because pre-2022 NL pitchers were already historically poor hitters).\n\nThe transferable lesson for analytics across sports: counterfactual estimation under rule changes benefits enormously from having a 'sister league' running the alternate rule simultaneously. The MLB transition was unusually clean to study because the AL had used the DH for half a century. Sports without such natural experiments — soccer's recent set-piece rule changes, for instance — face much harder identification problems.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "League-wide NBA three-point shot mix has converged to within 1 percentage point of the optimisation-model prediction, ending the era of clearly-suboptimal shot selection; execution gaps now matter more than mix gaps. (env-09-a)",
+      "Public defensive metrics show lower cross-framework agreement than offensive metrics (mean correlation 0.62 vs 0.83), and a simple unweighted ensemble outperforms any single framework on out-of-sample team defensive prediction. (env-09-b)",
+      "Playoff shot-creation drop averages 0.07 expected points per shot but is concentrated in measurable skill attributes (mid-range pull-up rate, pick-and-roll separation, low transition reliance), making 'playoff archetypes' quantifiable rather than scouting intuition. (env-09-c)",
+      "Counterfactual estimation under sports rule changes benefits from natural sister-league experiments; the universal DH analysis was unusually clean because the AL had run the alternate rule for decades. (env-09-d)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.79,
+    "domains_distinct": 4,
+    "captured_at_span_hours": 3.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "clean cluster across four sports-analytics outlets; topical thread is sport-specific quantitative methods + cross-sport methodological commonalities"
+}

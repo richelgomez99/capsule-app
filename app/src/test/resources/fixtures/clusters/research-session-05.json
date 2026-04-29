@@ -1,0 +1,53 @@
+{
+  "id": "research-session-05",
+  "domain": "climate",
+  "envelopes": [
+    {
+      "envelope_id": "env-05-a",
+      "url": "https://www.nature.com/articles/s41558-026-01943-x",
+      "captured_at": "2026-04-19T08:00:00Z",
+      "url_domain": "nature.com",
+      "hydrated_text": "Atlantic Meridional Overturning Circulation (AMOC) weakening has been identified in proxy reconstructions and climate model projections, but observational records have been too short to detect a statistically significant trend. Using the RAPID array's now 21-year continuous time series, we report the first significance-tested decline: a 14% reduction in transport at 26.5 N over 2004-2025, with p < 0.01 against natural variability estimated from a 500-year preindustrial control run.\n\nThe attribution to anthropogenic forcing depends on assumptions about low-frequency internal variability that the observational record cannot constrain directly. Model-based attribution (CMIP7 ensemble) assigns 60-80% of the observed weakening to forcing; the remainder is consistent with internal variability. Our headline conclusion is therefore conservative: weakening is real and detected, attribution is most likely anthropogenic but not yet certain.\n\nImplications for European winter temperature and Sahel rainfall are substantial but state-dependent — the same AMOC weakening can produce qualitatively different regional responses depending on Atlantic SST patterns. We recommend the upcoming IPCC AR7 treat AMOC trajectories as a key sensitivity in regional climate projections.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-05-b",
+      "url": "https://www.nasa.gov/news/ocean-heat-content-2025-summary",
+      "captured_at": "2026-04-19T09:30:00Z",
+      "url_domain": "nasa.gov",
+      "hydrated_text": "Global ocean heat content in 2025 reached a new record of 247 zettajoules above the 1981-2010 baseline, continuing a pattern of acceleration that began around 2014. The rate of heat accumulation in the upper 2000m of the ocean is now approximately 0.84 W/m^2, roughly 60% higher than the 1990s average.\n\nThe acceleration has spatial structure: the Southern Ocean and the subpolar North Atlantic show the largest anomalies, consistent with model projections of the regions where deep mixing carries surface heat to depth. Tropical Pacific anomalies remain modulated by ENSO state, with the late-2025 La Nina partially masking continued warming.\n\nA key uncertainty is whether the post-2014 acceleration represents a genuine increase in the planetary energy imbalance or a temporary shift in heat-transport efficiency. Argo float coverage has improved sufficiently that we expect this to be answerable within 3-5 years; until then, both interpretations remain consistent with the data.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-05-c",
+      "url": "https://www.ipcc.ch/report/ar7/wg1/chapter-9-tipping-elements",
+      "captured_at": "2026-04-19T10:15:00Z",
+      "url_domain": "ipcc.ch",
+      "hydrated_text": "Chapter 9 of the AR7 WG1 draft synthesises evidence on tipping elements in the climate system. Compared to AR6, two elements have moved into the high-confidence range for triggering at warming levels currently considered plausible (1.5-2.0 C above preindustrial): West Antarctic Ice Sheet retreat and boreal permafrost carbon release. AMOC weakening remains medium-confidence for tipping but high-confidence for substantial slowdown.\n\nThe chapter introduces a new framing — 'committed' versus 'imminent' tipping — that distinguishes between systems where the trigger has already been crossed but the dynamics play out over centuries (e.g. some West Antarctic ice streams) versus systems where present-day forcing rates are bringing the trigger closer in time but it has not been crossed (e.g. AMOC). This distinction matters for adaptation planning, which has different time horizons in the two cases.\n\nWe also discuss the under-quantified risk of tipping cascades: cases where one tipped element raises the probability of another (Greenland melt freshening AMOC, AMOC weakening warming the Southern Ocean, etc.). The current scientific community estimate is that cascade risk is non-negligible but the available models are not yet skilful enough to assign confident probabilities.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    },
+    {
+      "envelope_id": "env-05-d",
+      "url": "https://www.carbonbrief.org/explainer-2025-amoc-evidence",
+      "captured_at": "2026-04-19T11:00:00Z",
+      "url_domain": "carbonbrief.org",
+      "hydrated_text": "An accessible synthesis of three months of recent AMOC research aimed at policy audiences. The headline message: detection of a real weakening trend in the observational record is now scientifically robust, but attribution and projection of further weakening involve substantial uncertainty that policymakers should not collapse into a single number.\n\nWe walk through the four lines of evidence: (1) direct transport measurements from the RAPID array, now showing a significance-tested decline; (2) sea-surface-temperature fingerprints in the subpolar North Atlantic, consistent with circulation slowdown; (3) salinity records from coastal hydrographic stations, showing freshening in the Labrador Sea consistent with reduced deep-water formation; (4) paleoclimate reconstructions, which place modern AMOC strength near the lower end of its Holocene range.\n\nThe article closes with a discussion of decision-relevant questions: at what AMOC weakening level does European winter climate change measurably? (Answer: probably already, though detection vs internal variability is hard.) At what level does Sahel rainfall regime shift? (Probably substantial further weakening required, but model spread is wide.) We argue these are the questions IPCC AR7 should foreground.",
+      "modelLabel": "nano-v4-build-2026-05-01"
+    }
+  ],
+  "expectedSummary": {
+    "bullets": [
+      "AMOC weakening is now detected with statistical significance in the 21-year RAPID observational record, with attribution most likely anthropogenic but with remaining uncertainty between forced and internal-variability components. (env-05-a, env-05-d)",
+      "Global ocean heat content set a new record in 2025 with a post-2014 acceleration that is not yet definitively attributed to a change in planetary energy imbalance versus a shift in heat-transport efficiency. (env-05-b)",
+      "AR7 elevates West Antarctic Ice Sheet retreat and boreal permafrost carbon release into the high-confidence tipping range at 1.5-2.0 C warming, and introduces a 'committed vs imminent' tipping distinction relevant to adaptation planning. (env-05-c)"
+    ],
+    "model_label_seen": "nano-v4-build-2026-05-01"
+  },
+  "expected_metadata": {
+    "cosine_min_observed": 0.80,
+    "domains_distinct": 4,
+    "captured_at_span_hours": 3.0,
+    "expected_outcome": "POSITIVE"
+  },
+  "notes": "clean climate cluster: 4 envelopes from 4 distinct domains, all comfortably above FR-028 thresholds; topical thread is AMOC + tipping elements + ocean heat"
+}
