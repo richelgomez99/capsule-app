@@ -15,7 +15,7 @@
  * Six valid intent labels. Mirrors the system prompt in
  * handlers/classify_intent.ts. Anything outside this set falls back to OTHER.
  */
-export const INTENT_LABELS: ReadonlySet<string> = new Set([
+export const INTENT_VALUES: ReadonlySet<string> = new Set([
   "REMINDER",
   "NOTE",
   "QUESTION",
@@ -54,5 +54,5 @@ export function sanitizeSensitivityTags(raw: readonly string[]): string[] {
 
 /** Clamp an intent label to the closed set; unknowns become OTHER. */
 export function sanitizeIntent(raw: string): string {
-  return INTENT_LABELS.has(raw) ? raw : INTENT_FALLBACK;
+  return INTENT_VALUES.has(raw) ? raw : INTENT_FALLBACK;
 }
