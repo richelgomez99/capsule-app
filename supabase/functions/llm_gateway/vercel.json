@@ -1,13 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
   "regions": ["iad1"],
-  "functions": {
-    "index.ts": {
-      "runtime": "edge"
-    }
-  },
-  "routes": [
-    { "src": "/llm", "dest": "/index" }
+  "rewrites": [
+    { "source": "/llm", "destination": "/api/llm" }
   ]
 }
