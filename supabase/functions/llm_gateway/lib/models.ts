@@ -33,10 +33,12 @@ export function failureToErrorCode(f: AnthropicFailure): ErrorCode {
 export function failureToMessage(f: AnthropicFailure): string {
   switch (f.kind) {
     case "timeout":
-      return "Anthropic request timed out";
+      return "upstream request timed out";
     case "gateway_5xx":
-      return `Vercel AI Gateway returned ${f.status}`;
+      // Do not leak the upstream provider or status code to the client.
+      // Logs (audit row + structured error log) carry the real details.
+      return "upstream gateway error";
     case "malformed":
-      return "Upstream returned malformed response";
+      return "upstream returned malformed response";
   }
 }

@@ -55,8 +55,14 @@ let cachedClient: SupabaseClient | null = null;
 /** Lazy service-role client (env vars read once per cold start). */
 function client(): SupabaseClient {
   if (cachedClient) return cachedClient;
-  const url = process.env.SUPABASE_URL ?? "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    // Fail loud on first audit insert rather than silently writing into a
+    // misconfigured client. Either the deploy is missing required env or
+    // someone removed it; both are bugs we want to surface immediately.
+    throw new Error("missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
   cachedClient = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

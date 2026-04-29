@@ -121,10 +121,11 @@ export function openaiFailureToErrorCode(
 export function openaiFailureToMessage(f: OpenAIFailure): string {
   switch (f.kind) {
     case "timeout":
-      return "OpenAI request timed out";
+      return "upstream request timed out";
     case "provider_5xx":
-      return `OpenAI returned ${f.status}`;
+      // Do not leak provider name or status code to the client.
+      return "upstream gateway error";
     case "malformed":
-      return "OpenAI returned malformed response";
+      return "upstream returned malformed response";
   }
 }

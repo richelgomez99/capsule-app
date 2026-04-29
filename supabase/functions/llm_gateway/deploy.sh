@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Spec 014 FR-014-020 — Vercel deploy runbook script.
-# Verifies all five required env vars are set in Vercel `production`
+# Verifies all six required env vars are set in Vercel `production`
 # before invoking `vercel deploy --prod`. Exits non-zero on any missing var.
 #
 # Usage:
@@ -14,6 +14,7 @@ set -euo pipefail
 REQUIRED_VARS=(
   OPENAI_API_KEY
   ANTHROPIC_API_KEY
+  VERCEL_AI_GATEWAY_URL
   SUPABASE_SERVICE_ROLE_KEY
   SUPABASE_URL
   SUPABASE_JWT_SECRET
