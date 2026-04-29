@@ -12,6 +12,32 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 9 (T148–T149) DiaryViewModel + DiaryScreen cluster wiring landed**
+
+The Diary now surfaces cluster cards on cluster days. `DiaryViewModel.observe()` combines the per-day envelope flow with `DiaryRepository.observeClusters()` (a new interface method, default `flowOf(emptyList())` so the JVM test fakes don't need rewriting). Clusters are filtered to `isoDate` by mapping `timeBucketStart` through `ZoneId.systemDefault()` (injected via constructor for testability), then embedded in `DayUiState.Ready.clusters`. Reduce contract widened: a day with envelopes-empty *and* clusters-empty is `Empty`; a day with clusters but no envelopes is `Ready` with empty threads so the slot still renders.
+
+**T148 (VM)** — `DiaryRepository.observeClusters(): Flow<List<ClusterCardModel>>` defaulted to empty flow on the interface. `BinderDiaryRepository` implements it via `IClusterObserver` → `callbackFlow`, mapping `ClusterCardParcel` back to the in-process `ClusterCardModel` via a private `toModel()` extension (zips `memberEnvelopeIds` × `memberIndices` into `ClusterMemberRef`s, `ClusterState.valueOf` for the enum). VM combines via `kotlinx.coroutines.flow.combine` + `.onStart { emit(emptyList()) }` so the page flow alone can drive the first emission on the dominant non-cluster path.
+
+**T149 (Screen)** — `DayContentView`'s `LazyColumn` now renders cluster cards as the first items (above the day-header `item { DayHeader(...) }`), one keyed item per `ClusterCardModel`. Spec 010 D6-revision honored: events outrank steady-state. Sunday digest ordering reads `Digest? → Cluster? → DayHeader → Threads` once spec 003 weekly digest lands (T150 will assert). A `ClusterCardModel.toCardStateOrNull()` projection maps lifecycle states honestly: SURFACED/TAPPED → `Surfaced`, ACTING → `Acting`, FAILED → `Failed(retryCount=0)`, ACTED/FORMING/DISMISSED/AGED_OUT → `null` (don't fabricate bullets the summariser hasn't produced). `headerLabel`, `timeRangeLabel`, `sourceCategories` are placeholders today (`"Cluster · N captures"` / Berkeley-Mono-style range / empty list); Block 6 (`ClusterSummariser`) will replace them.
+
+**Reduce-motion wiring** — `DayContentView` reads `Settings.Global.ANIMATOR_DURATION_SCALE` (== 0f means animations off in Developer Options + Accessibility) and passes the boolean to `ClusterSuggestionCard.reduceMotion`. Compose has no first-class API for this preference; the `Settings.Global` read is the de facto Android pattern. Defaults to `false` if the setting is unreadable.
+
+**Block 8 follow-ups absorbed (committed first)**:
+1. Test naming: `fullTapFlow_renderToActingToActedWithCitations` (line 49 of `DiaryClusterSuggestionCardTest.kt`) renamed to `surfacedToActingTransition` — the test only verifies Surfaced → Acting, so the new name matches scope honestly. Chaining a third hop would require driving the closure to flip to Acted after a tick and was out of scope for this repair commit.
+2. Tautological assertion: `(state as? ClusterSuggestionCardState.Surfaced)?.bodyText` on a Failed state (line 237 of `ClusterSuggestionCardTest.kt`) replaced with a real defensive sealed-class subtype guard using `KClass.isInstance` (avoids Kotlin's smart-cast eliding the check at compile time).
+3. Spec 010 D-amendment 2026-04-29 appended: documents `DismissedTrace` as the 7th render variant beyond the enumerated 6.
+
+**Hard constraints upheld**: no new color tokens, no new fonts, no intent-set changes, "sealed at save" wording untouched, no bubble overlay touch.
+
+**Gates:** `:app:compileDebugKotlin` clean. `:app:testDebugUnitTest --tests "com.capsule.app.diary.*" --tests "com.capsule.app.diary.ui.*"` 77/77 green (full Diary + Diary-UI surface). `:build-logic:lint:test` 8/8 green. `:app:lintDebug` shows only the pre-existing `MissingClass ActionsSettingsActivity` + `RemoveWorkManagerInitializer` errors (baseline, unchanged from Block 8). `:app:connectedDebugAndroidTest` not run locally (no emulator). Pre-existing JVM failure `DateTimeParserTest.isoUtcConvertsToZone` (TZ-dependent, fails on `phase-11-block-8` parent too) is unrelated to Block 9 and is not gated against here.
+
+**Out of scope (deferred to Block 10):**
+- T150 instrumented placement test (`DiaryScreenWithClusterTest.kt`) — flagged but not landed; LazyColumn index assertions plus a Sunday-with-cluster fixture deserve their own commit window once the digest/cluster ordering primitives stabilize.
+- Cluster card interactivity (Summarize / Open all / Dismiss / Retry handlers) — wired as no-op stubs; real flows arrive with `ClusterSummariser` (Block 6 / future).
+- Source-category glyphs (`sourceCategories`) — empty list today; Block 6 fills from envelope `appCategory` join.
+
+---
+
 **2026-04-29 — Phase 11 Block 8 (T145–T147) ClusterSuggestionCard landed**
 
 Stateless Compose primitive renders all six lifecycle states (SURFACED, ACTING, ACTED, FAILED, STALE, SLOW-NETWORK) plus a post-dismissal trace, per spec 010 FR-010-019..024. The card is dumb: parent (Block 9 ViewModel) maps `ClusterCardModel` + lifecycle events into a sealed `ClusterSuggestionCardState` and passes it in; the card emits intent callbacks (`onSummarize`, `onOpenAll`, `onDismiss`, `onRetry`) and never reaches into the repository or summariser.
@@ -959,8 +985,8 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 ### Diary integration (US8)
 
-- [ ] T148 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/DiaryViewModel.kt` — combine `Flow<List<EnvelopeView>>` with `Flow<List<ClusterCardModel>>` from `ClusterRepository`. Cluster card slot positioned ABOVE day-header on cluster days only (per FR-036 + spec 010 FR-010-021 amended /autoplan). On non-cluster days, no slot.
-- [ ] T149 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/ui/DiaryScreen.kt` — render cluster card slot. Compose ordering: `Cluster.SURFACED?` → `DigestEnvelope?` (Sunday) → `DayHeader` → `Threads`/`Envelopes` chronological. On Sundays-with-cluster, ordering is `Digest → Cluster → DayHeader → Feed` per spec 003 status-log entry 2026-04-27 (latest+12).
+- [x] T148 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/DiaryViewModel.kt` — combine `Flow<List<EnvelopeView>>` with `Flow<List<ClusterCardModel>>` from `ClusterRepository`. Cluster card slot positioned ABOVE day-header on cluster days only (per FR-036 + spec 010 FR-010-021 amended /autoplan). On non-cluster days, no slot.
+- [x] T149 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/ui/DiaryScreen.kt` — render cluster card slot. Compose ordering: `Cluster.SURFACED?` → `DigestEnvelope?` (Sunday) → `DayHeader` → `Threads`/`Envelopes` chronological. On Sundays-with-cluster, ordering is `Digest → Cluster → DayHeader → Feed` per spec 003 status-log entry 2026-04-27 (latest+12).
 - [ ] T150 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryScreenWithClusterTest.kt` (instrumented Compose) — placement order on cluster vs non-cluster days; Sunday-with-cluster ordering; LazyColumn index assertions (`index(cluster) < index(day-header)` on weekdays-with-cluster; `index(digest) < index(cluster) < index(day-header)` on Sundays-with-cluster).
 
 ### State machine + retention coupling (US8)
