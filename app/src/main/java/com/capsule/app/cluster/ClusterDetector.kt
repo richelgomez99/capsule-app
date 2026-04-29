@@ -1,5 +1,6 @@
 package com.capsule.app.cluster
 
+import android.util.Log
 import com.capsule.app.ai.LlmProvider
 import com.capsule.app.ai.NanoLlmProvider
 import com.capsule.app.audit.AuditLogWriter
@@ -87,9 +88,19 @@ class ClusterDetector(
             val clustersFormed: Int,
             val candidatesScanned: Int,
             val embeddingsObtained: Int,
-            val bucketsConsidered: Int
+            val bucketsConsidered: Int,
+            val bucketsSkippedRevDrift: Int = 0
         ) : Outcome()
     }
+
+    /**
+     * Thrown by [detect] when [SimilarityEngine.cosine] surfaces an
+     * [EmbeddingDimensionMismatch]. The worker maps this to
+     * `Result.failure()` per FR-038 — a dimensionality mismatch is a
+     * permanent / structural error that retrying cannot fix.
+     */
+    class DimensionMismatchInRun(cause: EmbeddingDimensionMismatch) :
+        IllegalStateException("cluster detection aborted: dimension mismatch", cause)
 
     suspend fun detect(): Outcome {
         // (1) modelLabel boundary gate — FR-030.
@@ -129,6 +140,7 @@ class ClusterDetector(
         // (3) Embed every candidate; nulls (blank text, AICore
         // unavailable, transient throw) drop out by Block 2 contract.
         val embeddings = HashMap<String, FloatArray>(candidates.size)
+        val perEnvelopeModelLabel = HashMap<String, String>(candidates.size)
         val embeddedCandidates = ArrayList<ClusterCandidate>(candidates.size)
         for (row in candidates) {
             val text = row.summary
@@ -139,6 +151,7 @@ class ClusterDetector(
             }
             if (emb != null) {
                 embeddings[row.envelopeId] = emb.vector
+                perEnvelopeModelLabel[row.envelopeId] = emb.modelLabel
                 embeddedCandidates += ClusterCandidate(
                     id = row.envelopeId,
                     createdAtMillis = row.createdAtMillis,
@@ -153,11 +166,39 @@ class ClusterDetector(
 
         // (5) Evaluate every viable bucket; persist passing ones.
         val now = clock()
-        val modelLabel = current
         var formed = 0
+        var revDriftSkips = 0
         for ((anchor, members) in buckets) {
             if (members.size < SimilarityEngine.Thresholds.MIN_SIZE) continue
-            if (!SimilarityEngine.isCluster(members, embeddings)) continue
+
+            // FR-038 per-bucket model-rev guard. If the embeddings in
+            // this bucket disagree on modelLabel (e.g. router rolled to
+            // a new build mid-run) we cannot legally compute cosine
+            // across them. Skip with one bounded log line — never log
+            // text, vectors, or hostnames (Principle XIV).
+            val bucketLabels = members.mapNotNull { perEnvelopeModelLabel[it.id] }.toSet()
+            if (bucketLabels.size > 1) {
+                logI(
+                    LOG_TAG,
+                    "cluster_skip_model_rev_drift bucketAnchor=$anchor labels=${bucketLabels.size} members=${members.size}"
+                )
+                revDriftSkips += 1
+                continue
+            }
+            // Stamp the cluster with the bucket's actual model label
+            // (from the embedding response) — falls back to the local
+            // currentModelLabel only when the bucket lookup is empty,
+            // which can't happen post-guard but keeps the type total.
+            val bucketModelLabel = bucketLabels.singleOrNull() ?: current
+
+            val passes = try {
+                SimilarityEngine.isCluster(members, embeddings)
+            } catch (e: EmbeddingDimensionMismatch) {
+                // FR-038: dimensionality mismatch is structural — abort
+                // the run so the worker can return Result.failure().
+                throw DimensionMismatchInRun(e)
+            }
+            if (!passes) continue
 
             val similarity = SimilarityEngine.averagePairwiseCosine(members, embeddings)
             val clusterId = idGen()
@@ -168,7 +209,7 @@ class ClusterDetector(
                 timeBucketStart = anchor,
                 timeBucketEnd = anchor + SimilarityEngine.Thresholds.BUCKET_WIDTH_MS,
                 similarityScore = similarity,
-                modelLabel = modelLabel,
+                modelLabel = bucketModelLabel,
                 createdAt = now,
                 stateChangedAt = now,
                 dismissedAt = null
@@ -194,7 +235,7 @@ class ClusterDetector(
                         put("clusterId", clusterId)
                         put("memberCount", members.size)
                         put("similarityScore", similarity)
-                        put("modelLabel", modelLabel)
+                        put("modelLabel", bucketModelLabel)
                         put("timeBucketStart", anchor)
                     }.toString()
                 )
@@ -202,11 +243,18 @@ class ClusterDetector(
             formed += 1
         }
 
+        logI(
+            LOG_TAG,
+            "cluster_detection_done clusters_detected=$formed envelopes_scanned=${candidates.size} " +
+                "embeddings=${embeddings.size} buckets=${buckets.size} rev_drift_skips=$revDriftSkips"
+        )
+
         return finishCompleted(
             clustersFormed = formed,
             candidatesScanned = candidates.size,
             embeddingsObtained = embeddings.size,
-            bucketsConsidered = buckets.size
+            bucketsConsidered = buckets.size,
+            bucketsSkippedRevDrift = revDriftSkips
         )
     }
 
@@ -214,7 +262,8 @@ class ClusterDetector(
         clustersFormed: Int,
         candidatesScanned: Int,
         embeddingsObtained: Int,
-        bucketsConsidered: Int
+        bucketsConsidered: Int,
+        bucketsSkippedRevDrift: Int = 0
     ): Outcome.Completed {
         auditLogDao.insert(
             auditWriter.build(
@@ -229,6 +278,7 @@ class ClusterDetector(
                     put("candidatesScanned", candidatesScanned)
                     put("embeddingsObtained", embeddingsObtained)
                     put("bucketsConsidered", bucketsConsidered)
+                    put("bucketsSkippedRevDrift", bucketsSkippedRevDrift)
                 }.toString()
             )
         )
@@ -236,13 +286,22 @@ class ClusterDetector(
             clustersFormed = clustersFormed,
             candidatesScanned = candidatesScanned,
             embeddingsObtained = embeddingsObtained,
-            bucketsConsidered = bucketsConsidered
+            bucketsConsidered = bucketsConsidered,
+            bucketsSkippedRevDrift = bucketsSkippedRevDrift
         )
     }
 
     companion object {
-        /** 7-day lookback per FR-026 (the "research window"). */
-        const val DEFAULT_LOOKBACK_MILLIS: Long = 7L * 24L * 60L * 60L * 1000L
+        private const val LOG_TAG: String = "ClusterDetector"
+
+        /**
+         * 24-hour lookback per Phase 11 Block 4 cost discipline. The
+         * worker runs daily; combined with [ClusterDao.findClusterCandidates]
+         * excluding already-clustered envelopes, this bounds embed
+         * cost to roughly one call per surviving envelope per pass
+         * (≤2 calls in the worst overlap case at the bucket boundary).
+         */
+        const val DEFAULT_LOOKBACK_MILLIS: Long = 24L * 60L * 60L * 1000L
 
         /**
          * Floor at ~64 tokens of summary text. The cluster engine
@@ -252,5 +311,18 @@ class ClusterDetector(
          * capture is eligible for clustering.
          */
         const val DEFAULT_MIN_SUMMARY_LENGTH: Int = 256
+
+        /**
+         * Wraps [android.util.Log.i] so JVM unit tests (where
+         * `android.util.Log` is the not-mocked stub) don't raise.
+         * Production behaviour on-device is unchanged.
+         */
+        private fun logI(tag: String, message: String) {
+            try {
+                Log.i(tag, message)
+            } catch (_: Throwable) {
+                // Test JVM — `android.util.Log` is the unmocked Android stub.
+            }
+        }
     }
 }

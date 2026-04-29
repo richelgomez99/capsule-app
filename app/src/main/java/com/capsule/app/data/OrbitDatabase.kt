@@ -75,6 +75,19 @@ abstract class OrbitDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Test-only seam — instrumented tests may install an in-memory
+         * [OrbitDatabase] so they can exercise workers without touching
+         * the on-disk SQLCipher file. Pass `null` to clear the override.
+         *
+         * Intentionally not annotated `@VisibleForTesting` because the
+         * `androidx.annotation` dep isn't on the main classpath here;
+         * the convention is enforced by review.
+         */
+        fun overrideInstanceForTest(db: OrbitDatabase?) {
+            synchronized(this) { INSTANCE = db }
+        }
+
         private fun buildDatabase(context: Context): OrbitDatabase {
             System.loadLibrary("sqlcipher")
             val passphrase = KeystoreKeyProvider.getOrCreatePassphrase(context)
