@@ -82,6 +82,14 @@ Items deferred from /autoplan, /ship, /investigate, and other gstack flows. New 
   - **Effort**: S (CC ~30min — likely a one-line fix in `DateTimeParser.parse` for the `Z`-suffixed branch).
   - **Depends on**: nothing.
 
+- [ ] T10 [P3, post-Demo-Day] [spec 014 hardening] **Migrate Edge Function JWT verification from legacy HS256 secret to Supabase asymmetric Signing Keys (JWKS)** — replace `SUPABASE_JWT_SECRET` (shared HMAC key) with JWKS-based verification fetching the project's public key from `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`.
+  - **Why**: Supabase migrated new projects to asymmetric JWT signing keys (ES256/RS256). Legacy HS256 still works for verification but is the deprecated path. Asymmetric keys eliminate shared-secret distribution risk and enable zero-downtime key rotation.
+  - **Context**: Surfaced 2026-04-29 during T014-019b deploy walkthrough — Supabase dashboard shows "Legacy JWT secret has been migrated to new JWT Signing Keys" notice. Current `lib/auth.ts` uses `jwtVerify(token, secret, ...)` with `SUPABASE_JWT_SECRET`. New version: `jwtVerify(token, createRemoteJWKSet(new URL(jwksUrl)), { algorithms: ['ES256','RS256'] })` (jose 5.x supports both). Drop `SUPABASE_JWT_SECRET` from Vercel env vars after migration; add `SUPABASE_JWKS_URL` instead (or derive from `SUPABASE_URL`).
+  - **Effort**: S (CC ~2h — one file MODIFY in `lib/auth.ts`, update `lib/auth.test.ts` fixtures from HS256 to RS256, update README §1 secrets table, update `deploy.sh` REQUIRED_VARS).
+  - **Depends on**: nothing — can ship anytime.
+  - **Not blocking** — legacy HS256 path is officially supported.
+
+
 ---
 
 ## Closed
