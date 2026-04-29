@@ -1,8 +1,32 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+}
+
+// Spec 014 T014-016 (FR-014-016) — read `cloud.gateway.url` from local.properties
+// and emit as BuildConfig.CLOUD_GATEWAY_URL. If the property is missing, log a
+// Gradle warning and default to the Day-1 placeholder so smoke tests still
+// execute the offline path. The placeholder URL lives ONLY here as a fallback.
+val cloudGatewayUrl: String = run {
+    val props = Properties()
+    val propsFile = rootProject.file("local.properties")
+    if (propsFile.exists()) {
+        propsFile.inputStream().use { props.load(it) }
+    }
+    val configured = props.getProperty("cloud.gateway.url")?.trim().orEmpty()
+    if (configured.isEmpty()) {
+        logger.warn(
+            "[capsule-app] cloud.gateway.url not set in local.properties — " +
+                "falling back to Day-1 placeholder (FR-014-016).",
+        )
+        "https://gateway.example.invalid/llm"
+    } else {
+        configured
+    }
 }
 
 android {
@@ -26,6 +50,10 @@ android {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
+
+        // Spec 014 T014-016 — non-secret cloud config, sourced from
+        // local.properties (or Day-1 placeholder fallback above).
+        buildConfigField("String", "CLOUD_GATEWAY_URL", "\"$cloudGatewayUrl\"")
     }
 
     buildTypes {
