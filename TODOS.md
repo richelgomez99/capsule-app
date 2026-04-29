@@ -74,6 +74,14 @@ Items deferred from /autoplan, /ship, /investigate, and other gstack flows. New 
   - **Depends on**: spec 002 T137 ships first.
   - **Not blocking 003 closure** — explicitly v1.1 per /autoplan symmetry decision.
 
+### From spec 014 health check 2026-04-29
+
+- [ ] T9 [P2] [spec 003 datetime] **`DateTimeParser` ISO-UTC zone conversion broken** — `DateTimeParserTest.isoUtcConvertsToZone` fails: parsing `2026-05-04T20:00:00Z` against `America/New_York` returns hour=20 instead of hour=16 (expected EDT conversion).
+  - **Why**: ISO-UTC inputs aren't getting converted to the target zone before extracting `hour`. Likely a missing `.withZoneSameInstant(zone)` call in `DateTimeParser`. Surfaced when running full `:app:testDebugUnitTest` during T014-019b verification.
+  - **Context**: Last touched in commit `acbcb3d` (spec 003 Phases 1-4) — pre-existing, not regressed by cloud-pivot work. All other parser tests pass. Test anchor is correct (May 4, 2026 is EDT/UTC-4, so 20:00Z should be 16:00 local).
+  - **Effort**: S (CC ~30min — likely a one-line fix in `DateTimeParser.parse` for the `Z`-suffixed branch).
+  - **Depends on**: nothing.
+
 ---
 
 ## Closed
