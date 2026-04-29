@@ -289,6 +289,87 @@ BEGIN
 END $$;
 COMMIT;
 
+-- ─── Spec 014: cost_per_user_daily view RLS isolation (SC-014-007) ────────
+-- A inserts one cloud_llm_call audit row. B then queries cost_per_user_daily
+-- filtered to A's user_id and MUST see 0 rows (the view inherits RLS from
+-- audit_log_entries).
+
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true);
+
+INSERT INTO audit_log_entries (user_id, event_type, actor, subject_id, details_json)
+VALUES (
+  '00000000-0000-0000-0000-00000000000a',
+  'cloud_llm_call',
+  'edge_function',
+  NULL,
+  jsonb_build_object(
+    'requestId',  '550e8400-e29b-41d4-a716-446655440777',
+    'requestType','classify_intent',
+    'model',      'claude-haiku-4-5',
+    'modelLabel', 'anthropic/claude-haiku-4-5',
+    'latencyMs',  120,
+    'tokensIn',   800,
+    'tokensOut',  20,
+    'cacheHit',   true,
+    'success',    true
+  )
+);
+COMMIT;
+
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true);
+
+DO $$
+DECLARE
+    n int;
+BEGIN
+    -- B querying for A's cost rows must see 0 (RLS inheritance).
+    SELECT count(*) INTO n FROM cost_per_user_daily
+      WHERE user_id = '00000000-0000-0000-0000-00000000000a';
+    IF n <> 0 THEN
+        RAISE EXCEPTION
+          'FAIL B saw A''s cost_per_user_daily rows (count=%) — RLS LEAK', n;
+    END IF;
+
+    -- B's view of cost_per_user_daily must be empty for B (B has no cloud_llm_call rows).
+    SELECT count(*) INTO n FROM cost_per_user_daily
+      WHERE user_id = '00000000-0000-0000-0000-00000000000b';
+    IF n <> 0 THEN
+        RAISE EXCEPTION
+          'FAIL B''s cost view contains unexpected rows (count=%)', n;
+    END IF;
+
+    RAISE NOTICE 'cost_per_user_daily RLS isolation: ok';
+END $$;
+COMMIT;
+
+-- A re-confirms its own row IS visible to itself via the view.
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true);
+
+DO $$
+DECLARE
+    n int;
+BEGIN
+    SELECT count(*) INTO n FROM cost_per_user_daily
+      WHERE user_id = '00000000-0000-0000-0000-00000000000a';
+    IF n <> 1 THEN
+        RAISE EXCEPTION
+          'FAIL A cannot see own cost_per_user_daily row (count=%)', n;
+    END IF;
+END $$;
+COMMIT;
+
 -- ─── Cleanup ──────────────────────────────────────────────────────────────
 BEGIN;
 RESET ROLE;
