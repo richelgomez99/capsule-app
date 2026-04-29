@@ -26,13 +26,13 @@
 
 **Independent test**: `./gradlew compileDebugKotlin` continues to pass after each commit; no behavior change.
 
-- [ ] **T013-001** [Phase A] Relax `LlmProvider` interface doc-comment to scope the network-ban to local-mode implementations only (FR-013-001).
+- [X] **T013-001** [Phase A] Relax `LlmProvider` interface doc-comment to scope the network-ban to local-mode implementations only (FR-013-001).
   - **Files**: [`app/src/main/java/com/capsule/app/ai/LlmProvider.kt`](../../app/src/main/java/com/capsule/app/ai/LlmProvider.kt)
   - **Acceptance**: Doc comment on `interface LlmProvider` no longer reads "MUST NOT touch the network" unconditionally; instead scopes the ban to local-mode implementations and documents that cloud-mode implementations route through `:net`. Method signatures and method count unchanged. `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `docs(ai): scope LlmProvider network ban to local-mode impls (FR-013-001)`
   - **Depends on**: —
 
-- [ ] **T013-002** [Phase A] Extend `RuntimeFlags` with `useLocalAi` (default `false`) and `clusterEmitEnabled` (default `true`); preserve `clusterModelLabelLock` (FR-013-002).
+- [X] **T013-002** [Phase A] Extend `RuntimeFlags` with `useLocalAi` (default `false`) and `clusterEmitEnabled` (default `true`); preserve `clusterModelLabelLock` (FR-013-002).
   - **Files**: [`app/src/main/java/com/capsule/app/RuntimeFlags.kt`](../../app/src/main/java/com/capsule/app/RuntimeFlags.kt)
   - **Acceptance**: Two new `@Volatile @JvmStatic var` fields persisted via the existing `SharedPreferences` (keys `cloud.use_local_ai` and `cluster.emit_enabled`). Default for `useLocalAi` is `false` (cloud is default). `clusterModelLabelLock` and its default (`NanoLlmProvider.MODEL_LABEL`) are unchanged. `./gradlew compileDebugKotlin compileDebugUnitTestKotlin` exits 0. `grep -n "useLocalAi" app/src/main/java/com/capsule/app/RuntimeFlags.kt` returns ≥ 1 line.
   - **Commit**: `feat(runtime): add useLocalAi + clusterEmitEnabled flags (FR-013-002)`

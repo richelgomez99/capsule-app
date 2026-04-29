@@ -36,4 +36,35 @@ object RuntimeFlags {
     @JvmStatic
     var clusterModelLabelLock: String = NanoLlmProvider.MODEL_LABEL
         internal set
+
+    /**
+     * Spec 013 (FR-013-002) — selects the on-device LLM provider.
+     *  - `false` (default) → [com.capsule.app.ai.LlmProviderRouter] returns
+     *    `CloudLlmProvider` (cloud is the Day-1 default per D-001).
+     *  - `true` → router returns `NanoLlmProvider` *if and only if*
+     *    `hasNanoCapableHardware()` also returns true; otherwise it
+     *    transparently falls through to `CloudLlmProvider`.
+     *
+     * SharedPreferences key (Block 10 surface): `"cloud.use_local_ai"`.
+     * The hot path is the in-memory `@Volatile` field; `SharedPreferences`
+     * is the boot-time / settings-write path the same way
+     * [clusterModelLabelLock] is intended to be wired.
+     */
+    @Volatile
+    @JvmStatic
+    var useLocalAi: Boolean = false
+        internal set
+
+    /**
+     * Spec 013 (FR-013-002) — runtime kill switch for cluster card
+     * surfacing read by `ClusterDetectionWorker`. Default `true`. When
+     * flipped to `false` the worker still computes clusters locally but
+     * suppresses any UI emission until the user re-enables it.
+     *
+     * SharedPreferences key (Block 10 surface): `"cluster.emit_enabled"`.
+     */
+    @Volatile
+    @JvmStatic
+    var clusterEmitEnabled: Boolean = true
+        internal set
 }
