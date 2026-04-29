@@ -2,7 +2,13 @@ package com.capsule.app.net
 
 import android.os.Binder
 import android.os.Process
+import com.capsule.app.ai.gateway.LlmGatewayRequest
+import com.capsule.app.ai.gateway.LlmGatewayResponse
 import com.capsule.app.net.ipc.FetchResultParcel
+import com.capsule.app.net.ipc.LlmGatewayRequestParcel
+import com.capsule.app.net.ipc.LlmGatewayResponseParcel
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -38,6 +44,7 @@ class NetworkGatewayImpl(
     private val myUidProvider: () -> Int = { Process.myUid() },
     private val auditSink: AuditSink? = null,
     private val disabled: () -> Boolean = { false },
+    private val gatewayClient: LlmGatewayClient = LlmGatewayClient(client = client),
 ) {
 
     /** Minimal audit seam; a richer [com.capsule.app.audit] wiring lands via merge zone. */
@@ -228,9 +235,65 @@ class NetworkGatewayImpl(
             fetchedAtMillis = at,
         )
 
+    /**
+     * Spec 013 (FR-013-011) — AI Gateway handler.
+     *
+     * Decodes [LlmGatewayRequestParcel.payloadJson] into a typed
+     * [LlmGatewayRequest], delegates to [gatewayClient], encodes the
+     * resulting [LlmGatewayResponse] back to JSON and wraps in a
+     * [LlmGatewayResponseParcel]. Never throws across the AIDL boundary —
+     * any failure (parse, IO, etc.) collapses to [LlmGatewayResponse.Error].
+     *
+     * No locks are taken across the network call (FR-013-011); the
+     * cooldown map used by [fetchPublicUrl] is unrelated to this path.
+     */
+    fun callLlmGateway(request: LlmGatewayRequestParcel): LlmGatewayResponseParcel {
+        val caller = callerUidProvider()
+        if (caller != myUidProvider()) {
+            return errorParcel("", "UNAUTHORIZED", "caller uid $caller is not allowed")
+        }
+        val decoded: LlmGatewayRequest = try {
+            GATEWAY_JSON.decodeFromString(LlmGatewayRequest.serializer(), request.payloadJson)
+        } catch (t: Throwable) {
+            return errorParcel("", "MALFORMED_RESPONSE", t.message ?: "request decode failed")
+        }
+        val response: LlmGatewayResponse = try {
+            runBlocking { gatewayClient.call(decoded) }
+        } catch (t: Throwable) {
+            LlmGatewayResponse.Error(
+                requestId = decoded.requestId,
+                code = "INTERNAL",
+                message = t.message ?: "gateway client threw",
+            )
+        }
+        val encoded = try {
+            GATEWAY_JSON.encodeToString(LlmGatewayResponse.serializer(), response)
+        } catch (t: Throwable) {
+            return errorParcel(
+                decoded.requestId,
+                "INTERNAL",
+                "response encode failed: ${t.message}",
+            )
+        }
+        return LlmGatewayResponseParcel(encoded)
+    }
+
+    private fun errorParcel(requestId: String, code: String, message: String): LlmGatewayResponseParcel {
+        val err = LlmGatewayResponse.Error(requestId, code, message)
+        return LlmGatewayResponseParcel(
+            GATEWAY_JSON.encodeToString(LlmGatewayResponse.serializer(), err),
+        )
+    }
+
     companion object {
         internal const val MAX_REDIRECTS: Int = 5
         internal const val MAX_BODY_BYTES: Int = 2 * 1024 * 1024
         internal const val HOST_COOLDOWN_MS: Long = 60_000L
+
+        private val GATEWAY_JSON: Json = Json {
+            classDiscriminator = "type"
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
     }
 }

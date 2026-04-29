@@ -24,13 +24,11 @@ class NetworkGatewayService : Service() {
         override fun fetchPublicUrl(url: String, timeoutMs: Long): FetchResultParcel =
             impl.fetchPublicUrl(url, timeoutMs)
 
-        // Spec 013 (T013-008) — AIDL surface added; real handler wired in T013-012.
-        // Until then this stub keeps the binder concrete and the build green; any
-        // caller that beats T013-012 to the punch surfaces a clear error envelope.
+        // Spec 013 (T013-012) — wired to NetworkGatewayImpl.callLlmGateway,
+        // which decodes the parcel, delegates to LlmGatewayClient, and
+        // re-encodes the typed response (FR-013-011).
         override fun callLlmGateway(request: LlmGatewayRequestParcel): LlmGatewayResponseParcel =
-            LlmGatewayResponseParcel(
-                """{"type":"error","requestId":"","code":"INTERNAL","message":"callLlmGateway not yet wired (T013-012)"}"""
-            )
+            impl.callLlmGateway(request)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
