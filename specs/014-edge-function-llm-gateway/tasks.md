@@ -598,9 +598,9 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 | T014-018 | [x] | `6f1bfc5` |
 | T014-019 | [x] | `f9dc273` |
 | T014-019b | [x] | (Supabase SDK wired in :net; EncryptedSessionManager 4/4 tests; pin supabase-kt 3.6.0 + ktor 3.3.0; closes deviation #1) |
-| T014-020 | [ ] | (deploy — needs user credentials) |
-| T014-021 | [ ] | (live E2E — depends on T014-020) |
-| T014-022 | [ ] | (closeout — depends on T014-021) |
+| T014-020 | [x] | `47ad371` (Vercel deploy fix — Edge handler shim) |
+| T014-021 | [x] | `2e0938b` (live E2E — JWKS auth, fence-strip, await audit) |
+| T014-022 | [x] | `2e0938b` (this closeout) |
 
 ### Verification matrix at handoff (2026-04-29)
 
@@ -637,3 +637,87 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 
 `cost_per_user_daily` view created in Supabase project `omohxxhsjrqpkwfxbkau` via psql + `00000003_cost_per_user_daily.sql`. Query returns 0 rows as expected (Edge Function not yet deployed; no `cloud_llm_call` audit rows exist). T014-015's prod deployment side is done; the migration file itself was committed in `98e708e`.
 
+
+### 2026-04-29 — Phase I complete (T014-020/021/022)
+
+Live deployment to Vercel + end-to-end verification against production
+Supabase (`omohxxhsjrqpkwfxbkau`).
+
+**Deployment** (T014-020, commit `47ad371`)
+
+- Vercel project: `orbit-llm-gateway` (region `iad1`, Node 24.x runtime).
+- Public URL: `https://orbit-llm-gateway.vercel.app/llm` (rewrites
+  `/llm` → `/api/llm`; `/api/llm.ts` is a thin shim that forwards into the
+  TypeScript handler default-exported from `index.ts`).
+- Five production secrets seeded: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET` — plus
+  `VERCEL_AI_GATEWAY_URL=https://api.anthropic.com` (Anthropic SDK base URL;
+  the Vercel AI Gateway default `gateway.ai.vercel.app/v1/anthropic` was
+  unreachable from the Edge runtime in this account/region).
+
+**Live E2E** (T014-021, commit `2e0938b`)
+
+Test JWT minted via Supabase admin API for a one-shot auth user. Smoke
+script `test/e2e_smoke.sh` POSTs all six request types in sequence:
+
+| Request type         | HTTP | ok    | latency  |
+|----------------------|------|-------|----------|
+| embed                | 200  | true  | ~1.4 s   |
+| summarize            | 200  | true  | ~1.7 s   |
+| classify_intent      | 200  | true  | ~0.9 s   |
+| generate_day_header  | 200  | true  | ~1.5 s   |
+| scan_sensitivity     | 200  | true  | ~0.9 s   |
+| extract_actions      | 200  | true  | ~2.2 s   |
+
+`audit_log_entries` verification (psql, last 5 minutes after smoke):
+
+```
+ rows |               users                  |                          req_types                                       
+------+--------------------------------------+--------------------------------------------------------------------------
+    6 | {d8fed828-...}                       | {classify_intent,embed,extract_actions,generate_day_header,scan_sensitivity,summarize}
+```
+
+1:1 row count matches request count; single `user_id`; all six request
+types stamped via `details_json->>'requestType'`.
+
+**Late-stage findings folded into commit `2e0938b`**
+
+1. Supabase has migrated to ES256 asymmetric JWT signing keys; HS256-only
+   verification rejected every real token. `lib/auth.ts` now verifies via
+   `jose.createRemoteJWKSet` against `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`
+   with HS256 fallback (T10 from `cloud-pivot` plan landed here ahead of
+   schedule).
+2. Haiku occasionally wraps strict-JSON output in ```` ```json ... ``` ```` fences
+   despite the system prompt. Three handlers now strip fences before
+   `JSON.parse`: `scan_sensitivity`, `classify_intent`, `extract_actions`.
+3. Vercel Edge runtime terminates pending fire-and-forget work after
+   `Response` is returned, so `void recordAuditRow(audit)` was silently
+   dropping every audit row. `index.ts` now `await`s the audit insert
+   (still swallows its own errors per FR-014-014; closed-shape bounded log
+   line on failure unchanged).
+
+**SCs verified live**
+
+- SC-014-001 — six request types succeed: PASS (table above).
+- SC-014-005 — every authenticated request emits exactly one audit row
+  with closed `details_json`: PASS (6 requests → 6 rows, all required
+  keys present).
+- SC-014-007 — RLS scopes audit rows to the calling user: PASS by schema
+  (FK + RLS policies inspected via `\d audit_log_entries`; single `user_id`
+  observed in the smoke window).
+
+**Closeout** (T014-022, this entry)
+
+- All 22 task checkboxes ticked.
+- Phase I marked complete in `plan.md`.
+- PR #1 ready to mark ready-for-review.
+- Follow-ups (not blocking spec 014):
+  - Multi-user audit smoke against >1 JWT (SC-014-007 stronger evidence).
+  - Cost-per-user daily view smoke (`cost_per_user_daily`) once real
+    Android traffic generates >24 h of data.
+  - Revisit Vercel AI Gateway routing if/when its Anthropic endpoint
+    becomes reachable; currently bypassed via `VERCEL_AI_GATEWAY_URL`
+    pointing at `api.anthropic.com` directly.
+  - Wire `cloud.gateway.url=https://orbit-llm-gateway.vercel.app/llm`
+    into `local.properties` for the Android build (handled out-of-band;
+    `local.properties` is gitignored).
