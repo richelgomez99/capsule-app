@@ -62,7 +62,7 @@
   - **Commit**: `feat(net/ipc): add LlmGatewayRequestParcel (Parcelable + AIDL stub)`
   - **Depends on**: T013-003
 
-- [ ] **T013-007** [P] [Phase A] Create `LlmGatewayResponseParcel` + sibling AIDL parcelable declaration.
+- [X] **T013-007** [P] [Phase A] Create `LlmGatewayResponseParcel` + sibling AIDL parcelable declaration.
   - **Files**: `app/src/main/java/com/capsule/app/net/ipc/LlmGatewayResponseParcel.kt` (NEW); `app/src/main/aidl/com/capsule/app/net/ipc/LlmGatewayResponseParcel.aidl` (NEW)
   - **Acceptance**: Same shape as T013-006 (single `payloadJson: String`, manual `Parcelable`). AIDL stub contains `parcelable LlmGatewayResponseParcel;`. `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `feat(net/ipc): add LlmGatewayResponseParcel (Parcelable + AIDL stub)`
