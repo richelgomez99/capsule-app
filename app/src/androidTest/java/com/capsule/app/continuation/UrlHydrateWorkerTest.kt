@@ -152,7 +152,7 @@ class UrlHydrateWorkerTest {
                 )
             }
         )
-        UrlHydrateWorker.summariserFactory = {
+        UrlHydrateWorker.summariserFactory = { _ ->
             NanoSummariser(FakeLlm(text = "One sentence. Two sentences."))
         }
 
@@ -214,7 +214,7 @@ class UrlHydrateWorkerTest {
                 )
             }
         )
-        UrlHydrateWorker.summariserFactory = { NanoSummariser(FakeLlm("should not matter")) }
+        UrlHydrateWorker.summariserFactory = { _ -> NanoSummariser(FakeLlm("should not matter")) }
 
         val outcome = UrlHydrateWorker.runHydration(context, "https://example.com/a")
         assertEquals(UrlHydrateWorker.Classification.SUCCESS, outcome.classification)
@@ -276,6 +276,6 @@ class UrlHydrateWorkerTest {
     private object DefaultBinderHolder {
         val ORIGINAL_BINDER: suspend (Context) -> INetworkGateway? =
             UrlHydrateWorker.gatewayBinder
-        val ORIGINAL_FACTORY: () -> NanoSummariser = UrlHydrateWorker.summariserFactory
+        val ORIGINAL_FACTORY: (Context) -> NanoSummariser = UrlHydrateWorker.summariserFactory
     }
 }

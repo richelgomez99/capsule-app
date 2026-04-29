@@ -3,7 +3,7 @@ package com.capsule.app.service
 import android.content.Context
 import android.util.Log
 import com.capsule.app.ai.IntentPredictor
-import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.LlmProviderRouter
 import com.capsule.app.capture.SensitivityScrubber
 import com.capsule.app.capture.StateSnapshotCollector
 import com.capsule.app.data.ipc.IEnvelopeRepository
@@ -47,7 +47,7 @@ class CapsuleSealOrchestrator(
 ) : SealOrchestrator {
 
     private val stateCollector = StateSnapshotCollector.create(appContext)
-    private val intentPredictor = IntentPredictor(NanoLlmProvider())
+    private val intentPredictor = IntentPredictor(LlmProviderRouter.createPreferLocal(appContext))
 
     override suspend fun captureAndSeal(content: CapturedContent): SealOutcome =
         withContext(Dispatchers.IO) {

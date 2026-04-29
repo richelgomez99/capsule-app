@@ -5,7 +5,7 @@ import android.content.Intent
 import android.os.IBinder
 import com.capsule.app.audit.AuditLogImpl
 import com.capsule.app.audit.AuditLogWriter
-import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.LlmProviderRouter
 import com.capsule.app.ai.extract.ActionExtractor
 import com.capsule.app.continuation.ContinuationEngine
 import com.capsule.app.data.ActionsRepositoryDelegate
@@ -71,7 +71,7 @@ class EnvelopeRepositoryService : Service() {
             proposalDao = db.actionProposalDao(),
             auditLogDao = db.auditLogDao(),
             registry = registry,
-            llmProvider = NanoLlmProvider(),
+            llmProvider = LlmProviderRouter.createPreferLocal(applicationContext),
             auditWriter = auditWriter
         )
         // T072/T074 — weekly digest delegate. Composer reuses the same
@@ -82,7 +82,7 @@ class EnvelopeRepositoryService : Service() {
         val weeklyDigestDelegate = WeeklyDigestDelegate(
             database = db,
             backend = backend,
-            composer = DigestComposer(NanoLlmProvider()),
+            composer = DigestComposer(LlmProviderRouter.createPreferLocal(applicationContext)),
             auditWriter = auditWriter
         )
         repository = EnvelopeRepositoryImpl(

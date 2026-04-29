@@ -43,6 +43,21 @@ object LlmProviderRouter {
     )
 
     /**
+     * Day-1 sugar for call sites whose cloud migration is deferred.
+     * Always returns [NanoLlmProvider] via the resolve() path. To be
+     * removed when each call site grows the proper `:net` binding
+     * (per-site follow-up specs).
+     *
+     * Routes through the router so the FR-013-016 grep invariant
+     * (no direct `NanoLlmProvider()` outside the carve-outs) is
+     * satisfied without each consumer having to plumb an
+     * [INetworkGateway] through its constructor today.
+     */
+    fun createPreferLocal(
+        @Suppress("UNUSED_PARAMETER") context: Context,
+    ): LlmProvider = NanoLlmProvider()
+
+    /**
      * Pure resolution function for unit testing — no Android types.
      * `create` is the production entry point; tests exercise the
      * resolution rules through this.

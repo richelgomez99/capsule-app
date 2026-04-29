@@ -8,7 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.lifecycle.lifecycleScope
-import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.LlmProviderRouter
 import com.capsule.app.audit.DebugCounters
 import com.capsule.app.diary.ui.DiaryScreen
 import com.capsule.app.onboarding.OnboardingActivity
@@ -66,7 +66,7 @@ class DiaryActivity : ComponentActivity() {
         viewModel = DiaryViewModel(
             repository = repository,
             threadGrouper = ThreadGrouper(),
-            dayHeaderGenerator = DayHeaderGenerator(NanoLlmProvider())
+            dayHeaderGenerator = DayHeaderGenerator(LlmProviderRouter.createPreferLocal(this))
         )
         pagingSource = DiaryPagingSource(repository)
 

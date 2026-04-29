@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.LlmProviderRouter
 import com.capsule.app.diary.BinderDiaryRepository
 import com.capsule.app.diary.DayHeaderGenerator
 import com.capsule.app.diary.DiaryActivity
@@ -66,7 +66,7 @@ class ReducedModeActivity : ComponentActivity() {
         viewModel = DiaryViewModel(
             repository = repository,
             threadGrouper = ThreadGrouper(),
-            dayHeaderGenerator = DayHeaderGenerator(NanoLlmProvider())
+            dayHeaderGenerator = DayHeaderGenerator(LlmProviderRouter.createPreferLocal(this))
         )
         pagingSource = DiaryPagingSource(repository)
 

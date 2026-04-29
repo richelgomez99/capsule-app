@@ -7,7 +7,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.capsule.app.ai.NanoLlmProvider
+import com.capsule.app.ai.LlmProviderRouter
 import com.capsule.app.ai.NanoSummariser
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.net.CanonicalUrlHasher
@@ -141,8 +141,8 @@ class UrlHydrateWorker(
 
         /** Test seam for [NanoSummariser]. Default builds one over v1 Nano. */
         @Volatile
-        internal var summariserFactory: () -> NanoSummariser = {
-            NanoSummariser(NanoLlmProvider())
+        internal var summariserFactory: (Context) -> NanoSummariser = { context ->
+            NanoSummariser(LlmProviderRouter.createPreferLocal(context))
         }
 
         /**
@@ -224,7 +224,7 @@ class UrlHydrateWorker(
                 "UrlHydrate",
                 "fetch ok title=${fetch.title?.take(60)} host=${fetch.canonicalHost} htmlLen=${fetch.readableHtml?.length}"
             )
-            val summariser = summariserFactory()
+            val summariser = summariserFactory(context)
             val slug = fetch.readableHtml.orEmpty()
             val summary = summariser.summarise(fetch.title, slug)
             android.util.Log.i(
