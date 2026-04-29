@@ -25,3 +25,6 @@ build_output.log
 # Private working notes (never push)
 .specify/memory/linkedin*.md
 .specify/memory/*private*
+
+# Edge function deps (spec 014)
+supabase/functions/llm_gateway/node_modules/
