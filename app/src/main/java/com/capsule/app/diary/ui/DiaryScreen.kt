@@ -43,8 +43,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.provider.Settings
 import android.widget.Toast
+import com.capsule.app.data.ClusterCardModel
 import com.capsule.app.data.ipc.ActionProposalParcel
+import com.capsule.app.data.model.ClusterState
 import com.capsule.app.data.model.Intent
 import com.capsule.app.diary.ActionPreviewSheet
 import com.capsule.app.diary.ActionProposalChipRow
@@ -54,6 +57,10 @@ import com.capsule.app.diary.DiaryViewModel
 import com.capsule.app.diary.EnvelopeDetailActivity
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * T050 + T056 — diary screen with unbounded backscroll over non-empty days.
@@ -379,10 +386,44 @@ private fun DayContentView(
     onOpenDetail: (String) -> Unit,
     onProposalTap: (ActionProposalParcel) -> Unit
 ) {
+    // Phase 11 Block 9 / T149 — reduce-motion preference. Compose has no
+    // first-class API for this; we read `Settings.Global.ANIMATOR_DURATION_SCALE`
+    // (== 0f means "Remove animations" in Developer Options + Accessibility).
+    // Falls back to `false` if the setting is unreadable.
+    val context = LocalContext.current
+    val reduceMotion = remember {
+        runCatching {
+            Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            ) == 0f
+        }.getOrDefault(false)
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
     ) {
+        // T149 — cluster slot renders ABOVE the day-header on cluster days
+        // (spec 010 D6 revision: events outrank steady-state). Non-cluster
+        // days (clusters.isEmpty()) skip the slot entirely.
+        state.clusters.forEach { cluster ->
+            item(key = "cluster-${cluster.clusterId}") {
+                val cardState = cluster.toCardStateOrNull()
+                if (cardState != null) {
+                    ClusterSuggestionCard(
+                        state = cardState,
+                        onSummarize = { /* T-future: wired when ClusterSummariser lands (Block 6/10) */ },
+                        onOpenAll = { /* T-future: cluster detail navigation */ },
+                        onDismiss = { /* T-future: ClusterRepository.markDismissed */ },
+                        onRetry = { /* T-future: re-enqueue summary */ },
+                        reduceMotion = reduceMotion,
+                    )
+                }
+            }
+        }
+
         // Sticky-ish day header (LazyColumn's stickyHeader API is overkill
         // for a single item; a plain `item` matches the Figma's "hero
         // paragraph that scrolls up with the rest" behaviour).
@@ -472,4 +513,67 @@ private fun ThreadLabel(label: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.Medium
     )
+}
+
+// ----------------------------------------------------------------------
+// Phase 11 Block 9 / T149 — ClusterCardModel → ClusterSuggestionCardState
+// ----------------------------------------------------------------------
+//
+// Bare-minimum projection. Block 6 (ClusterSummariser) will replace the
+// placeholder bodyText / bullets / sourceCategories once Nano summary
+// output is wired. Until then the card surfaces honestly: it shows the
+// cluster exists and how many captures fed it, without inventing a
+// summary it can't yet produce.
+//
+// Mapping:
+//   SURFACED, TAPPED      → Surfaced(...)
+//   ACTING                → Acting(...)
+//   ACTED                 → null  (Block 6 supplies bullets; render
+//                                  nothing rather than fabricate them)
+//   FAILED                → Failed(retryCount=0)
+//   FORMING/DISMISSED/AGED_OUT → null  (DAO already excludes these but
+//                                       the case must be exhaustive)
+//
+// `headerLabel`, `timeRangeLabel`, `sourceCategories` are pre-formatted
+// here so the card stays locale-agnostic.
+private fun ClusterCardModel.toCardStateOrNull(): ClusterSuggestionCardState? {
+    val header = "Cluster · ${members.size} captures"
+    val timeRange = formatBucketRange(timeBucketStart, timeBucketEnd)
+    val sources = emptyList<String>() // Block 6 fills from envelope appCategory join.
+    val placeholderBody = "${members.size} captures across this period."
+
+    return when (state) {
+        ClusterState.SURFACED, ClusterState.TAPPED -> ClusterSuggestionCardState.Surfaced(
+            headerLabel = header,
+            timeRangeLabel = timeRange,
+            sourceCategories = sources,
+            bodyText = placeholderBody,
+        )
+        ClusterState.ACTING -> ClusterSuggestionCardState.Acting(
+            headerLabel = header,
+            timeRangeLabel = timeRange,
+            sourceCategories = sources,
+            bodyText = placeholderBody,
+        )
+        ClusterState.FAILED -> ClusterSuggestionCardState.Failed(
+            headerLabel = header,
+            timeRangeLabel = timeRange,
+            sourceCategories = sources,
+            retryCount = 0,
+        )
+        ClusterState.ACTED,
+        ClusterState.FORMING,
+        ClusterState.DISMISSED,
+        ClusterState.AGED_OUT -> null
+    }
+}
+
+private val bucketRangeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE h:mma", Locale.US)
+
+private fun formatBucketRange(startMillis: Long, endMillis: Long): String {
+    val zone = ZoneId.systemDefault()
+    val start = Instant.ofEpochMilli(startMillis).atZone(zone).format(bucketRangeFormatter)
+    val end = Instant.ofEpochMilli(endMillis).atZone(zone).format(bucketRangeFormatter)
+    return "$start → $end"
 }
