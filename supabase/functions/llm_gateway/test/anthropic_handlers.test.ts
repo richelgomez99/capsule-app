@@ -193,3 +193,118 @@ describe("generate_day_header handler — Sonnet, 30s", () => {
     expect(result.response).toMatchObject({ type: "error", code: "TIMEOUT" });
   });
 });
+
+describe("classify_intent handler — Haiku, prompt-cached", () => {
+  it("first call (cache miss) → cacheHit=false; sends beta header + cache_control", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"intent":"REMINDER","confidence":0.92}' }],
+      usage: { input_tokens: 50, output_tokens: 10, cache_read_input_tokens: 0 },
+    });
+    const { handle } = await import("../handlers/classify_intent.js");
+    const result = await handle(
+      {
+        type: "classify_intent",
+        requestId: RID,
+        payload: { text: "remind me to call mom", appCategory: "messaging" },
+      },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({
+      type: "classify_intent_response",
+      intent: "REMINDER",
+      confidence: 0.92,
+      modelLabel: "anthropic/claude-haiku-4-5",
+    });
+    expect(result.cacheHit).toBe(false);
+    // Verify beta header + cached system block were sent to the SDK.
+    const call = mockCreate.mock.calls[0]!;
+    const body = call[0] as { model: string; system: Array<{ cache_control: unknown }> };
+    const opts = call[1] as { headers: Record<string, string> };
+    expect(opts.headers["anthropic-beta"]).toBe("prompt-caching-2024-07-31");
+    expect(body.system[0]!.cache_control).toEqual({ type: "ephemeral" });
+    expect(body.model).toBe("claude-haiku-4-5");
+  });
+
+  it("second call (cache hit) → cacheHit=true", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"intent":"NOTE","confidence":0.7}' }],
+      usage: { input_tokens: 5, output_tokens: 8, cache_read_input_tokens: 480 },
+    });
+    const { handle } = await import("../handlers/classify_intent.js");
+    const result = await handle(
+      {
+        type: "classify_intent",
+        requestId: RID,
+        payload: { text: "buy milk", appCategory: "notes" },
+      },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.cacheHit).toBe(true);
+    expect(result.tokensIn).toBe(5 + 480);
+  });
+
+  it("schema-invalid (confidence > 1) → MALFORMED_RESPONSE", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"intent":"X","confidence":2.0}' }],
+      usage: { input_tokens: 5, output_tokens: 5 },
+    });
+    const { handle } = await import("../handlers/classify_intent.js");
+    const result = await handle(
+      {
+        type: "classify_intent",
+        requestId: RID,
+        payload: { text: "x", appCategory: "y" },
+      },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({ code: "MALFORMED_RESPONSE" });
+  });
+});
+
+describe("scan_sensitivity handler — Haiku, prompt-cached", () => {
+  it("happy path with cache hit → cacheHit=true, tags array", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"tags":["PII","FINANCIAL"]}' }],
+      usage: { input_tokens: 6, output_tokens: 6, cache_read_input_tokens: 320 },
+    });
+    const { handle } = await import("../handlers/scan_sensitivity.js");
+    const result = await handle(
+      { type: "scan_sensitivity", requestId: RID, payload: { text: "ssn 123-45-6789" } },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({
+      type: "scan_sensitivity_response",
+      tags: ["PII", "FINANCIAL"],
+      modelLabel: "anthropic/claude-haiku-4-5",
+    });
+    expect(result.cacheHit).toBe(true);
+    const call = mockCreate.mock.calls[0]!;
+    const body = call[0] as { system: Array<{ cache_control: unknown }> };
+    const opts = call[1] as { headers: Record<string, string> };
+    expect(opts.headers["anthropic-beta"]).toBe("prompt-caching-2024-07-31");
+    expect(body.system[0]!.cache_control).toEqual({ type: "ephemeral" });
+  });
+
+  it("non-array tags → MALFORMED_RESPONSE", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [{ type: "text", text: '{"tags":"PII"}' }],
+      usage: { input_tokens: 5, output_tokens: 5 },
+    });
+    const { handle } = await import("../handlers/scan_sensitivity.js");
+    const result = await handle(
+      { type: "scan_sensitivity", requestId: RID, payload: { text: "x" } },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({ code: "MALFORMED_RESPONSE" });
+  });
+
+  it("upstream timeout → TIMEOUT", async () => {
+    mockCreate.mockRejectedValueOnce(makeTimeoutError());
+    const { handle } = await import("../handlers/scan_sensitivity.js");
+    const result = await handle(
+      { type: "scan_sensitivity", requestId: RID, payload: { text: "x" } },
+      { userId: "u", requestId: RID },
+    );
+    expect(result.response).toMatchObject({ code: "TIMEOUT" });
+  });
+});
