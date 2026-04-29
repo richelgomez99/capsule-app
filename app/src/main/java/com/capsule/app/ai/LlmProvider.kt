@@ -11,9 +11,19 @@ import com.capsule.app.data.entity.StateSnapshot
 /**
  * Principle IX — LLM Sovereignty.
  *
- * All AI inference MUST go through this interface. The sole v1 implementation
- * is [NanoLlmProvider] (on-device Gemini Nano via AICore). Future providers
- * (Cloud Boost, BYOK) will implement this same interface.
+ * All AI inference MUST go through this interface. Two production impls:
+ *  - [NanoLlmProvider] — local-mode (on-device Gemini Nano via AICore).
+ *    Local-mode impls run on the `:ml` process and **MUST NOT touch the
+ *    network** (Principle II — Local by Default in local mode).
+ *  - `CloudLlmProvider` — cloud-mode. Cloud impls do NOT call HTTP
+ *    directly; they route every request through the `:net`-process
+ *    `INetworkGateway` AIDL surface (Principle VI — single network
+ *    egress). The on-device process holding `LlmProvider` therefore
+ *    still does not open sockets; the network egress lives in `:net`.
+ *
+ * Selection between local and cloud impls is owned by `LlmProviderRouter`
+ * (see spec 013). Future providers (Cloud Boost, BYOK) will implement
+ * this same interface and follow the same routing rule.
  */
 interface LlmProvider {
 
@@ -38,7 +48,10 @@ interface LlmProvider {
      *  - sort the returned list by confidence descending
      *  - leave the returned list empty when the text is purely informational
      *
-     * Implementations run on the :ml process and MUST NOT touch the network.
+     * Local-mode implementations run on the `:ml` process and MUST NOT
+     * touch the network. Cloud-mode implementations route the request
+     * through the `:net` process via `INetworkGateway` (no direct HTTP
+     * from the calling process).
      *
      * See `specs/003-orbit-actions/contracts/action-extraction-contract.md`.
      */
@@ -69,10 +82,14 @@ interface LlmProvider {
      *    safer and cheaper. **Do not "fix" this to throw** — the regression
      *    test in `NanoLlmProviderEmbedTest` will fail if you do.
      *
-     * Implementations run on the `:ml` process and MUST NOT touch the network
-     * (Principle II — Local by Default). The returned [EmbeddingResult]
-     * stamps the producing model's label + dimensionality so downstream
-     * cosine math can refuse mismatched vectors (FR-038, FR-039).
+     * Local-mode implementations run on the `:ml` process and MUST NOT
+     * touch the network (Principle II — Local by Default in local mode).
+     * Cloud-mode implementations route the embedding call through the
+     * `:net` process via `INetworkGateway` (Principle VI — single
+     * network egress); the calling process still does not open sockets.
+     * The returned [EmbeddingResult] stamps the producing model's
+     * label + dimensionality so downstream cosine math can refuse
+     * mismatched vectors (FR-038, FR-039).
      */
     suspend fun embed(text: String): EmbeddingResult?
 }
