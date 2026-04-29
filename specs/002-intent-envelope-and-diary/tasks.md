@@ -12,6 +12,34 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 5 (T133–T136) Cluster repository + AIDL surface landed**
+
+Clusters now flow from `:ml` Room → `ClusterRepository.observeSurfaced()` → AIDL `IClusterObserver` → (eventual) UI process. Block 5 closes the read-side gap so Block 9's Diary can subscribe with no further engine changes.
+
+**Surface design (T133)** — `ClusterRepository(clusterDao)` is a thin wrapper around `ClusterDao.observeSurfaced()` (which already enforces FR-037: state ∈ {SURFACED,TAPPED,ACTING,ACTED,FAILED} ∧ surviving-members ≥ 3). The repository adds two read-side gates:
+
+1. `RuntimeFlags.clusterEmitEnabled == false` → emit `emptyList()` (runtime kill switch).
+2. `cluster.modelLabel != RuntimeFlags.clusterModelLabelLock` → drop the row (FR-030 defence-in-depth — the worker already enforces label-equality at write time, but a stale row from a prior boot must not reach UI on a model rev).
+
+Maps `ClusterEntity` + `List<ClusterMemberEntity>` → `ClusterCardModel` with members sorted by `memberIndex` (binder ordering must be deterministic for diff-stable LazyColumn).
+
+**AIDL surface (T134)** — added `ClusterCardParcel.aidl` (parcelable declaration) + `ClusterCardParcel.kt` (Kotlin Parcelable impl) + `IClusterObserver.aidl` (one-way `onClustersChanged(List<ClusterCardParcel>)`). Extended `IEnvelopeRepository.aidl` with two new methods: `observeClusters(IClusterObserver)` + `stopObservingClusters(IClusterObserver)`. Reused 002's existing observer pattern (no new `IClusterRepository.aidl`) — keeps Diary's binder lifecycle identical to envelope/proposal observation.
+
+**State serialisation** — parcel encodes `ClusterState` as its `.name` string (consumer calls `ClusterState.valueOf`). Members carried as parallel `List<String>` envelope ids + `List<Int>` indices rather than a nested parcelable list — cheaper marshal, fewer CREATOR boilerplates, and the order is the only invariant we need.
+
+**Wiring (T135)** — `EnvelopeRepositoryImpl` gained a nullable `clusterRepository: ClusterRepository? = null` constructor param (nullable so 002 contract tests stay green; `EnvelopeRepositoryService.onCreate()` passes the real one). Override implementations follow the existing `observeDay`/`stopObserving` pattern: `IBinderKey(observer.asBinder())` → cancel any existing job → launch on `Dispatchers.IO` → `collectLatest` → catch `RemoteException` to clean up dead observers. When `clusterRepository` is null the AIDL method emits one empty list and returns (so binder callers don't deadlock waiting for an emission).
+
+**Test coverage (T136)** — `ClusterRepositoryTest.kt` (JVM) exercises the four read-side guarantees the repository owns: passthrough when label matches + kill-switch off, kill-switch hides everything, modelLabel mismatch excludes that row only, member ordering is stable by `memberIndex` regardless of join order. DAO-level filters (state set + surviving ≥ 3) are already covered by `ClusterDetectorTest` and Room-backed integration tests, so this layer doesn't re-test them. Uses a fake `ClusterDao` (interface impl) rather than Robolectric/in-mem Room — keeps the test fast and focused on repository logic.
+
+**Deferred (out of scope for Block 5):**
+- `today + zoneId` filtering — pushed to Diary ViewModel in T148 (the spec line for T133 mentioned `observeSurfacedToday` but the engine emits all surfaced clusters; the UI layer windows by day so the worker can keep emitting yesterday's clusters into morning if a user hasn't opened the app yet).
+- Diary `ClustersViewModel` and Compose card UI — Block 9 (T146–T148).
+- `unmounted_storage` audit on storage stack overflow — pre-existing concern, not Block 5.
+
+**Gates:** `:app:compileDebugKotlin` clean, `:app:testDebugUnitTest --tests ClusterRepositoryTest` 4/4 green, `:app:compileDebugAndroidTestKotlin` clean (after stubbing `observeClusters`/`stopObservingClusters` in two `RecordingRepository` fakes — `ScreenshotObserverTest` and `ScreenshotUrlExtractWorkerTest`). Pre-existing `DateTimeParserTest.isoUtcConvertsToZone` flake (timezone-dependent) is unrelated and tracked separately.
+
+---
+
 **2026-04-29 — Phase 11 Block 4 (T129–T132) ClusterDetectionWorker landed (post cloud-pivot)**
 
 ClusterDetectionWorker now routes embeddings through `LlmProviderRouter` instead of pinning to `NanoLlmProvider` directly, satisfying the post-cloud-pivot flow: detector → router → `CloudLlmProvider` → `INetworkGateway` AIDL → `:net` process → Vercel Edge Function. Worker stays in the default process and binds `:net` for every run via the same `BIND_NETWORK_GATEWAY` intent pattern used by `UrlHydrateWorker`.
@@ -827,10 +855,10 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 ### ClusterRepository + binder (US8)
 
-- [ ] T133 [US8] Create `app/src/main/java/com/capsule/app/data/ClusterRepository.kt` — `Flow<List<ClusterWithMembers>>` exposing `observeSurfacedToday(): Flow<List<ClusterCardModel>>` filtering surviving-members ≥ 3 at query time per FR-037. State transitions go through this surface.
-- [ ] T134 [US8] MODIFY `app/src/main/aidl/com/capsule/app/data/ipc/IEnvelopeRepository.aidl` — extend with cluster-observation method (or add `IClusterRepository.aidl` if cleaner separation is preferred — call here is to follow 002's existing IPC pattern).
-- [ ] T135 [US8] MODIFY `app/src/main/java/com/capsule/app/data/ipc/EnvelopeRepositoryService.kt` — wire cluster observe → AIDL surface; ensure cross-process observation is binder-safe (no Room thread escape).
-- [ ] T136 [P] [US8] Create `app/src/test/java/com/capsule/app/data/ClusterRepositoryTest.kt` (JVM, in-mem Room) — empty-cluster filter (4 members → 2 surviving → cluster filtered out), state filter (DISMISSED/AGED_OUT not visible), modelLabel mismatch → not in result.
+- [x] T133 [US8] Create `app/src/main/java/com/capsule/app/data/ClusterRepository.kt` — `Flow<List<ClusterWithMembers>>` exposing `observeSurfacedToday(): Flow<List<ClusterCardModel>>` filtering surviving-members ≥ 3 at query time per FR-037. State transitions go through this surface.
+- [x] T134 [US8] MODIFY `app/src/main/aidl/com/capsule/app/data/ipc/IEnvelopeRepository.aidl` — extend with cluster-observation method (or add `IClusterRepository.aidl` if cleaner separation is preferred — call here is to follow 002's existing IPC pattern).
+- [x] T135 [US8] MODIFY `app/src/main/java/com/capsule/app/data/ipc/EnvelopeRepositoryService.kt` — wire cluster observe → AIDL surface; ensure cross-process observation is binder-safe (no Room thread escape).
+- [x] T136 [P] [US8] Create `app/src/test/java/com/capsule/app/data/ClusterRepositoryTest.kt` (JVM, in-mem Room) — empty-cluster filter (4 members → 2 surviving → cluster filtered out), state filter (DISMISSED/AGED_OUT not visible), modelLabel mismatch → not in result.
 
 ### ClusterSummariser (foreground inference) (US8)
 
