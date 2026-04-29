@@ -721,3 +721,11 @@ types stamped via `details_json->>'requestType'`.
   - Wire `cloud.gateway.url=https://orbit-llm-gateway.vercel.app/llm`
     into `local.properties` for the Android build (handled out-of-band;
     `local.properties` is gitignored).
+
+## Followups from PR #1 review
+
+- T014-023 — Add direct audit_log_entries RLS probe to multi_user_smoke.sql (4 DO-blocks: SELECT cross-user denied, INSERT cross-user denied, UPDATE own row denied, DELETE own row denied). Owner: solo. By: May 8 (alpha-actively-using gate).
+- T014-024 — Cluster membership citation regex case-insensitivity + BEFORE DELETE trigger on cluster_members re-checking parent cluster summary. Owner: solo. By: May 8. Cross-ref: spec 002 amendment FR-032.
+- T014-025 — LlmGatewayClient 401 → refresh-and-retry. Blocked on: spec 013 AuthStateBinder.refresh() seam. Owner: solo. By: when seam exists; do not implement retry loop before then.
+- T014-026 — Binder-thread semaphore (max 4 concurrent) around callLlmGateway in NetworkGatewayImpl. Owner: solo. By: May 8.
+- T014-027 — audit_log_entries.event_type and actor CHECK constraints enumerating allowed values. Defense-in-depth against handler bugs emitting malformed event types. Owner: solo. By: May 15 (1-alpha-using gate).
