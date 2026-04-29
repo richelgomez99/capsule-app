@@ -44,13 +44,19 @@ class LlmGatewayClient(
     private val client: OkHttpClient = SafeOkHttpClient.build(),
     private val gatewayUrl: String = DEFAULT_GATEWAY_URL,
     /**
-     * FR-013-009 — graceful-null bearer-token provider. Day-1 stub
-     * returns `null` because `AuthSessionStore` does not yet exist; when
-     * it lands, this becomes `{ AuthSessionStore.getCurrentToken() }`.
-     * A `null` or blank result MUST suppress the `Authorization` header
-     * entirely (no `"Authorization: Bearer "` request gets sent).
+     * Spec 014 T014-019 (FR-014-017) — fail-fast auth seam. Replaces the
+     * Day-1 graceful-null `tokenProvider` lambda. If [AuthStateBinder.currentJwt]
+     * returns null/blank, [call] short-circuits to
+     * [LlmGatewayResponse.Error] with code `UNAUTHORIZED` and never crosses
+     * the network. A non-null JWT is stamped as `Authorization: Bearer <jwt>`
+     * on every upstream request.
+     *
+     * Default is [NoSessionAuthStateBinder] so existing call sites that
+     * rely on the old default (no auth wired yet) get the documented
+     * Day-2 behaviour: every LLM call returns `UNAUTHORIZED` until a
+     * real session binder is supplied.
      */
-    private val tokenProvider: () -> String? = { null },
+    private val authStateBinder: AuthStateBinder = NoSessionAuthStateBinder,
 ) {
 
     private val jsonCodec: Json = Json {
@@ -66,12 +72,23 @@ class LlmGatewayClient(
      */
     suspend fun call(request: LlmGatewayRequest): LlmGatewayResponse =
         withContext(Dispatchers.IO) {
+            // Spec 014 T014-019 — fail-fast auth gate. No session = no LLM
+            // call. We do this BEFORE building any OkHttp request so the
+            // network is never touched on the unauthenticated path.
+            val jwt = authStateBinder.currentJwt()
+            if (jwt.isNullOrBlank()) {
+                return@withContext LlmGatewayResponse.Error(
+                    requestId = request.requestId,
+                    code = "UNAUTHORIZED",
+                    message = "no active Supabase session",
+                )
+            }
             val timeoutMs = timeoutFor(request)
             val perCallClient = client.newBuilder()
                 .callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                 .build()
             val nestedBody = wrapToHttpEnvelope(request)
-            val gatewayResult = postOnce(perCallClient, gatewayUrl, nestedBody, request)
+            val gatewayResult = postOnce(perCallClient, gatewayUrl, nestedBody, request, jwt)
             if (!gatewayResult.shouldRetryDirect()) return@withContext gatewayResult.response
             // FR-013-008 — retry-once direct-provider fallback per ADR-003.
             // Day-1 placeholder URLs; no real provider keys ship in the
@@ -82,6 +99,7 @@ class LlmGatewayClient(
                 directProviderUrlFor(request),
                 nestedBody,
                 request,
+                jwt,
             )
             if (directResult.response is LlmGatewayResponse.Error) {
                 LlmGatewayResponse.Error(
@@ -100,20 +118,15 @@ class LlmGatewayClient(
         url: String,
         body: String,
         original: LlmGatewayRequest,
+        jwt: String,
     ): PostOutcome {
         val builder = Request.Builder()
             .url(url)
             .header("Content-Type", "application/json; charset=utf-8")
             .header("X-Orbit-Request-Id", original.requestId)
             .header("X-Orbit-Model-Hint", modelFor(original))
+            .header("Authorization", "Bearer $jwt")
             .post(body.toRequestBody(JSON_MEDIA_TYPE))
-        // FR-013-009 — graceful-null bearer token. Suppress Authorization
-        // header when provider returns null/blank; never throw NPE on the
-        // no-auth path.
-        val token = runCatching { tokenProvider() }.getOrNull()
-        if (!token.isNullOrBlank()) {
-            builder.header("Authorization", "Bearer $token")
-        }
         val httpRequest = builder.build()
         return try {
             client.newCall(httpRequest).execute().use { response ->
