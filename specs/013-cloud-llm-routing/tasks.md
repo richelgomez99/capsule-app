@@ -44,7 +44,7 @@
   - **Commit**: `feat(ai/gateway): add LlmGatewayRequest sealed hierarchy (FR-013-003)`
   - **Depends on**: —
 
-- [ ] **T013-004** [P] [Phase A] Create `LlmGatewayResponse` sealed class with seven variants and `Embed` `equals`/`hashCode` override (FR-013-004).
+- [X] **T013-004** [P] [Phase A] Create `LlmGatewayResponse` sealed class with seven variants and `Embed` `equals`/`hashCode` override (FR-013-004).
   - **Files**: `app/src/main/java/com/capsule/app/ai/gateway/LlmGatewayResponse.kt` (NEW)
   - **Acceptance**: `@Serializable sealed class LlmGatewayResponse` with `EmbedResponse`, `SummarizeResponse`, `ExtractActionsResponse`, `ClassifyIntentResponse`, `GenerateDayHeaderResponse`, `ScanSensitivityResponse`, `Error(code, message)`. Every variant carries `requestId: String`. `EmbedResponse` overrides `equals` using `vector.contentEquals` and `hashCode` using `vector.contentHashCode`. `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `feat(ai/gateway): add LlmGatewayResponse sealed hierarchy with Embed equals override (FR-013-004)`
