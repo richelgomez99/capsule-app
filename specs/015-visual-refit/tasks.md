@@ -17,9 +17,10 @@ commit lands. No commit proceeds without explicit approval.
 **Goal**: tokens + primitives + AgentVoiceMark color consolidation. No screen
 changes. Flag defaulted OFF.
 
-**Pre-Phase**: confirm with user — DEP-003 (Phase 11 Block 7 PR #4 merged
-into `main`) and DEP-002 (D4 amendment goes to `spec.md` not `tasks.md`
-which doesn't exist).
+**Pre-Phase**: PR #3 → PR #4 must be merged into `main` and
+`015-visual-refit` rebased onto fresh main; user green-lights Phase 0
+commit 1. (DEP-002 + DEP-003 resolved 2026-04-29; D4 amendment target =
+`spec.md`, exact wording locked at T015-018.)
 
 ### Commit 1 — `feat(015): brand accent + display + serif tokens`
 
@@ -111,21 +112,28 @@ which doesn't exist).
 
 - [ ] **T015-016** [P0c3] One-line color change in `AgentVoiceMark.kt`:
   swap the rendering color from `tokens.inkAccentCluster` to
-  `tokens.brandAccent`. Update KDoc to note the consolidation per spec 015
-  LD-001.
+  `tokens.brandAccent`. Retire the `inkAccentCluster` field on
+  `CapsulePalette.Tokens` (per the user's 2026-04-29 confirmation —
+  no deprecation window; `AgentVoiceMark` was the sole consumer).
+  Update KDoc to note the consolidation per spec 015 LD-001.
 - [ ] **T015-017** [P0c3] Update `NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest`
   expectations to reflect the brand-amber color (test fixture only —
   detector logic and allow-list are unchanged).
 - [ ] **T015-018** [P0c3] Append D4 amendment entry to
-  `specs/010-visual-polish-pass/spec.md`. Format:
+  `specs/010-visual-polish-pass/spec.md`, immediately after the
+  existing D4 entry (currently at line 171). Use this exact wording
+  (confirmed by user 2026-04-29, DEP-002 resolved):
+
   ```
-  - **D4 amendment (2026-04-29 via spec 015)**: `AgentVoiceMark` color
-    consolidated from `--ink-accent-cluster` to single brand amber
-    (`BrandAccent` #e8b06a) per spec 015 LD-001. Glyph (✦) and
-    exclusivity lint allow-list unchanged.
+  **Amendment 2026-04-29 (spec 015 visual-refit):** AgentVoiceMark
+  color consolidates with the brand amber accent (`#e8b06a` /
+  `BrandAccent`). The previously reserved `--ink-accent-cluster` token
+  is retired. Single-accent rationale: the ✦ glyph carries symbolic
+  weight; a separate color was load-bearing only when "agent voice"
+  needed to register against a non-amber palette. The visual refit
+  unifies on amber, and the ✦ remains the agent-voice marker via
+  shape, not color.
   ```
-  Targeted at `spec.md` rather than `tasks.md` because spec 010 has no
-  `tasks.md` (DEP-002).
 - [ ] **T015-019** [P0c3] Verify gates: `:app:compileDebugKotlin`,
   `:app:lintDebug` (no new warnings), `:build-logic:lint:test` (8/8 green
   with updated expectations).
@@ -218,17 +226,16 @@ against constitution.
 **Goal**: new chrome, intent chips adopt the LD-002 5-intent set,
 "Save" / "Cancel" CTA styling, no "sealed at save" wording.
 
-**Pre-Phase**: confirm with user — DEP-001 (IntentEnvelope schema
-migration to drop "in orbit" + "archive", add "for someone") status.
-Default = wait for DEP-001 to land. If user approves option (b), surface
-the asymmetry explicitly.
+**Pre-Phase**: spec 016 (`016-intent-set-migration`) must be merged into
+`main` before Phase 4 starts. (DEP-001 resolved 2026-04-29 — referred out
+to its own spec; drafted in parallel; Phase 4 simply waits.)
 
 - [ ] **T015-401** [P4] Refit `CaptureSheet` chrome per
   `design/visual-refit-2026-04-29/project/orbit-screen-capture.jsx`.
 - [ ] **T015-402** [P4] Replace intent chip set with `IntentChip`
   consuming the LD-002 5 intents. Drop "in orbit" + "archive". Add
-  "for someone" (with contact-picker stub if DEP-001 landed; else
-  rendering-only).
+  "for someone" (with contact-picker stub backed by spec 016's enum,
+  which has merged by Phase 4 start).
 - [ ] **T015-403** [P4] Refit "Save" / "Cancel" CTAs to the new pattern.
   ViewModel calls unchanged.
 - [ ] **T015-404** [P4] Audit copy for any "sealed at save" wording across
@@ -273,8 +280,7 @@ UI; LD-003 wording purged.
 - Phase 1 depends on Phase 0 complete.
 - Phases 2, 3 depend on Phase 0 complete; can be developed in parallel
   conceptually but each ships behind its own review gate.
-- Phase 4 depends on (Phase 0 complete) AND (DEP-001 resolved or option-b
-  approved).
+- Phase 4 depends on (Phase 0 complete) AND (spec 016 merged into main).
 - Phase 5 deferred.
 - Cross-cutting tasks (T015-9xx) depend on Phases 1–4 complete.
 

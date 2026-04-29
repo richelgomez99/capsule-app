@@ -183,23 +183,20 @@ refs.
 
 ## 7. Open questions surfaced (for user before implementation)
 
-1. **DEP-001** — Should the IntentEnvelope schema migration ("drop in-orbit
-   + archive, add for-someone") be authored as its own spec, or as a
-   discrete task referenced from spec 015 Phase 4? Surface before Phase 4
-   starts. (See spec.md Dependencies.)
-2. **DEP-002** — User said "append D4 amendment line to
-   `specs/010-visual-polish-pass/tasks.md`"; that file does not exist.
-   This spec writes to `spec.md` instead. Confirm.
-3. **DEP-003** — Phase 11 Block 7 PR #4 currently targets `phase-11-block-5`
-   not `main`. This branch was cut from `origin/main`. The
-   `AgentVoiceMark.kt` / `Colors.kt` / lint-detector files this spec
-   modifies in Phase 0 may not yet exist at branch base. Confirm merge order
-   before starting Phase 0 commit 1.
-4. **`inkAccentCluster` deprecation strategy** — keep field with a
-   deprecation alias for one release, or remove immediately in Phase 0 c3?
-   This research recommends keep + deprecate; confirm.
+1. ~~**DEP-001**~~ — **RESOLVED 2026-04-29**: authored as its own spec,
+   `016-intent-set-migration`. Spec 015 Phase 4 gates on spec 016 merge.
+2. ~~**DEP-002**~~ — **RESOLVED 2026-04-29**: D4 amendment targets
+   `specs/010-visual-polish-pass/spec.md` (line 171 area); exact wording
+   locked in tasks.md T015-018.
+3. ~~**DEP-003**~~ — **RESOLVED 2026-04-29**: PR #3 → PR #4 must merge
+   into main first; rebase `015-visual-refit` onto fresh main; user
+   green-lights Phase 0 c1.
+4. ~~**`inkAccentCluster` deprecation strategy**~~ — **RESOLVED**:
+   retire the field immediately in Phase 0 c3 (no deprecation window —
+   `AgentVoiceMark` was the sole consumer).
 5. **Font subsetting** — confirm we may subset Cormorant Garamond to
    Latin Extended-A (drops Cyrillic/Vietnamese). Reduces APK size delta.
+   *Open.*
 6. **Material You / dynamic color** — confirm fixed palette (no Material
    You) is acceptable to product. LD-001 implies yes; calling out
-   explicitly.
+   explicitly. *Open — likely a non-issue but worth a one-line confirm.*

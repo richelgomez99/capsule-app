@@ -233,24 +233,29 @@ layer.
 
 ## Dependencies
 
-- **DEP-001 (BLOCKS Capture sheet refit at runtime)** — IntentEnvelope schema
-  migration to adopt the LD-002 intent set ("drop in-orbit + archive, add
-  for-someone"). This is **out of scope for this spec**. It belongs in a
-  separate spec or as a discrete migration task referenced from this one.
-  Phase 4 of this refit can render the new `IntentChip` set against today's
-  schema if the existing `IntentEnvelope.intent` field is widened to permit
-  the new strings, but persistent enforcement requires the migration. Surface
-  this to the user before starting Phase 4.
-- **DEP-002 (CONTRADICTION SURFACED)** — User instructed appending the D4
-  amendment to `specs/010-visual-polish-pass/tasks.md`. That file does not
-  exist; spec 010 has only `spec.md` (with D4 at line 171). This spec
-  resolves the contradiction by targeting `specs/010-visual-polish-pass/spec.md`.
-  Confirm before Phase 0 commit 3.
-- **DEP-003** — Phase 11 Block 7 (PR #4) must be merged into `main` before
-  this branch starts work that touches `AgentVoiceMark.kt` (Phase 0 commit 3)
-  or `CapsulePalette` (Phase 0 commit 1). At spec authoring time PR #4 is
-  open against `phase-11-block-5`, not main; this branch is created from
-  `origin/main`, so the Block 7 dependency must be resolved upstream first.
+- **DEP-001 (RESOLVED 2026-04-29 — referred out to spec 016)** —
+  IntentEnvelope schema migration to adopt the LD-002 intent set ("drop
+  in-orbit + archive, add for-someone") is authored as its own spec:
+  **`016-intent-set-migration`**. It is a data-layer migration (Room
+  schema version bump, `IntentEnvelope` enum change, migration SQL with
+  `intentHistoryJson` rewrite for existing rows) with its own rollback
+  story, contracts, and risk profile. It cross-cuts capture flow, diary
+  mini-intent display, Salesforce `Alpha_User__c`, design canvas
+  reference docs, founder kit personas, and `product-dna.md`. Spec 016
+  may be drafted in parallel; it does **not** gate spec 015 Phases 0–3.
+  It **must** merge before spec 015 Phase 4 (capture sheet) lands.
+- **DEP-002 (RESOLVED 2026-04-29)** — User confirmed the D4 amendment
+  target is `specs/010-visual-polish-pass/spec.md` (immediately after
+  the existing D4 entry, currently at line 171). Spec 010 never had a
+  `tasks.md` — `spec.md` was always the only file. The amendment
+  wording is locked; see [tasks.md](tasks.md) T015-018 for the exact
+  block to insert.
+- **DEP-003 (RESOLVED 2026-04-29 — gated)** — Phase 11 Block 7 (PR #4)
+  must be merged into `main` before Phase 0 commit 1 can start, because
+  Phase 0 commit 1 extends `Colors.kt` (introduced in PR #4) and Phase 0
+  commit 3 modifies `AgentVoiceMark.kt` (also PR #4). Required merge
+  order: **PR #3 → PR #4 → rebase `015-visual-refit` onto fresh main →
+  user green-lights Phase 0 commit 1**. Non-negotiable.
 
 ## Out of Scope (Explicit)
 

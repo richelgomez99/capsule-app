@@ -49,13 +49,17 @@ The refit BUILDS ON `AgentVoiceMark` / `ClusterActionRow` / `CapsulePalette`
 
 ## Execution order
 
-1. Confirm with user: DEP-001 status, DEP-002 (D4 lives in spec.md not tasks.md),
-   DEP-003 (PR #4 merged into main).
+1. **Wait for green-light from user** — DEP-003 requires PR #3 + PR #4
+   merged into `main` first; rebase `015-visual-refit` onto fresh main
+   before starting Phase 0 commit 1.
 2. Run Phase 0 commits 1 → 2 → 3, with a Claude review gate between each.
 3. Phase 1 (cluster surface) before Phase 2 (diary) — lowest-risk first.
+   Phase 1 will lean on Block 8's `ClusterSuggestionCard` if it has
+   landed; otherwise Phase 1 builds the surface and Block 8 wires it later.
 4. Phase 3 (settings) — flag constitutional copy review against Principles
    IX + X.
-5. Phase 4 (capture sheet) — gated on DEP-001 resolution.
+5. Phase 4 (capture sheet) — gated on **spec 016** (`016-intent-set-migration`)
+   merging first. Spec 016 may be drafted in parallel.
 6. Phase 5 (bubble) — DEFERRED to post-Demo Day (after 2026-05-22).
 
 ## Review gate protocol
@@ -79,9 +83,9 @@ The refit BUILDS ON `AgentVoiceMark` / `ClusterActionRow` / `CapsulePalette`
 
 - Locked decision (LD-001 .. LD-005) appears to contradict existing code.
 - Design bundle JSX renders something Compose can't reproduce 1:1.
-- DEP-001 unresolved when starting Phase 4.
-- DEP-003 unresolved when starting Phase 0 c1 (i.e., Block 7 primitives
-  not yet on main).
+- Spec 016 (`016-intent-set-migration`) not merged when starting Phase 4.
+- PR #3 + PR #4 not yet merged into `main` when starting Phase 0 c1
+  (i.e., Block 7 primitives not yet on main).
 - Any change starts touching `app/src/main/java/com/capsule/app/bubble/`
   before Demo Day (LD-005).
 
@@ -114,5 +118,7 @@ The refit BUILDS ON `AgentVoiceMark` / `ClusterActionRow` / `CapsulePalette`
 - [ ] DEP-001/002/003 confirmed with user
 - [ ] Phase 0 commit 1 begun
 
-**This is a planning-only spec. No implementation begins until the planning
-PR is reviewed and the dependencies are confirmed.**
+**This is a planning-only spec.** As of 2026-04-29 all 3 dependencies
+are resolved: DEP-001 → spec 016 (separate, parallel), DEP-002 → spec.md
+confirmed, DEP-003 → gated on PR #3 + PR #4 merging into main. Phase 0
+commit 1 fires only after the user green-lights it post-merge.

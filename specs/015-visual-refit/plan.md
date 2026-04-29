@@ -203,24 +203,18 @@ phrasing present verbatim.
 CTA styling. Strip "sealed at save" wording (LD-003).
 
 **Risk**: Highest because (a) capture sheet is the primary save path and
-(b) the LD-002 intent set's persistent enforcement depends on DEP-001
-(separate schema migration spec). Phase 4 must either:
-
-- (a) **Wait on DEP-001** — preferred. Run DEP-001's migration before
-  Phase 4 lands, then the new `IntentChip` set persists end-to-end.
-- (b) **Land presentation-only with widened intent field** — risky;
-  introduces an asymmetry between UI vocabulary and DB constraints.
-
-**Default**: option (a). If DEP-001 cannot land before Demo Day, surface
-to user; do not invent a resolution.
+(b) the LD-002 intent set's persistent enforcement depends on **spec 016
+(`016-intent-set-migration`)** — a separate, parallel-drafted data-layer
+migration spec. Phase 4 must wait for spec 016 to merge before landing.
+Do not invent presentation-only widening of the intent field as a
+shortcut.
 
 **Inputs**: `design/visual-refit-2026-04-29/project/orbit-screen-capture.jsx`,
 `app/src/main/java/com/capsule/app/capture/...`.
 
-**Gate criteria**: DEP-001 satisfied OR user has explicitly approved option
-(b) with eyes-open; flag-OFF unchanged; flag-ON capture flow saves an
-envelope with the new intent set; no "sealed at save" wording anywhere
-in the refit copy.
+**Gate criteria**: spec 016 merged into main; flag-OFF unchanged; flag-ON
+capture flow saves an envelope with the new intent set; no "sealed at
+save" wording anywhere in the refit copy.
 
 **Rollback**: revert phase commits; if DEP-001 already shipped, that
 migration stays.
@@ -235,13 +229,14 @@ Reference only. No actionable tasks in this spec. Reopen post-2026-05-22.
 
 | ID | Risk | Phase | Likelihood | Impact | Mitigation |
 |----|------|-------|------------|--------|------------|
-| R1 | Phase 11 Block 7 not yet on main | 0 | Medium | Blocks branch start | Wait for PR #4 merge into main; rebase |
+| R1 | PR #3 + PR #4 not yet on main when Phase 0 c1 fires | 0 | Resolved-gated | Blocks branch start | User green-lights Phase 0 c1 only after PR #3 → PR #4 merge + rebase |
 | R2 | Cormorant Garamond licensing / size | 0 c1 | Low | APK size bloat | Subset font; monitor APK size delta |
-| R3 | DEP-001 schema migration not ready | 4 | Medium | Phase 4 cannot land safely | Surface to user; choose option (a) or (b) explicitly |
+| R3 | Spec 016 (intent-set migration) not ready by Phase 4 | 4 | Medium | Phase 4 cannot land | Drafted in parallel; Phase 4 simply waits |
 | R4 | Instrumented test selectors break | 2, 3 | Medium | CI red | Preserve content-descriptions + test tags |
 | R5 | Designer/Claude block on a Phase 0 commit | 0 | Medium | Branch stalls | Each commit small + self-contained; iterate fast |
 | R6 | LD-005 violated by Phase 1 cluster work touching bubble | 1 | Low | Demo bubble breaks | Lint/grep for `bubble/` in pre-merge review |
 | R7 | Material You expectation from product | any | Low | Re-litigation of locked decision | LD-001 closes this; reject re-open |
+| R8 | Concurrent agent worktree collision | any | Medium | Cross-branch commit drift | Use `git worktree add` per agent OR serialize agents |
 
 ## Complexity Tracking
 
