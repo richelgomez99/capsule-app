@@ -59,6 +59,21 @@ class LlmGatewayClient(
     private val authStateBinder: AuthStateBinder = NoSessionAuthStateBinder,
 ) {
 
+    init {
+        // Spec 014 hotfix — fail-fast https validation. The gateway URL
+        // flows from BuildConfig.CLOUD_GATEWAY_URL (sourced from
+        // local.properties at build time). A typo (http://) or a private
+        // IP must crash here, NOT silently succeed at request time.
+        // Mirrors the validation NetworkGatewayImpl applies to public
+        // fetch URLs, but at construction — this URL is fixed per build.
+        when (val v = UrlValidator(requireHttps = true).validate(gatewayUrl)) {
+            is UrlValidator.Validation.Invalid -> error(
+                "LlmGatewayClient: invalid CLOUD_GATEWAY_URL (${v.errorKind}: ${v.reason})"
+            )
+            is UrlValidator.Validation.Valid -> Unit
+        }
+    }
+
     private val jsonCodec: Json = Json {
         classDiscriminator = "type"
         ignoreUnknownKeys = true
@@ -130,7 +145,26 @@ class LlmGatewayClient(
         val httpRequest = builder.build()
         return try {
             client.newCall(httpRequest).execute().use { response ->
-                val raw = response.body?.string().orEmpty()
+                // Spec 014 hotfix — cap response body to MAX_BODY_BYTES.
+                // Mirrors NetworkGatewayImpl#fetchPublicUrl. A compromised
+                // gateway returning a multi-GB body must not OOM the :net
+                // process. Read up to MAX+1 bytes; reject if oversized.
+                val raw = response.body?.let { rb ->
+                    val source = rb.source()
+                    source.request((MAX_BODY_BYTES + 1).toLong())
+                    val buffered = source.buffer
+                    if (buffered.size > MAX_BODY_BYTES) {
+                        return@use PostOutcome(
+                            response = LlmGatewayResponse.Error(
+                                original.requestId,
+                                "MALFORMED_RESPONSE",
+                                "response body exceeded $MAX_BODY_BYTES bytes",
+                            ),
+                            retryable = false,
+                        )
+                    }
+                    buffered.readUtf8()
+                }.orEmpty()
                 if (response.code in 500..599) {
                     PostOutcome(
                         response = LlmGatewayResponse.Error(
@@ -262,6 +296,14 @@ class LlmGatewayClient(
 
         const val DEFAULT_TIMEOUT_MS: Long = 30_000L
         const val SUMMARIZE_TIMEOUT_MS: Long = 60_000L
+
+        /**
+         * Spec 014 hotfix — max response body size (2 MiB). Mirrors
+         * [NetworkGatewayImpl.MAX_BODY_BYTES]. JSON LLM responses are
+         * typically <10 KiB; 2 MiB leaves comfortable headroom while
+         * preventing OOM on a hostile/compromised gateway.
+         */
+        const val MAX_BODY_BYTES: Int = 2 * 1024 * 1024
 
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }

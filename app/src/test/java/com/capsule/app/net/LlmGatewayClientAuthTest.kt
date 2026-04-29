@@ -164,6 +164,61 @@ class LlmGatewayClientAuthTest {
         assertNull("no message-leak", null)
     }
 
+    // ─── Spec 014 hotfix (PR #1 review items 3, 4) ─────────────────────
+
+    @Test(expected = IllegalStateException::class)
+    fun nonHttpsGatewayUrlFailsConstruction() {
+        // Item 4: gateway URL must validate as https. A typo (http://)
+        // must crash at construction, not silently succeed at request time.
+        LlmGatewayClient(
+            client = OkHttpClient(),
+            gatewayUrl = "http://gateway.test.invalid/llm",
+            authStateBinder = FakeAuthStateBinder(initialJwt = "x"),
+        )
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun blankGatewayUrlFailsConstruction() {
+        LlmGatewayClient(
+            client = OkHttpClient(),
+            gatewayUrl = "",
+            authStateBinder = FakeAuthStateBinder(initialJwt = "x"),
+        )
+    }
+
+    @Test
+    fun oversizedResponseBodyCollapsesToMalformed() = runTest {
+        // Item 3: a compromised gateway returning a multi-MB body must
+        // not OOM the :net process. Cap at MAX_BODY_BYTES (2 MiB).
+        val oversized = "x".repeat(LlmGatewayClient.MAX_BODY_BYTES + 1024)
+        val mockClient = OkHttpClient.Builder()
+            .addInterceptor(Interceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(oversized.toResponseBody("application/json".toMediaType()))
+                    .build()
+            })
+            .build()
+        val client = LlmGatewayClient(
+            client = mockClient,
+            gatewayUrl = "https://gateway.test.invalid/llm",
+            authStateBinder = FakeAuthStateBinder(initialJwt = "x"),
+        )
+
+        val response = client.call(req)
+
+        assertTrue(response is LlmGatewayResponse.Error)
+        val err = response as LlmGatewayResponse.Error
+        assertEquals("MALFORMED_RESPONSE", err.code)
+        assertTrue(
+            "expected size-cap message, got ${err.message}",
+            err.message.contains(LlmGatewayClient.MAX_BODY_BYTES.toString()),
+        )
+    }
+
     private companion object {
         const val REQ_ID = "11111111-2222-3333-4444-555555555555"
     }
