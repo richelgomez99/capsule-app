@@ -1,5 +1,6 @@
 package com.capsule.app.net
 
+import com.capsule.app.BuildConfig
 import com.capsule.app.ai.gateway.LlmGatewayRequest
 import com.capsule.app.ai.gateway.LlmGatewayResponse
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +32,9 @@ import java.util.concurrent.TimeUnit
  *    before POST (per envelope contract §3.4 / FR-013-007). Unwrap the
  *    response back into flat sealed-class JSON.
  *  - Apply 30s default timeout, 60s for `Summarize` (FR-013-010).
- *  - Day-1 placeholder URL `https://gateway.example.invalid/llm`
- *    (RFC-2606 reserved). Real URL lands when the Edge Function deploys.
+ *  - Gateway URL is sourced from `BuildConfig.CLOUD_GATEWAY_URL`
+ *    (Spec 014 T014-017 / FR-014-016). Day-1 placeholder fallback lives
+ *    in `app/build.gradle.kts` only — never inlined here.
  *
  * Retry-once direct-provider fallback (FR-013-008) and bearer-token
  * graceful-null handling (FR-013-009) are layered on by T013-010 and
@@ -230,7 +232,10 @@ class LlmGatewayClient(
     }
 
     companion object {
-        const val DEFAULT_GATEWAY_URL: String = "https://gateway.example.invalid/llm"
+        // Sourced from BuildConfig (spec 014 T014-017). The Day-1 placeholder
+        // string lives only in app/build.gradle.kts as a fallback default.
+        @JvmField
+        val DEFAULT_GATEWAY_URL: String = BuildConfig.CLOUD_GATEWAY_URL
 
         // Day-1 placeholder direct-provider URLs (FR-013-008 / ADR-003).
         // No real keys ship in the binary; the fallback path exists so
