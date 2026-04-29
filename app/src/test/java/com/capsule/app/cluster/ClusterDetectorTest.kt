@@ -322,6 +322,106 @@ class ClusterDetectorTest {
         assertEquals(0, outcome.clustersFormed)
     }
 
+    // ---- FR-038 per-bucket model-rev drift guard ----------------------
+
+    @Test
+    fun `bucket with mixed model labels is skipped without persisting cluster`() = runBlocking {
+        val t0 = 5_000_000L
+        val dao = FakeClusterDao(positiveTriple(t0))
+        val audit = FakeAuditLogDao()
+        // env-a + env-c on label v4; env-b on label v5 → bucket disagrees.
+        val llm = FakeLlmProvider(
+            embeddings = positiveEmbeddings(),
+            modelLabelByEnvelopeId = mapOf(
+                "env-a" to MODEL_LABEL,
+                "env-b" to "gemini-nano-5@2026-05-01",
+                "env-c" to MODEL_LABEL
+            )
+        )
+        val outcome = makeDetector(dao = dao, audit = audit, llm = llm)
+            .detect() as ClusterDetector.Outcome.Completed
+        assertEquals(0, outcome.clustersFormed)
+        assertEquals(1, outcome.bucketsConsidered)
+        assertEquals(1, outcome.bucketsSkippedRevDrift)
+        assertEquals(0, dao.persistedClusters.size)
+        // No CLUSTER_FORMED row; only the terminal CONTINUATION_COMPLETED.
+        assertEquals(1, audit.entries.size)
+        assertEquals(AuditAction.CONTINUATION_COMPLETED, audit.entries.single().action)
+        val extra = JSONObject(audit.entries.single().extraJson!!)
+        assertEquals(1, extra.getInt("bucketsSkippedRevDrift"))
+    }
+
+    @Test
+    fun `cluster modelLabel reflects embedding response not detector default`() = runBlocking {
+        val t0 = 6_000_000L
+        val dao = FakeClusterDao(positiveTriple(t0))
+        val audit = FakeAuditLogDao()
+        val cloudLabel = "openai-text-embedding-3-small@2026-04-29"
+        val llm = FakeLlmProvider(
+            embeddings = positiveEmbeddings(),
+            defaultModelLabel = cloudLabel
+        )
+        val outcome = makeDetector(dao = dao, audit = audit, llm = llm)
+            .detect() as ClusterDetector.Outcome.Completed
+        assertEquals(1, outcome.clustersFormed)
+        val (cluster, _) = dao.persistedClusters.single()
+        assertEquals(cloudLabel, cluster.modelLabel)
+    }
+
+    // ---- FR-038 dimension mismatch — Result.failure() path -------------
+
+    @Test
+    fun `dimension mismatch in bucket throws DimensionMismatchInRun`() = runBlocking {
+        val t0 = 7_000_000L
+        val dao = FakeClusterDao(positiveTriple(t0))
+        val audit = FakeAuditLogDao()
+        // Two 2-d vectors and one 3-d vector — same modelLabel so the
+        // rev-drift guard doesn't catch it; cosine() will throw.
+        val embeddings = mapOf(
+            "env-a" to floatArrayOf(1.0f, 0.0f),
+            "env-b" to floatArrayOf(1.0f, 0.0f, 0.0f),
+            "env-c" to floatArrayOf(1.0f, 0.0f)
+        )
+        val llm = FakeLlmProvider(embeddings = embeddings)
+
+        var threw = false
+        try {
+            makeDetector(dao = dao, audit = audit, llm = llm).detect()
+        } catch (e: ClusterDetector.DimensionMismatchInRun) {
+            threw = true
+            assertNotNull(e.cause)
+            assertTrue(e.cause is EmbeddingDimensionMismatch)
+        }
+        assertTrue("DimensionMismatchInRun must propagate", threw)
+        assertEquals(0, dao.persistedClusters.size)
+    }
+
+    // ---- Idempotency: re-run on the same window produces no duplicates -
+
+    @Test
+    fun `re-run on same data with already-clustered envelopes excluded forms no new clusters`() = runBlocking {
+        // Models the production behaviour where ClusterDao.findClusterCandidates
+        // excludes envelopes already attached to a cluster_member row, so a
+        // worker re-run on the same day is a no-op.
+        val t0 = 8_000_000L
+        val dao = FakeClusterDao(positiveTriple(t0))
+        val audit = FakeAuditLogDao()
+        val detector = makeDetector(dao = dao, audit = audit, llm = FakeLlmProvider(positiveEmbeddings()))
+
+        val first = detector.detect() as ClusterDetector.Outcome.Completed
+        assertEquals(1, first.clustersFormed)
+
+        // Simulate the production DAO behaviour: after persistence,
+        // the next candidate query returns the empty set.
+        dao.candidatesAfterFirstRun = emptyList()
+
+        val second = detector.detect() as ClusterDetector.Outcome.Completed
+        assertEquals(0, second.clustersFormed)
+        assertEquals(0, second.candidatesScanned)
+        // Still exactly one cluster on disk.
+        assertEquals(1, dao.persistedClusters.size)
+    }
+
     // ---- helper --------------------------------------------------------
 
     private fun makeDetector(
@@ -351,6 +451,15 @@ private class FakeClusterDao(
     val persistedClusters: MutableList<Pair<ClusterEntity, List<ClusterMemberEntity>>> =
         mutableListOf()
 
+    /**
+     * If non-null, the next call to [findClusterCandidates] returns this
+     * list instead of the constructor-provided seed. Lets the
+     * idempotency test simulate the production DAO's "exclude already-
+     * clustered envelope ids" projection on a re-run.
+     */
+    var candidatesAfterFirstRun: List<ClusterCandidateRow>? = null
+    private var queryCount: Int = 0
+
     override suspend fun insertCluster(cluster: ClusterEntity) {
         persistedClusters += cluster to emptyList()
     }
@@ -364,7 +473,12 @@ private class FakeClusterDao(
     override suspend fun findClusterCandidates(
         sinceMillis: Long,
         minSummaryLength: Int
-    ): List<ClusterCandidateRow> = candidates
+    ): List<ClusterCandidateRow> {
+        val q = queryCount
+        queryCount += 1
+        val override = candidatesAfterFirstRun
+        return if (q > 0 && override != null) override else candidates
+    }
 
     // ---- unused surface in this test --------------------------------
     override suspend fun updateState(
@@ -413,7 +527,9 @@ private class FakeAuditLogDao : AuditLogDao {
 
 private class FakeLlmProvider(
     private val embeddings: Map<String, FloatArray>,
-    private val throwForIds: Set<String> = emptySet()
+    private val throwForIds: Set<String> = emptySet(),
+    private val modelLabelByEnvelopeId: Map<String, String> = emptyMap(),
+    private val defaultModelLabel: String = "gemini-nano-4@2026-04-15"
 ) : LlmProvider {
 
     override suspend fun classifyIntent(text: String, appCategory: String): IntentClassification =
@@ -446,7 +562,8 @@ private class FakeLlmProvider(
         val id = WORD_TO_ID[tail] ?: return null
         if (id in throwForIds) throw RuntimeException("synthetic embed failure for $id")
         val v = embeddings[id] ?: return null
-        return EmbeddingResult(vector = v, modelLabel = "test-model", dimensionality = v.size)
+        val label = modelLabelByEnvelopeId[id] ?: defaultModelLabel
+        return EmbeddingResult(vector = v, modelLabel = label, dimensionality = v.size)
     }
 
     companion object {
