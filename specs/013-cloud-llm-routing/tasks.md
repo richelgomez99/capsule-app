@@ -95,7 +95,7 @@
   - **Commit**: `feat(net): add retry-once direct-provider fallback to LlmGatewayClient (FR-013-008)`
   - **Depends on**: T013-009
 
-- [ ] **T013-011** [Phase B] Add bearer-token graceful-null handling to `LlmGatewayClient` (FR-013-009).
+- [X] **T013-011** [Phase B] Add bearer-token graceful-null handling to `LlmGatewayClient` (FR-013-009).
   - **Files**: `app/src/main/java/com/capsule/app/net/LlmGatewayClient.kt`
   - **Acceptance**: Client attempts to read a bearer token from a `tokenProvider: () -> String?` constructor parameter (Day-1 stub returns `null` because `AuthSessionStore` does not yet exist). When the result is `null` or blank, no `Authorization` header is sent and the request proceeds. No `NullPointerException` is thrown on the no-auth path. `./gradlew compileDebugKotlin compileDebugUnitTestKotlin` exits 0.
   - **Commit**: `feat(net): graceful-null bearer-token handling in LlmGatewayClient (FR-013-009)`

@@ -41,6 +41,14 @@ import java.util.concurrent.TimeUnit
 class LlmGatewayClient(
     private val client: OkHttpClient = SafeOkHttpClient.build(),
     private val gatewayUrl: String = DEFAULT_GATEWAY_URL,
+    /**
+     * FR-013-009 — graceful-null bearer-token provider. Day-1 stub
+     * returns `null` because `AuthSessionStore` does not yet exist; when
+     * it lands, this becomes `{ AuthSessionStore.getCurrentToken() }`.
+     * A `null` or blank result MUST suppress the `Authorization` header
+     * entirely (no `"Authorization: Bearer "` request gets sent).
+     */
+    private val tokenProvider: () -> String? = { null },
 ) {
 
     private val jsonCodec: Json = Json {
@@ -91,13 +99,20 @@ class LlmGatewayClient(
         body: String,
         original: LlmGatewayRequest,
     ): PostOutcome {
-        val httpRequest = Request.Builder()
+        val builder = Request.Builder()
             .url(url)
             .header("Content-Type", "application/json; charset=utf-8")
             .header("X-Orbit-Request-Id", original.requestId)
             .header("X-Orbit-Model-Hint", modelFor(original))
             .post(body.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
+        // FR-013-009 — graceful-null bearer token. Suppress Authorization
+        // header when provider returns null/blank; never throw NPE on the
+        // no-auth path.
+        val token = runCatching { tokenProvider() }.getOrNull()
+        if (!token.isNullOrBlank()) {
+            builder.header("Authorization", "Bearer $token")
+        }
+        val httpRequest = builder.build()
         return try {
             client.newCall(httpRequest).execute().use { response ->
                 val raw = response.body?.string().orEmpty()
