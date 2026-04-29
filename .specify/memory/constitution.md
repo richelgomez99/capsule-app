@@ -1,3 +1,55 @@
+<!--
+SYNC IMPACT REPORT — 2026-04-28
+================================
+Version change: 3.1.0 → 3.2.0 (MINOR — scope addition, no guarantee removed)
+
+Modified principles:
+- Principle I (Local-First Supremacy): scoped. Network egress for AI
+  inference via `:net` is now permitted; local-mode kill switch
+  (`RuntimeFlags.useLocalAi`) is a non-negotiable structural invariant;
+  `NanoLlmProvider` is preserved for the life of the product.
+- Principle VI (Privilege Separation By Design): clarifying amendment
+  noting `:net` carries AI inference traffic in addition to URL
+  hydration, via `callLlmGateway` AIDL method. Lint rule unchanged.
+- Principle IX (User-Sovereign Cloud Escape Hatch — LLM): clarifying
+  amendment. Managed Orbit-operated proxy is permitted as the default
+  cloud-mode path subject to non-negotiable conditions (Supabase Auth
+  JWT, no server-side prompt assembly, kill switch, BYOK + per-
+  capability toggles + audit log per call before alpha cutoff,
+  multi-user RLS smoke test before alpha).
+
+Added sections: none (no new principles).
+Removed sections: none.
+
+Templates / artifacts requiring updates:
+- ✅ `.specify/memory/constitution.md` (this file).
+- ✅ `specs/013-cloud-llm-routing/plan.md` — Constitution Check
+  verdict updated from CONDITIONAL PASS to PASS.
+- ✅ `.github/copilot-instructions.md` — no wording change required;
+  current template does not embed principle text.
+- ✅ `.specify/templates/plan-template.md` — principle-list-driven;
+  no wording change required.
+- ✅ `.specify/templates/spec-template.md` — no principle wording
+  embedded.
+- ✅ `.specify/templates/tasks-template.md` — no principle wording
+  embedded.
+- ⚠ `specs/005-cloud-boost-byok-llm/spec.md` — pending. Must absorb
+  BYOK provisioning UI + per-capability cloud opt-out toggles + audit
+  log per cloud LLM call. Flagged in amendment log; no edit applied.
+
+Follow-up TODOs:
+- TODO(spec-005): expand `specs/005-cloud-boost-byok-llm/spec.md` to
+  cover BYOK + per-capability toggles + audit log before external
+  alpha install (alpha-install gate).
+- TODO(edge-fn-spec): track cloud-LLM audit log entries (provider,
+  model, capability, prompt digest, token count) as a precondition
+  for the first external alpha.
+- TODO(adr-007): land Supabase multi-user RLS smoke test as the
+  alpha-install gate.
+
+Cross-references: spec 013-cloud-llm-routing; ADR-003, ADR-006, ADR-007.
+-->
+
 # Orbit Constitution
 
 Orbit is the local-first personal memory layer for mobile. This document
@@ -6,9 +58,9 @@ from architecture to UX to data policy. These principles are non-
 negotiable. A design, feature, or implementation that violates any of
 them is wrong, regardless of how useful it seems in isolation.
 
-**Version**: 3.1.0
+**Version**: 3.2.0
 **Ratified**: 2026-04-16
-**Last Amended**: 2026-04-21
+**Last Amended**: 2026-04-28
 **Domain**: orbitassistant.com
 
 **Companion documents**:
@@ -25,17 +77,54 @@ them is wrong, regardless of how useful it seems in isolation.
 
 ### I. Local-First Supremacy
 
-All user content and all state derived from user behavior remain on the
-device by default. No captured text, image, audio, embedding, or inferred
-state is transmitted to any remote server unless the user explicitly
-exports it. The network exists only to hydrate public URLs the user has
-already chosen to save.
+All user content — captured text, images, audio, OCR/transcripts, and
+the SQLCipher corpus that holds them — remains on the device as the
+source of truth. The corpus and the audit log and the consent ledger
+are never authoritative anywhere but on the device. Network egress of
+user content is permitted only along structurally-bounded paths
+(Principle VI) for the following purposes, each justified by an
+explicit principle below:
 
-This is not a marketing claim; it is a structural commitment enforced at
-the manifest, the process boundary, the Room access layer, and the lint
-rule. It is also Orbit's permanent moat: Google cannot credibly promise
-it because their business model opposes it; Apple can but does not ship
-on Android; every cloud competitor has already made the opposite choice.
+1. Hydrating public URLs the user has already chosen to save
+   (URL fetch via `:net`).
+2. **AI inference** routed through `:net` to a cloud LLM provider —
+   either an Orbit-operated managed proxy (Principle IX, Model A of
+   Principle X) or a user-supplied BYOK endpoint (Principle IX). Cloud
+   inference MAY be the default routing for AI calls so long as a
+   user-facing kill switch (`RuntimeFlags.useLocalAi`) is always
+   available and, when set, structurally prevents any network call
+   originating from an `LlmProvider`.
+3. Sovereign cloud storage that the user has opted into per-category
+   under Principle X.
+4. User-initiated export.
+
+Nothing else leaves the device. Inferred state, embeddings, profile
+facts, KG nodes/edges, and continuation results follow Principle X for
+storage and Principle XI for any prompt assembly that crosses `:net`.
+
+This is not a marketing claim; it is a structural commitment enforced
+at the manifest, the process boundary, the Room access layer, and the
+lint rule. It is also Orbit's permanent moat: Google cannot credibly
+promise it because their business model opposes it; Apple can but does
+not ship on Android; every cloud competitor has already made the
+opposite choice.
+
+**Local-mode invariant (non-negotiable)**: When the user sets
+`RuntimeFlags.useLocalAi = true`, every `LlmProvider` implementation
+resolved by `LlmProviderRouter` MUST be a fully on-device implementation
+(e.g., `NanoLlmProvider`) and MUST NOT open any network socket. The
+local-mode path is verifiable, end-to-end, with the device in airplane
+mode. `NanoLlmProvider` is preserved for the life of the product as
+the local-mode option; the strangler-fig migration in spec
+`013-cloud-llm-routing` does not retire it.
+
+**Cloud-mode invariant (non-negotiable)**: When cloud routing is
+active, AI inference MUST originate from the `:net` process via the
+`callLlmGateway` AIDL surface. Direct HTTPS from `:ml`, `:capture`, or
+`:default` for AI inference is structurally forbidden — the same
+lint rule that bans HTTP clients outside `:net` for URL hydration
+bans them for AI inference. The boundary is the process, not the
+purpose.
 
 ### II. Effortless Capture, Any Path
 
@@ -113,6 +202,16 @@ These boundaries are enforced at the `AndroidManifest.xml` level
 access layer (corpus opens only in `:ml`), and at the lint-rule level
 (HTTP clients blocked outside the `:net` package).
 
+**Amendment 2026-04-28 (spec 013 Cloud LLM Routing)**: `:net` is the
+sole egress process for AI inference as well as URL hydration. The
+existing AIDL channel between `:capture`/`:ml` and `:net` is extended
+with `callLlmGateway(LlmGatewayRequestParcel) → LlmGatewayResponseParcel`.
+No new cross-process surface and no new socket from `:capture` or
+`:ml`. The lint rule "no OkHttp/HTTP clients outside `:net`" is
+unchanged — the network restriction was always about the process
+boundary, not the absence of network. `:capture` retains zero network
+permission; `:ml` retains zero network permission.
+
 User data leaving the device through a bug must be structurally
 impossible, not procedurally discouraged.
 
@@ -155,14 +254,38 @@ simultaneously:
    local audit log with provider, model, capability, prompt digest, and
    token count.
 
-Orbit itself never operates LLM keys, never runs a managed cloud LLM on
-behalf of users, and never bills for cloud inference. If the user
-revokes a key or disables a capability, the system falls back to on-
-device Gemini Nano with no feature loss — only quality change.
+Orbit MAY operate a managed cloud LLM proxy (Model A of Principle X)
+as the default cloud-mode path when all of the following are true:
+
+- The proxy is reachable only from `:net` (Principle VI), authenticated
+  by a per-user Supabase Auth JWT, and never assembles prompts from
+  server-held user data (Principle XI).
+- A user-facing kill switch (`RuntimeFlags.useLocalAi`) is always
+  available and, when set, structurally routes every `LlmProvider`
+  call to an on-device implementation with no network egress
+  (Principle I, local-mode invariant).
+- BYOK and per-capability cloud opt-out toggles ship before the
+  product is presented as honoring Principle IX in full. Until they
+  ship, the gap is documented in this constitution's amendment log
+  (see 2026-04-28) and tracked in spec `005-cloud-boost-byok-llm`.
+- An audit log entry per cloud LLM call (provider, model, capability,
+  prompt digest, token count) lands before the first external alpha
+  install — this is a non-negotiable precondition for alpha and is
+  cross-referenced from the spec 013 plan.
+
+Orbit never bills for cloud inference. If the user revokes a key,
+disables a capability, or sets `useLocalAi = true`, the system falls
+back to on-device Gemini Nano (`NanoLlmProvider`) with no feature loss
+— only quality change. `NanoLlmProvider` is preserved permanently as
+the local-mode option.
 
 Every feature Orbit ships must work at full feature coverage with Nano
-alone. Cloud is quality, never scope. An unaudited cloud call is a
-structural bug, not a feature.
+alone. Cloud is quality, never scope. An unaudited cloud call after
+the alpha cutoff is a structural bug, not a feature.
+
+**Alpha-install gate (ADR-007)**: No external alpha install ships
+until the multi-user RLS smoke test on Supabase passes (cross-tenant
+isolation proven end-to-end against `auth.uid()`).
 
 ### X. Sovereign Cloud Storage (Orbit-Hosted or User-Hosted)
 
@@ -523,3 +646,100 @@ and X define the escape hatch that users can *choose* to take.
 principle change per the amendment policy, even though the new
 principles are escape hatches rather than restrictions on existing
 behavior.
+
+#### 2026-04-28 — v3.2.0: Scope Principle I for cloud LLM routing as default; clarify Principle VI and Principle IX (spec 013-cloud-llm-routing)
+
+**Rationale**: Spec `013-cloud-llm-routing` introduces cloud LLM
+routing as the **default** path for AI inference (intent
+classification, summaries, day headers, action extraction,
+embeddings, sensitivity scan). The previous wording of Principle I
+("the network exists only to hydrate public URLs") encoded a
+structural ban on AI-inference network egress that the cloud-pivot
+product decision (orbit-pivot-plan-2026-04-28) explicitly retires.
+Leaving the wording unchanged would put every cloud-mode `LlmProvider`
+call in structural violation of the constitution.
+
+The spirit of local-first is preserved, not removed. Specifically:
+
+1. **Local-mode remains a first-class option**, gated by
+   `RuntimeFlags.useLocalAi`. When the user sets it, every
+   `LlmProvider` resolved by `LlmProviderRouter` MUST be a fully
+   on-device implementation (`NanoLlmProvider`) and MUST NOT open any
+   network socket. This is verifiable in airplane mode.
+2. **`NanoLlmProvider` is preserved for the life of the product**
+   as the local-mode option. The strangler-fig migration in spec 013
+   does not retire it.
+3. **The process boundary is unchanged**. AI inference MUST originate
+   from `:net` via the new AIDL method `callLlmGateway`. The lint
+   rule banning OkHttp/HTTP clients outside `:net` survives unchanged
+   — the restriction was always about the process boundary, not the
+   absence of network.
+4. **Sovereignty is unchanged**. All AI inference still passes
+   through the `LlmProvider` interface (Principle IX). Only the
+   binding changes: cloud-mode resolves to `CloudLlmProvider`, which
+   proxies through `:net` to a managed Vercel AI Gateway endpoint
+   authenticated by a per-user Supabase Auth JWT. Server-side
+   prompts are never assembled from server-held user data
+   (Principle XI).
+
+**Honestly-documented gaps (deferred, tracked)**:
+
+- **BYOK provisioning UI** is not in scope for spec 013 and is
+  deferred to spec `005-cloud-boost-byok-llm`. Day-1 cloud routing
+  ships with managed Vercel AI Gateway + server-side provider keys.
+- **Per-capability cloud opt-out toggles** are deferred to the same
+  spec.
+- **Audit log entry per cloud LLM call** (provider, model, capability,
+  prompt digest, token count) is a precondition for the first external
+  alpha install. Spec 013 ships the routing skeleton; the audit
+  entries land in the Edge Function spec before alpha. Until then, no
+  external alpha install.
+- **Multi-user RLS smoke test** (ADR-007) is the alpha-install gate.
+  Cross-tenant isolation must be proven end-to-end on Supabase
+  before any external user installs the app.
+
+**Cross-references**:
+
+- Spec: `specs/013-cloud-llm-routing/spec.md` (and plan, research,
+  data-model, quickstart, contracts under the same directory).
+- ADR-003: Vercel AI Gateway + direct provider fallback.
+- ADR-006: Cluster engine cloud migration as gating work for Phase 11
+  Block 4 (`ClusterDetectionWorker` is carved out of the spec 013
+  router migration and pinned to local-mode until that block lands;
+  see spec 013 FR-013-028 and the `// CLUSTER-LOCAL-PIN` comment in
+  `app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt`).
+- ADR-007: RLS + multi-user smoke test prerequisite for alpha.
+
+**Downstream artifact review**:
+
+- `specs/013-cloud-llm-routing/plan.md` — Constitution Check moves
+  from CONDITIONAL PASS to PASS for Principles I, VI, and IX as
+  amended here. Items XI (deferred consent filter) and the audit-log
+  precondition remain tracked in Complexity Tracking; they are now
+  deferred-with-deadline (alpha-install gate) rather than
+  unresolved-ambiguity.
+- `.github/copilot-instructions.md` — auto-generated agent context;
+  re-run `update-agent-context.sh` after this amendment if its
+  template surfaces principle wording (current version does not, so
+  no change required).
+- `.specify/templates/plan-template.md` — Constitution Check template
+  is principle-list-driven; no wording change required. Future plans
+  will evaluate against the amended Principle I.
+- `.specify/templates/spec-template.md` — no principle wording
+  embedded; no change required.
+- `.specify/templates/tasks-template.md` — no principle wording
+  embedded; no change required.
+- `specs/005-cloud-boost-byok-llm/spec.md` — must absorb the BYOK +
+  per-capability toggles + audit-log work that this amendment defers.
+  Flagged here; no edit applied in this amendment.
+
+**Semver reasoning**: MINOR. No existing guarantee is removed —
+local-mode remains structurally enforceable via `useLocalAi`, the
+process boundary is unchanged, the lint rule survives, the sovereignty
+principle is unchanged. A new permission (cloud LLM inference via
+`:net` as default routing) is added, with explicit non-negotiable
+conditions (kill switch, process boundary, audit-log precondition for
+alpha, RLS smoke-test gate). Per the constitution's own amendment
+policy: "MINOR for scope additions, PATCH for clarifications." This
+is a scope addition that scopes an invariant rather than removing it,
+so MINOR is the correct bump.
