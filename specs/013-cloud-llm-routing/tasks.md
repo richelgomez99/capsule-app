@@ -153,7 +153,7 @@
   - **Commit**: `test(ai): cover LlmProviderRouter resolution rules (SC-004)`
   - **Depends on**: T013-016
 
-- [ ] **T013-018** [Phase D] Migrate every production `NanoLlmProvider()` call site under `app/src/main/` to `LlmProviderRouter.create(context, networkGateway)` — **except** `cluster/ClusterDetectionWorker.kt` (FR-013-016 sweep with carve-out).
+- [X] **T013-018** [Phase D] Migrate every production `NanoLlmProvider()` call site under `app/src/main/` to `LlmProviderRouter.create(context, networkGateway)` — **except** `cluster/ClusterDetectionWorker.kt` (FR-013-016 sweep with carve-out).
   - **Files**: every file under `app/src/main/` matching `grep -rln "NanoLlmProvider()" app/src/main/` at the time of the task **excluding** [`app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt`](../../app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt), [`app/src/main/java/com/capsule/app/ai/LlmProviderRouter.kt`](../../app/src/main/java/com/capsule/app/ai/LlmProviderRouter.kt) (local-mode branch), and [`app/src/main/java/com/capsule/app/ai/NanoLlmProvider.kt`](../../app/src/main/java/com/capsule/app/ai/NanoLlmProvider.kt) itself.
   - **Acceptance**: After this commit, the SC-001 verification command returns zero results:
     ```sh
@@ -165,7 +165,7 @@
   - **Commit**: `refactor(ai): route production sites through LlmProviderRouter (FR-013-016)`
   - **Depends on**: T013-016
 
-- [ ] **T013-019** [Phase D] Add `// CLUSTER-LOCAL-PIN: migrated in Phase 11 Block 4` comment in `ClusterDetectionWorker` immediately above the `NanoLlmProvider()` constructor (FR-013-028).
+- [X] **T013-019** [Phase D] Add `// CLUSTER-LOCAL-PIN: migrated in Phase 11 Block 4` comment in `ClusterDetectionWorker` immediately above the `NanoLlmProvider()` constructor (FR-013-028).
   - **Files**: [`app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt`](../../app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt)
   - **Acceptance**: Exactly one line `// CLUSTER-LOCAL-PIN: migrated in Phase 11 Block 4` appears immediately above the `NanoLlmProvider()` construction call. `grep -n "CLUSTER-LOCAL-PIN" app/src/main/java/com/capsule/app/cluster/ClusterDetectionWorker.kt | wc -l` returns exactly `1`. The constructor itself and the `clusterModelLabelLock` usage are unchanged (FR-013-018). `./gradlew compileDebugKotlin compileDebugUnitTestKotlin` exits 0.
   - **Commit**: `chore(cluster): pin ClusterDetectionWorker to local mode with self-doc comment (FR-013-028)`
@@ -177,7 +177,7 @@
 
 **Goal**: Prove SC-001, SC-002, SC-003 all pass against the merged Phase A–D state. This task is verification-only — no production code changes.
 
-- [ ] **T013-020** [Phase E] Run the full Day-1 verification matrix and capture the output in the commit body.
+- [X] **T013-020** [Phase E] Run the full Day-1 verification matrix and capture the output in the commit body.
   - **Files**: none modified — verification only.
   - **Acceptance**: All four commands MUST exit 0 (or empty for the grep) **in this exact order**:
     1. `./gradlew compileDebugKotlin compileDebugUnitTestKotlin` — exits 0 (SC-002 compile gate).
