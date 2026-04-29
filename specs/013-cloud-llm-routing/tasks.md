@@ -38,7 +38,7 @@
   - **Commit**: `feat(runtime): add useLocalAi + clusterEmitEnabled flags (FR-013-002)`
   - **Depends on**: —
 
-- [ ] **T013-003** [P] [Phase A] Create `LlmGatewayRequest` sealed class with the six subtypes per data-model §1.1 (FR-013-003).
+- [X] **T013-003** [P] [Phase A] Create `LlmGatewayRequest` sealed class with the six subtypes per data-model §1.1 (FR-013-003).
   - **Files**: `app/src/main/java/com/capsule/app/ai/gateway/LlmGatewayRequest.kt` (NEW; new sub-package `com.capsule.app.ai.gateway`)
   - **Acceptance**: `@Serializable sealed class LlmGatewayRequest` with subtypes `Embed`, `Summarize`, `ExtractActions`, `ClassifyIntent`, `GenerateDayHeader`, `ScanSensitivity`. Every subtype carries `requestId: String` plus method-specific payload fields per [data-model.md §1.1](data-model.md). Discriminator `"type"` matches the values in [contracts/llm-gateway-envelope-contract.md](contracts/llm-gateway-envelope-contract.md). `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `feat(ai/gateway): add LlmGatewayRequest sealed hierarchy (FR-013-003)`
