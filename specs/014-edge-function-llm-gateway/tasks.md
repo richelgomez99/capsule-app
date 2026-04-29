@@ -597,6 +597,7 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 | T014-017 | [x] | `9581f1f` |
 | T014-018 | [x] | `6f1bfc5` |
 | T014-019 | [x] | `f9dc273` |
+| T014-019b | [x] | (Supabase SDK wired in :net; EncryptedSessionManager 4/4 tests; pin supabase-kt 3.6.0 + ktor 3.3.0; closes deviation #1) |
 | T014-020 | [ ] | (deploy — needs user credentials) |
 | T014-021 | [ ] | (live E2E — depends on T014-020) |
 | T014-022 | [ ] | (closeout — depends on T014-021) |
