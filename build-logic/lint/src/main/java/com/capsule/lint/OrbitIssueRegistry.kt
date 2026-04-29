@@ -7,7 +7,8 @@ import com.android.tools.lint.detector.api.Issue
 
 class OrbitIssueRegistry : IssueRegistry() {
     override val issues: List<Issue> = listOf(
-        NoHttpClientOutsideNetDetector.ISSUE
+        NoHttpClientOutsideNetDetector.ISSUE,
+        NoAgentVoiceMarkOutsideAgentSurfacesDetector.ISSUE,
     )
     override val api: Int = CURRENT_API
     override val vendor: Vendor = Vendor(
