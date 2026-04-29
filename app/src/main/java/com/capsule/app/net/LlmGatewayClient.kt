@@ -61,46 +61,105 @@ class LlmGatewayClient(
                 .callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                 .build()
             val nestedBody = wrapToHttpEnvelope(request)
-            val httpRequest = Request.Builder()
-                .url(gatewayUrl)
-                .header("Content-Type", "application/json; charset=utf-8")
-                .header("X-Orbit-Request-Id", request.requestId)
-                .header("X-Orbit-Model-Hint", modelFor(request))
-                .post(nestedBody.toRequestBody(JSON_MEDIA_TYPE))
-                .build()
-            executeOrError(perCallClient, httpRequest, request)
-        }
-
-    private fun executeOrError(
-        client: OkHttpClient,
-        httpRequest: Request,
-        original: LlmGatewayRequest,
-    ): LlmGatewayResponse = try {
-        client.newCall(httpRequest).execute().use { response ->
-            val raw = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
+            val gatewayResult = postOnce(perCallClient, gatewayUrl, nestedBody, request)
+            if (!gatewayResult.shouldRetryDirect()) return@withContext gatewayResult.response
+            // FR-013-008 — retry-once direct-provider fallback per ADR-003.
+            // Day-1 placeholder URLs; no real provider keys ship in the
+            // binary, so this path will surface UNAUTHORIZED in practice.
+            // Wired now so Block 5+ specs do not have to add it later.
+            val directResult = postOnce(
+                perCallClient,
+                directProviderUrlFor(request),
+                nestedBody,
+                request,
+            )
+            if (directResult.response is LlmGatewayResponse.Error) {
                 LlmGatewayResponse.Error(
-                    requestId = original.requestId,
-                    code = if (response.code in 500..599) "GATEWAY_5XX" else "INTERNAL",
-                    message = "HTTP ${response.code}",
+                    requestId = request.requestId,
+                    code = "PROVIDER_5XX",
+                    message = "gateway+direct retry exhausted: ${directResult.response.message}",
                 )
             } else {
-                unwrapHttpEnvelope(raw, original.requestId)
+                directResult.response
             }
         }
-    } catch (e: SocketTimeoutException) {
-        LlmGatewayResponse.Error(original.requestId, "TIMEOUT", e.message ?: "timeout")
-    } catch (e: UnknownHostException) {
-        LlmGatewayResponse.Error(original.requestId, "NETWORK_UNAVAILABLE", e.message ?: "dns")
-    } catch (e: IOException) {
-        LlmGatewayResponse.Error(original.requestId, "NETWORK_UNAVAILABLE", e.message ?: "io")
+
+    /** One POST attempt against [url]; surfaces an [LlmGatewayResponse] never a throw. */
+    private fun postOnce(
+        client: OkHttpClient,
+        url: String,
+        body: String,
+        original: LlmGatewayRequest,
+    ): PostOutcome {
+        val httpRequest = Request.Builder()
+            .url(url)
+            .header("Content-Type", "application/json; charset=utf-8")
+            .header("X-Orbit-Request-Id", original.requestId)
+            .header("X-Orbit-Model-Hint", modelFor(original))
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        return try {
+            client.newCall(httpRequest).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                if (response.code in 500..599) {
+                    PostOutcome(
+                        response = LlmGatewayResponse.Error(
+                            original.requestId,
+                            "GATEWAY_5XX",
+                            "HTTP ${response.code}",
+                        ),
+                        retryable = true,
+                    )
+                } else if (!response.isSuccessful) {
+                    val code = if (response.code == 401 || response.code == 403) {
+                        "UNAUTHORIZED"
+                    } else {
+                        "INTERNAL"
+                    }
+                    PostOutcome(
+                        LlmGatewayResponse.Error(original.requestId, code, "HTTP ${response.code}"),
+                        retryable = false,
+                    )
+                } else {
+                    val parsed = unwrapHttpEnvelope(raw, original.requestId)
+                    val retryable = parsed is LlmGatewayResponse.Error &&
+                        (parsed.code == "GATEWAY_5XX" || parsed.code == "INTERNAL")
+                    PostOutcome(parsed, retryable)
+                }
+            }
+        } catch (e: SocketTimeoutException) {
+            PostOutcome(
+                LlmGatewayResponse.Error(original.requestId, "TIMEOUT", e.message ?: "timeout"),
+                retryable = false,
+            )
+        } catch (e: UnknownHostException) {
+            PostOutcome(
+                LlmGatewayResponse.Error(original.requestId, "NETWORK_UNAVAILABLE", e.message ?: "dns"),
+                retryable = false,
+            )
+        } catch (e: IOException) {
+            PostOutcome(
+                LlmGatewayResponse.Error(original.requestId, "NETWORK_UNAVAILABLE", e.message ?: "io"),
+                retryable = false,
+            )
+        }
+    }
+
+    private data class PostOutcome(
+        val response: LlmGatewayResponse,
+        val retryable: Boolean,
+    ) {
+        fun shouldRetryDirect(): Boolean = retryable
+    }
+
+    private fun directProviderUrlFor(request: LlmGatewayRequest): String = when (request) {
+        is LlmGatewayRequest.Embed -> DIRECT_OPENAI_EMBEDDINGS_URL
+        else -> DIRECT_ANTHROPIC_MESSAGES_URL
     }
 
     /**
      * Wrap flat `{type, requestId, …fields}` into HTTP envelope
      * `{type, requestId, payload: {…fields}}` per envelope contract §3.4.
-     * The `payload` strips the discriminator + requestId from the flat
-     * form and keeps the remaining fields verbatim.
      */
     private fun wrapToHttpEnvelope(request: LlmGatewayRequest): String {
         val flat = jsonCodec.encodeToJsonElement(LlmGatewayRequest.serializer(), request).jsonObject
@@ -157,6 +216,12 @@ class LlmGatewayClient(
 
     companion object {
         const val DEFAULT_GATEWAY_URL: String = "https://gateway.example.invalid/llm"
+
+        // Day-1 placeholder direct-provider URLs (FR-013-008 / ADR-003).
+        // No real keys ship in the binary; the fallback path exists so
+        // Phase 11 Block 5+ does not have to retrofit it.
+        const val DIRECT_OPENAI_EMBEDDINGS_URL: String = "https://api.openai.com/v1/embeddings"
+        const val DIRECT_ANTHROPIC_MESSAGES_URL: String = "https://api.anthropic.com/v1/messages"
 
         const val MODEL_EMBED: String = "openai/text-embedding-3-small"
         const val MODEL_SONNET: String = "anthropic/claude-sonnet-4-6"

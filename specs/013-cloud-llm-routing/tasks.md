@@ -89,7 +89,7 @@
   - **Commit**: `feat(net): add LlmGatewayClient skeleton with model routing + envelope (FR-013-006/007/010)`
   - **Depends on**: T013-003, T013-004, T013-005
 
-- [ ] **T013-010** [Phase B] Add retry-once direct-provider fallback to `LlmGatewayClient` per ADR-003 (FR-013-008).
+- [X] **T013-010** [Phase B] Add retry-once direct-provider fallback to `LlmGatewayClient` per ADR-003 (FR-013-008).
   - **Files**: `app/src/main/java/com/capsule/app/net/LlmGatewayClient.kt`
   - **Acceptance**: On Gateway 5xx response, the client retries the same request once against the direct provider endpoint (Anthropic Messages or OpenAI Embeddings, placeholder URLs). Retry-once is per-request, no exponential backoff. Two consecutive 5xx surface a single `LlmGatewayResponse.Error(code = "PROVIDER_5XX", ...)`. `IOException` and timeouts surface `Error(code = "NETWORK_UNAVAILABLE" | "TIMEOUT", ...)` rather than throwing across the AIDL boundary. `./gradlew compileDebugKotlin compileDebugUnitTestKotlin` exits 0.
   - **Commit**: `feat(net): add retry-once direct-provider fallback to LlmGatewayClient (FR-013-008)`
