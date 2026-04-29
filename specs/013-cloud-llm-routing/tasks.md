@@ -50,7 +50,7 @@
   - **Commit**: `feat(ai/gateway): add LlmGatewayResponse sealed hierarchy with Embed equals override (FR-013-004)`
   - **Depends on**: —
 
-- [ ] **T013-005** [P] [Phase A] Add `@Serializable` mirror DTOs `StateSnapshotJson`, `AppFunctionSummaryJson`, `ActionProposalJson` per data-model §1.4.
+- [X] **T013-005** [P] [Phase A] Add `@Serializable` mirror DTOs `StateSnapshotJson`, `AppFunctionSummaryJson`, `ActionProposalJson` per data-model §1.4.
   - **Files**: `app/src/main/java/com/capsule/app/ai/gateway/GatewayDtos.kt` (NEW)
   - **Acceptance**: Three field-for-field `@Serializable` mirrors of `StateSnapshot`, `AppFunctionSummary`, and `ActionProposal`. They are referenced by `LlmGatewayRequest.ExtractActions` and `LlmGatewayResponse.ExtractActionsResponse`. `./gradlew compileDebugKotlin` exits 0.
   - **Commit**: `feat(ai/gateway): add @Serializable DTO mirrors for AIDL wire format`

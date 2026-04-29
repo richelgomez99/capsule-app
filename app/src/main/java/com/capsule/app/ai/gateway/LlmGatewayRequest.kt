@@ -69,39 +69,3 @@ sealed class LlmGatewayRequest {
     ) : LlmGatewayRequest()
 }
 
-// ---------------------------------------------------------------------------
-// Day-1 inline DTO mirrors (T013-003). T013-005 moves these to
-// `GatewayDtos.kt` as the dedicated `@Serializable` mirror file. The
-// inline declarations exist solely so T013-003 compiles green; T013-005
-// is a structural move with the same field shapes.
-// ---------------------------------------------------------------------------
-
-@Serializable
-data class StateSnapshotJson(
-    val appCategory: String,
-    val activityState: String,
-    val tzId: String,
-    val hourLocal: Int,
-    val dayOfWeekLocal: Int,
-)
-
-@Serializable
-data class AppFunctionSummaryJson(
-    val functionId: String,
-    val schemaVersion: Int,
-    val displayName: String,
-    val description: String,
-    val argsSchemaJson: String,
-    val sensitivityScope: String,
-)
-
-@Serializable
-data class ActionProposalJson(
-    val functionId: String,
-    val schemaVersion: Int,
-    val argsJson: String,
-    val previewTitle: String,
-    val previewSubtitle: String? = null,
-    val confidence: Float,
-    val sensitivityScope: String,
-)
