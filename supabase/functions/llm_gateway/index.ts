@@ -12,7 +12,7 @@ import {
 } from "./lib/errors.js";
 import { LlmGatewayRequestSchema } from "./lib/schemas.js";
 import { wireResponse } from "./lib/response.js";
-import type { HandlerContext, LlmGatewayRequest, LlmGatewayResponse } from "./types.js";
+import type { HandlerContext, HandlerResult, LlmGatewayRequest } from "./types.js";
 
 import * as embedHandler from "./handlers/embed.js";
 import * as summarizeHandler from "./handlers/summarize.js";
@@ -26,7 +26,7 @@ export const config = { runtime: "edge" };
 async function dispatch(
   req: LlmGatewayRequest,
   ctx: HandlerContext,
-): Promise<LlmGatewayResponse> {
+): Promise<HandlerResult> {
   switch (req.type) {
     case "embed":
       return embedHandler.handle(req, ctx);
@@ -86,8 +86,11 @@ export default async function handler(req: Request): Promise<Response> {
   const ctx: HandlerContext = { userId, requestId: requestEnvelope.requestId };
 
   try {
-    const response = await dispatch(requestEnvelope, ctx);
-    return wireResponse(response);
+    const result = await dispatch(requestEnvelope, ctx);
+    // T014-014 (Phase F) wires audit insert + operator log here using the
+    // audit-only fields on `result`. For Phase C/D those fields are produced
+    // but not yet consumed.
+    return wireResponse(result.response);
   } catch {
     // Uncaught handler exception → INTERNAL per data-model §2.3 mapping.
     return errorResponse("INTERNAL", "handler exception", requestEnvelope.requestId, 200);

@@ -3,17 +3,25 @@
 import type {
   ScanSensitivityRequest,
   HandlerContext,
-  LlmGatewayResponse,
+  HandlerResult,
 } from "../types.js";
+import { MODEL_HAIKU, MODEL_HAIKU_LABEL } from "../lib/models.js";
 
 export async function handle(
   req: ScanSensitivityRequest,
   _ctx: HandlerContext,
-): Promise<LlmGatewayResponse> {
+): Promise<HandlerResult> {
   return {
-    type: "error",
-    requestId: req.requestId,
-    code: "INTERNAL",
-    message: "not yet implemented",
+    response: {
+      type: "error",
+      requestId: req.requestId,
+      code: "INTERNAL",
+      message: "not yet implemented",
+    },
+    model: MODEL_HAIKU,
+    modelLabel: MODEL_HAIKU_LABEL,
+    tokensIn: 0,
+    tokensOut: 0,
+    cacheHit: false,
   };
 }
