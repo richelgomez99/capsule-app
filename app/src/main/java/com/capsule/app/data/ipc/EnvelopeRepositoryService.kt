@@ -10,6 +10,7 @@ import com.capsule.app.ai.extract.ActionExtractor
 import com.capsule.app.continuation.ContinuationEngine
 import com.capsule.app.data.ActionsRepositoryDelegate
 import com.capsule.app.data.AppFunctionRegistry
+import com.capsule.app.data.ClusterRepository
 import com.capsule.app.data.EnvelopeRepositoryImpl
 import com.capsule.app.data.LocalRoomBackend
 import com.capsule.app.data.OrbitDatabase
@@ -92,7 +93,9 @@ class EnvelopeRepositoryService : Service() {
             continuationEngine = engine,
             actionsDelegate = actionsDelegate,
             actionExtractor = actionExtractor,
-            weeklyDigestDelegate = weeklyDigestDelegate
+            weeklyDigestDelegate = weeklyDigestDelegate,
+            // Spec 002 Phase 11 Block 5 / T135 — cluster read surface.
+            clusterRepository = ClusterRepository(db.clusterDao())
         )
         // T088 — same service binder pool exposes the audit-log surface on a
         // distinct intent action so the Settings / audit viewer process can

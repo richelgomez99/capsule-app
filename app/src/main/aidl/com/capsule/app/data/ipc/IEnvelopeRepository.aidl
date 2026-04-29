@@ -9,6 +9,8 @@ import com.capsule.app.data.ipc.IEnvelopeObserver;
 import com.capsule.app.data.ipc.ActionProposalParcel;
 import com.capsule.app.data.ipc.AppFunctionSummaryParcel;
 import com.capsule.app.data.ipc.IActionProposalObserver;
+import com.capsule.app.data.ipc.ClusterCardParcel;
+import com.capsule.app.data.ipc.IClusterObserver;
 
 interface IEnvelopeRepository {
 
@@ -192,4 +194,20 @@ interface IEnvelopeRepository {
     //   "SKIPPED:already_exists"  — partial unique index conflict
     //   "FAILED:<short_reason>"   — worker maps to Result.retry()
     String runWeeklyDigest(String targetDayLocal);
+
+    // ---- Spec 002 Phase 11 Block 5 — Cluster surface (T134) ----
+
+    // Live feed of currently-surfaceable clusters (state ∈
+    // {SURFACED,TAPPED,ACTING,ACTED,FAILED} && surviving members ≥ 3,
+    // FR-037). Mirrors the observeDay/stopObserving lifecycle: binder
+    // is the observer key, observer death triggers cleanup, callers
+    // pair `observeClusters` with `stopObservingClusters` exactly once.
+    //
+    // The repository applies two read-side gates beyond what the DAO
+    // can express: the runtime kill switch (RuntimeFlags.clusterEmitEnabled,
+    // empty list when off) and the model-label lock (FR-030 — rows with
+    // a drifted modelLabel are excluded so a label change after the fact
+    // hides stale clusters instantly).
+    void observeClusters(IClusterObserver observer);
+    void stopObservingClusters(IClusterObserver observer);
 }
