@@ -3,6 +3,7 @@ package com.capsule.app.diary
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.capsule.app.action.ipc.ActionExecuteRequestParcel
+import com.capsule.app.data.ClusterCardModel
 import com.capsule.app.data.ipc.ActionProposalParcel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -12,7 +13,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * T049 — diary screen VM. Wires the repository observer to the pure-logic
@@ -30,7 +35,8 @@ class DiaryViewModel(
     private val repository: DiaryRepository,
     private val threadGrouper: ThreadGrouper,
     private val dayHeaderGenerator: DayHeaderGenerator,
-    scopeOverride: CoroutineScope? = null
+    scopeOverride: CoroutineScope? = null,
+    private val zoneId: ZoneId = ZoneId.systemDefault()
 ) : ViewModel() {
 
     private val scope: CoroutineScope = scopeOverride ?: viewModelScope
@@ -46,6 +52,13 @@ class DiaryViewModel(
      * [DayUiState.Loading] before the first upstream page arrives.
      *
      * Idempotent: calling with the same [isoDate] twice is a no-op.
+     *
+     * Phase 11 Block 9 / T148 — combines the per-day envelope flow with
+     * the global cluster flow ([DiaryRepository.observeClusters]) so the
+     * Diary slot can render a cluster card on cluster days. Clusters
+     * that don't belong to [isoDate] (in [zoneId]) are filtered out
+     * before the state is emitted; non-cluster days observe an empty
+     * cluster list and render no slot.
      */
     fun observe(isoDate: String) {
         if (currentIsoDate == isoDate && currentJob?.isActive == true) return
@@ -55,15 +68,23 @@ class DiaryViewModel(
         _state.value = DayUiState.Loading(isoDate)
 
         currentJob = scope.launch {
-            repository.observeDay(isoDate)
+            val pages = repository.observeDay(isoDate)
+            // T148 — observeClusters is global. We always combine, but
+            // start with `emptyList()` so the page flow alone can drive
+            // the first emission (clusters are usually a no-op).
+            val clusters = repository.observeClusters().onStart { emit(emptyList()) }
+
+            combine(pages, clusters) { page, allClusters ->
+                page to allClusters.filter { it.belongsToDay(isoDate, zoneId) }
+            }
                 .catch { e ->
                     _state.value = DayUiState.Error(
                         isoDate = isoDate,
                         message = e.message ?: e::class.java.simpleName
                     )
                 }
-                .collect { page ->
-                    _state.value = reduce(isoDate, page.envelopes)
+                .collect { (page, dayClusters) ->
+                    _state.value = reduce(isoDate, page.envelopes, dayClusters)
                 }
         }
     }
@@ -213,18 +234,50 @@ class DiaryViewModel(
 
     private suspend fun reduce(
         isoDate: String,
-        envelopes: List<com.capsule.app.data.ipc.EnvelopeViewParcel>
+        envelopes: List<com.capsule.app.data.ipc.EnvelopeViewParcel>,
+        dayClusters: List<ClusterCardModel>
     ): DayUiState {
-        if (envelopes.isEmpty()) return DayUiState.Empty(isoDate)
+        if (envelopes.isEmpty() && dayClusters.isEmpty()) return DayUiState.Empty(isoDate)
 
-        val threads = threadGrouper.group(envelopes)
+        val threads = if (envelopes.isEmpty()) emptyList() else threadGrouper.group(envelopes)
         val header = dayHeaderGenerator.generate(isoDate, envelopes)
         return DayUiState.Ready(
             isoDate = isoDate,
             header = header.text,
             generationLocale = header.generationLocale,
-            threads = threads
+            threads = threads,
+            clusters = dayClusters
         )
+    }
+
+    /**
+     * T148 — does this cluster's `timeBucketStart` resolve to [isoDate]
+     * in [zone]? Cluster placement is anchored to the bucket's start so
+     * a cluster spanning a midnight boundary surfaces on the day it
+     * began. Aligns with how envelope `dayLocal` is computed upstream.
+     */
+    private fun ClusterCardModel.belongsToDay(isoDate: String, zone: ZoneId): Boolean {
+        val day = Instant.ofEpochMilli(timeBucketStart)
+            .atZone(zone)
+            .toLocalDate()
+            .toString()
+        return day == isoDate
+    }
+
+    // ---- Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss ----
+
+    /**
+     * User tapped the cluster-card "Dismiss" affordance. Fire-and-forget;
+     * the cluster row transitions to DISMISSED on disk and the data-layer
+     * flow re-emits with the row removed, so the card vanishes from the
+     * Diary slot on the next collection. IPC errors are swallowed (the
+     * card is best-effort UI; the worst case is a stale visual that
+     * disappears on the next page change).
+     */
+    fun onDismissCluster(clusterId: String) {
+        scope.launch {
+            runCatching { repository.dismissCluster(clusterId) }
+        }
     }
 
     override fun onCleared() {

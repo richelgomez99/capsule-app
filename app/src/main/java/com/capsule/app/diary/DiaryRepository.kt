@@ -2,10 +2,12 @@ package com.capsule.app.diary
 
 import com.capsule.app.action.ipc.ActionExecuteRequestParcel
 import com.capsule.app.action.ipc.ActionExecuteResultParcel
+import com.capsule.app.data.ClusterCardModel
 import com.capsule.app.data.ipc.ActionProposalParcel
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
  * T049 seam — the diary VM's view of the envelope repository. The AIDL
@@ -68,4 +70,31 @@ interface DiaryRepository {
 
     /** T064 (003 US2) — toggle one item on a derived to-do envelope. */
     suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean)
+
+    // ---- Spec 002 Phase 11 Block 9 — Cluster surface (T148) ---------------
+
+    /**
+     * Live feed of currently-surfaceable clusters. Mirrors
+     * `IEnvelopeRepository.observeClusters` (T134) — one cold flow that
+     * re-emits the full set whenever the underlying cluster table or
+     * its membership changes. Read-side gates (`clusterEmitEnabled`,
+     * `clusterModelLabelLock`, surviving members ≥ 3, terminal-state
+     * filter) live in the data layer; the VM simply consumes.
+     *
+     * Default `emptyFlow()` so existing JVM test fakes (which predate
+     * Block 9 wiring) don't have to be rewritten — they observe a day
+     * with no clusters and the cluster slot stays hidden.
+     */
+    fun observeClusters(): Flow<List<ClusterCardModel>> = flowOf(emptyList())
+
+    /**
+     * Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss for
+     * a cluster card. Transitions the cluster row to DISMISSED and
+     * audits `CLUSTER_DISMISSED`. Returns `true` iff a row was actually
+     * transitioned (idempotent on already-terminal rows).
+     *
+     * Default no-op so existing JVM test fakes don't have to implement
+     * it; production wiring is in `BinderDiaryRepository`.
+     */
+    suspend fun dismissCluster(clusterId: String): Boolean = false
 }

@@ -46,7 +46,7 @@ class DiaryClusterSuggestionCardTest {
     )
 
     @Test
-    fun fullTapFlow_renderToActingToActedWithCitations() {
+    fun surfacedToActingTransition() {
         var summarizeTaps = 0
         var dismissTaps = 0
 

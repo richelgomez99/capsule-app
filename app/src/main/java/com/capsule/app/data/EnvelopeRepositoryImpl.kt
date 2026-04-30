@@ -819,6 +819,12 @@ class EnvelopeRepositoryImpl(
         observerJobs.remove(key)?.cancel()
     }
 
+    // Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss.
+    override fun markClusterDismissed(clusterId: String): Boolean {
+        val repo = clusterRepository ?: return false
+        return runBlocking { repo.markDismissed(clusterId) }
+    }
+
     private fun ClusterCardModel.toParcel(): com.capsule.app.data.ipc.ClusterCardParcel =
         com.capsule.app.data.ipc.ClusterCardParcel(
             clusterId = clusterId,

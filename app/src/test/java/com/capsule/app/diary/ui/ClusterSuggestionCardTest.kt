@@ -3,7 +3,6 @@ package com.capsule.app.diary.ui
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -230,12 +229,16 @@ class ClusterSuggestionCardTest {
         )
         assertFalse(state.retryExhausted)
 
-        // Defensive: nothing else on Failed should leak a body string —
-        // the renderer hard-codes the apologetic line per FR-010-024.
-        // If this changes, T147 needs to update.
-        @Suppress("USELESS_IS_CHECK")
-        assertNull(
-            (state as? ClusterSuggestionCardState.Surfaced)?.bodyText,
+        // Defensive: Failed is a distinct sealed-class arm, not a Surfaced
+        // variant. The renderer hard-codes the apologetic line per
+        // FR-010-024; if a future refactor accidentally collapses Failed
+        // into Surfaced, this guard catches it before the card starts
+        // rendering bodyText where there is none. Use reflective
+        // `KClass.isInstance` so the smart-cast doesn't elide the check.
+        val typed: ClusterSuggestionCardState = state
+        assertFalse(
+            "Failed must not be assignable to Surfaced",
+            ClusterSuggestionCardState.Surfaced::class.isInstance(typed),
         )
     }
 }
