@@ -46,20 +46,51 @@ commit 1. (DEP-002 + DEP-003 resolved 2026-04-29; D4 amendment target =
   (`displayLarge`, `displayMedium`, `bodyLarge`, `bodyMedium`,
   `captionMonoSmall`). Match the size/tracking values from
   `design/visual-refit-2026-04-29/project/orbit-tokens.jsx`.
-- [ ] **T015-003** [P0c1] Subset Cormorant Garamond (Regular + Italic) to
-  Latin Extended-A glyph set (license: SIL OFL). Place TTFs under
+- [ ] **T015-003** [P0c1] Subset Cormorant Garamond TTFs to **Latin +
+  Latin Extended-A** glyph set only (drop Cyrillic + Vietnamese per
+  spec.md Clarifications 2026-04-29 / research.md §7 item 5; license:
+  SIL OFL). Run `pyftsubset` (or equivalent — `fonttools`) on the
+  upstream TTFs **before** wiring into `res/font/`. Produce per-weight
+  files matching research.md §3 (Display serif stack uses Regular +
+  Italic): `cormorant_garamond_regular.ttf` and
+  `cormorant_garamond_italic.ttf`. Place subset TTFs under
   `app/src/main/res/font/`. Add `font_cormorant_garamond.xml`
-  `<font-family>` declaration.
+  `<font-family>` declaration referencing both weights. If a future
+  weight (e.g. Semibold / Semibold-Italic) is added, subset it with the
+  same Latin + Latin Extended-A coverage and follow the same naming
+  (`_semibold.ttf`, `_semibold_italic.ttf`).
 - [ ] **T015-004** [P0c1] Add Inter Regular + JetBrains Mono Regular under
   `app/src/main/res/font/` with matching `<font-family>` XMLs.
 - [ ] **T015-005** [P0c1] Add `RuntimeFlags.useNewVisualLanguage: Boolean`
   in `RuntimeFlags.kt`, default `false`. Add `@Volatile` per existing
-  convention. KDoc: "spec 015 — gates the Quiet Almanac visual refit."
+  convention. KDoc: "spec 015 — gates the Quiet Almanac visual refit.
+  Read **once at Activity create** and propagated via `LocalRuntimeFlags`
+  Composition Local (FR-015-001 / spec.md Edge Cases — flag mid-session).
+  Refit composables MUST NOT observe this flag reactively (no `Flow` /
+  `State` / `mutableStateOf` observation); a mid-session flip has no
+  visible effect until next Activity recreate."
+- [ ] **T015-005A** [P0c1] Scaffold `LocalRuntimeFlags` Composition Local
+  in the same commit as T015-005. Add
+  `app/src/main/java/com/capsule/app/RuntimeFlagsCompositionLocal.kt`
+  exposing `val LocalRuntimeFlags = staticCompositionLocalOf<RuntimeFlags>
+  { error("RuntimeFlags not provided") }` (or equivalent
+  `compositionLocalOf` if a sensible default is preferred). Wire the
+  hosting Activity (`MainActivity` / equivalent) so it reads
+  `RuntimeFlags.useNewVisualLanguage` **once** in `onCreate` (or via the
+  existing flag holder) and provides it through
+  `CompositionLocalProvider(LocalRuntimeFlags provides …)` around the
+  root Composable. Assert in code review that **no `collectAsState`,
+  `Flow`, or reactive observer reads `useNewVisualLanguage`** (FR-015-001).
 - [ ] **T015-006** [P0c1] Verify gates: `:app:compileDebugKotlin`,
-  `:app:lintDebug` (no new warnings), `:build-logic:lint:test` (8/8 green).
+  `:app:lintDebug` (baseline = exactly two pre-existing warnings —
+  `MissingClass ActionsSettingsActivity` AND
+  `RemoveWorkManagerInitializer`; any third warning fails the gate per
+  SC-002 / spec.md Clarifications 2026-04-29),
+  `:build-logic:lint:test` (8/8 green).
 - [ ] **T015-007** [P0c1] **CLAIM REVIEW GATE**: commit, push, request
-  Claude review. **DO NOT START Commit 2 until approval is recorded in the
-  next commit body or the branch's review log.**
+  Claude review. Claude review verifies all Phase-0 properties 1–5 per
+  research.md §8. **DO NOT START Commit 2 until approval is recorded in
+  the next commit body or the branch's review log.**
 
 ### Commit 2 — `feat(015): OrbitMark + OrbitWordmark + MonoLabel + IntentChip + SourceGlyph`
 
@@ -97,10 +128,14 @@ commit 1. (DEP-002 + DEP-003 resolved 2026-04-29; D4 amendment target =
 - [ ] **T015-013** [P0c2] Add Compose `@Preview` for each primitive
   (own-file). Verify they render in the IDE preview pane.
 - [ ] **T015-014** [P0c2] Verify gates: `:app:compileDebugKotlin`,
-  `:app:lintDebug` (no new warnings), `:build-logic:lint:test` (still 8/8 —
-  these primitives are not gated by the AgentVoiceMark detector).
+  `:app:lintDebug` (baseline = exactly two pre-existing warnings —
+  `MissingClass ActionsSettingsActivity` AND
+  `RemoveWorkManagerInitializer`; any third warning fails per SC-002),
+  `:build-logic:lint:test` (still 8/8 — these primitives are not gated by
+  the AgentVoiceMark detector).
 - [ ] **T015-015** [P0c2] **CLAIM REVIEW GATE**: commit, push, request
-  Claude review. **DO NOT START Commit 3 until approval.**
+  Claude review. Claude review verifies all Phase-0 properties 1–5 per
+  research.md §8. **DO NOT START Commit 3 until approval.**
 
 ### Commit 3 — `feat(015): consolidate AgentVoiceMark to brand amber + spec 010 D4 amendment`
 
@@ -135,14 +170,41 @@ commit 1. (DEP-002 + DEP-003 resolved 2026-04-29; D4 amendment target =
   shape, not color.
   ```
 - [ ] **T015-019** [P0c3] Verify gates: `:app:compileDebugKotlin`,
-  `:app:lintDebug` (no new warnings), `:build-logic:lint:test` (8/8 green
-  with updated expectations).
+  `:app:lintDebug` (baseline = exactly two pre-existing warnings —
+  `MissingClass ActionsSettingsActivity` AND
+  `RemoveWorkManagerInitializer`; any third warning fails per SC-002),
+  `:build-logic:lint:test` (8/8 green with updated expectations).
 - [ ] **T015-020** [P0c3] **CLAIM REVIEW GATE**: commit, push, request
-  Claude review. **Phase 0 complete on approval.**
+  Claude review. Claude review verifies all Phase-0 properties 1–5 per
+  research.md §8. **Phase 0 complete on approval.**
 
 **Phase 0 Checkpoint**: 3 commits landed, each Claude-approved. Tokens +
 primitives + AgentVoiceMark consolidation in tree. Flag OFF. Zero behavior
-change. Phase 1 may begin.
+change. Phase 1 may begin once T015-VERIFY-CONTRAST clears.
+
+### Phase 0 — post-commit verification (must pass before Phase 1)
+
+- [ ] **T015-VERIFY-CONTRAST** [P0] Compute WCAG contrast ratios for
+  the two body-size text-on-bg pairs called out in spec.md Edge Cases /
+  Clarifications 2026-04-29:
+  1. `cream` (`#f3ead8`) on `bgDeep` (`#080b14`) at **14sp regular**
+     (matches `bodyLarge` per research.md §3) — MUST hit ≥ 4.5:1 (WCAG
+     AA normal text).
+  2. `brandAccent` (`#e8b06a`) on `bgDeep` (`#080b14`) at **14sp
+     regular** — MUST hit ≥ 4.5:1.
+  Use any standard contrast calculator (Material Theme Builder, WebAIM,
+  scripted relative-luminance check). Record both ratios in research.md
+  §3 (append a small "Contrast verification" sub-section).
+  **If brand-accent fails 4.5:1 at 14sp**: amend research.md §3 to
+  document that **accent-italic spans render only at ≥ 18sp display
+  tier**. Either (a) bump `displaySmall` from 17sp → 18sp for italic
+  spans, OR (b) restrict italic to `displayMedium` / `displayLarge`
+  only. Update the KDoc on `CapsuleType` in `Type.kt` accordingly so
+  future authors don't apply accent italic at body sizes that rely on
+  WCAG AA "large text" 3:1 relaxation (forbidden per spec.md Edge
+  Cases). Land the doc/code update as a follow-up commit on Phase 0
+  (gated by Claude review against research.md §8 Phase-0 properties).
+  If both pairs pass 4.5:1, record the ratios and proceed.
 
 ---
 
@@ -163,10 +225,27 @@ scratch on the new tokens. Coordinates with spec 002 Phase 11 Block 8.
   proposal section. ViewModel calls UNCHANGED from spec 002 expectations.
 - [ ] **T015-103** [P1] Add Compose `@Preview` for both surfaces with
   representative fixture data.
-- [ ] **T015-104** [P1] Verify gates: compile + lint clean; existing cluster
-  tests (if any) green; manual flag-ON screenshot vs JSX reference recorded
-  in PR body.
+- [ ] **T015-104** [P1] Verify gates per research.md §8 Phase 1+
+  properties:
+  (1) `:app:compileDebugKotlin` clean.
+  (2) `:app:lintDebug` baseline = exactly two pre-existing warnings
+      (`MissingClass ActionsSettingsActivity` AND
+      `RemoveWorkManagerInitializer`); any third warning fails per
+      SC-002.
+  (3) **Grep gate**: zero `Color(0xFF...)` hex literals in the cluster
+      screen's files (`grep -rn 'Color(0xFF' app/src/main/java/com/capsule/app/<cluster-screen-paths>`
+      returns nothing).
+  (4) **Grep gate**: zero inline `FontFamily(Font(R.font.` in the
+      cluster screen's files.
+  (5) Existing cluster logic-flow tests (if any) green on flag-OFF.
+  (6) **`git diff --stat origin/main...HEAD`** shows zero touches outside
+      the in-scope cluster screen's files (off-phase screens untouched).
+  (7) **PR-attached screenshot** of the refitted cluster screen (flag-ON)
+      embedded in the PR body for Claude structural review against
+      `design/visual-refit-2026-04-29/project/orbit-screen-cluster.jsx`
+      and `orbit-screen-diary.jsx` (cluster card section).
 - [ ] **T015-105** [P1] **REVIEW GATE** per commit landed in Phase 1.
+  Claude review verifies all Phase 1+ properties 1–7 per research.md §8.
   Phase 1 may span multiple commits; each gated.
 
 **Phase 1 Checkpoint**: cluster surfaces refitted. Ready for Phase 2.
@@ -186,9 +265,25 @@ app-icon dots. Navigation/data contracts unchanged.
   `design/visual-refit-2026-04-29/project/orbit-screen-diary.jsx::DiaryDay`.
 - [ ] **T015-203** [P2] Replace existing app-icon dots in diary rows with
   `SourceGlyph` consumption. Preserve content-descriptions and test tags.
-- [ ] **T015-204** [P2] Verify existing instrumented diary tests green on
-  flag-OFF. Add flag-ON manual screenshot or screenshot test.
-- [ ] **T015-205** [P2] **REVIEW GATE** per commit.
+- [ ] **T015-204** [P2] Verify gates per research.md §8 Phase 1+
+  properties:
+  (1) `:app:compileDebugKotlin` clean.
+  (2) `:app:lintDebug` baseline = exactly two pre-existing warnings
+      (`MissingClass ActionsSettingsActivity` AND
+      `RemoveWorkManagerInitializer`); any third warning fails per
+      SC-002.
+  (3) **Grep gate**: zero `Color(0xFF...)` hex literals in diary screen
+      files.
+  (4) **Grep gate**: zero inline `FontFamily(Font(R.font.` in diary
+      screen files.
+  (5) Existing instrumented diary tests green on flag-OFF.
+  (6) **`git diff --stat`** shows zero touches outside diary in-scope
+      files (off-phase screens untouched).
+  (7) **PR-attached screenshot** of the refitted diary screen (flag-ON)
+      embedded in the PR body for Claude structural review against
+      `design/visual-refit-2026-04-29/project/orbit-screen-diary.jsx`.
+- [ ] **T015-205** [P2] **REVIEW GATE** per commit. Claude review
+  verifies all Phase 1+ properties 1–7 per research.md §8.
 
 **Phase 2 Checkpoint**: diary refitted, tests green.
 
@@ -212,9 +307,26 @@ danger row with refined wording.
   (Pixel 8 Pro+, Galaxy S24+, capable hardware)"). NOT "Pixel 8 and up."
 - [ ] **T015-304** [P3] Constitutional copy review against Principles IX
   + X recorded in commit body.
-- [ ] **T015-305** [P3] Verify settings instrumented tests green on
-  flag-OFF.
-- [ ] **T015-306** [P3] **REVIEW GATE** per commit.
+- [ ] **T015-305** [P3] Verify gates per research.md §8 Phase 1+
+  properties:
+  (1) `:app:compileDebugKotlin` clean.
+  (2) `:app:lintDebug` baseline = exactly two pre-existing warnings
+      (`MissingClass ActionsSettingsActivity` AND
+      `RemoveWorkManagerInitializer`); any third warning fails per
+      SC-002.
+  (3) **Grep gate**: zero `Color(0xFF...)` hex literals in settings
+      screen files.
+  (4) **Grep gate**: zero inline `FontFamily(Font(R.font.` in settings
+      screen files.
+  (5) Existing settings instrumented tests green on flag-OFF.
+  (6) **`git diff --stat`** shows zero touches outside settings
+      in-scope files (off-phase screens untouched).
+  (7) **PR-attached screenshot** of the refitted settings screen
+      (flag-ON) embedded in the PR body for Claude structural review
+      against
+      `design/visual-refit-2026-04-29/project/orbit-screen-settings.jsx`.
+- [ ] **T015-306** [P3] **REVIEW GATE** per commit. Claude review
+  verifies all Phase 1+ properties 1–7 per research.md §8.
 
 **Phase 3 Checkpoint**: settings refitted; danger-row wording approved
 against constitution.
@@ -243,10 +355,26 @@ to its own spec; drafted in parallel; Phase 4 simply waits.)
   latest visible." (LD-003).
 - [ ] **T015-405** [P4] If "for someone" wires to a contact picker, scope
   the picker UI to a separate sub-task; keep behind the same flag.
-- [ ] **T015-406** [P4] Verify capture instrumented tests green on
-  flag-OFF; on flag-ON, save path persists envelope correctly per
-  DEP-001 status.
-- [ ] **T015-407** [P4] **REVIEW GATE** per commit.
+- [ ] **T015-406** [P4] Verify gates per research.md §8 Phase 1+
+  properties:
+  (1) `:app:compileDebugKotlin` clean.
+  (2) `:app:lintDebug` baseline = exactly two pre-existing warnings
+      (`MissingClass ActionsSettingsActivity` AND
+      `RemoveWorkManagerInitializer`); any third warning fails per
+      SC-002.
+  (3) **Grep gate**: zero `Color(0xFF...)` hex literals in capture sheet
+      files.
+  (4) **Grep gate**: zero inline `FontFamily(Font(R.font.` in capture
+      sheet files.
+  (5) Capture instrumented tests green on flag-OFF; on flag-ON, save
+      path persists envelope correctly per DEP-001 status.
+  (6) **`git diff --stat`** shows zero touches outside capture-sheet
+      in-scope files (off-phase screens untouched).
+  (7) **PR-attached screenshot** of the refitted capture sheet (flag-ON)
+      embedded in the PR body for Claude structural review against
+      `design/visual-refit-2026-04-29/project/orbit-screen-capture.jsx`.
+- [ ] **T015-407** [P4] **REVIEW GATE** per commit. Claude review
+  verifies all Phase 1+ properties 1–7 per research.md §8.
 
 **Phase 4 Checkpoint**: capture sheet refitted; LD-002 intent set live in
 UI; LD-003 wording purged.
