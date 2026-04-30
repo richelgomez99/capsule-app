@@ -7,7 +7,11 @@ import com.capsule.app.audit.AuditLogWriter
 import com.capsule.app.data.EnvelopeStorageBackend
 import com.capsule.app.data.LocalRoomBackend
 import com.capsule.app.data.OrbitDatabase
+import com.capsule.app.data.dao.AuditLogDao
+import com.capsule.app.data.dao.ClusterDao
 import com.capsule.app.data.model.AuditAction
+import com.capsule.app.data.model.ClusterState
+import org.json.JSONObject
 
 /**
  * T089a — daily retention worker that hard-purges envelopes soft-deleted
@@ -36,6 +40,16 @@ class SoftDeleteRetentionWorker(
         val cutoff = clock() - retentionWindowMillis()
         return runCatching {
             purge(backend, auditWriter, cutoff)
+            // T153 — orphan-cluster cascade. Runs after the envelope
+            // hard-purge so the surviving-member count reflects the
+            // post-purge state. Failures here do NOT poison the
+            // envelope purge above (already committed); they just
+            // schedule a retry of the whole worker.
+            cascadeOrphanClusters(
+                clusterDao = db.clusterDao(),
+                auditLogDao = db.auditLogDao(),
+                auditWriter = auditWriter
+            )
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { Result.retry() }
@@ -74,6 +88,51 @@ class SoftDeleteRetentionWorker(
                 backend.hardDeleteTransaction(id, audit)
             }
             return ids.size
+        }
+
+        /**
+         * T153 — cluster orphan cascade. Spec 002 FR-037 'the card never
+         * lies': when a cluster's surviving-member count drops below
+         * 3 (because envelopes were soft-deleted or archived), the
+         * cluster row must be transitioned to DISMISSED with reason
+         * `members_below_minimum` so the diary slot stops surfacing it.
+         *
+         * Runs **after** the envelope hard-purge above so the count
+         * reflects post-purge reality. Idempotent: terminal clusters
+         * are already filtered by [ClusterDao.findOrphaned] (which
+         * scopes to non-terminal states), so a second pass is a no-op.
+         *
+         * Returns the number of clusters dismissed in this pass.
+         */
+        suspend fun cascadeOrphanClusters(
+            clusterDao: ClusterDao,
+            auditLogDao: AuditLogDao,
+            auditWriter: AuditLogWriter,
+            now: Long = clock()
+        ): Int {
+            val orphanedIds = clusterDao.findOrphaned()
+            orphanedIds.forEach { clusterId ->
+                val current = clusterDao.byId(clusterId) ?: return@forEach
+                clusterDao.updateState(
+                    id = clusterId,
+                    newState = ClusterState.DISMISSED.name,
+                    stateChangedAt = now,
+                    dismissedAt = now
+                )
+                auditLogDao.insert(
+                    auditWriter.build(
+                        action = AuditAction.CLUSTER_ORPHANED,
+                        description = "Cluster auto-dismissed (members below minimum)",
+                        envelopeId = null,
+                        extraJson = JSONObject().apply {
+                            put("clusterId", clusterId)
+                            put("priorState", current.state.name)
+                            put("reason", "members_below_minimum")
+                        }.toString()
+                    )
+                )
+            }
+            return orphanedIds.size
         }
     }
 }

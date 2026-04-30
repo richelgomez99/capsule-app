@@ -8,6 +8,8 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.capsule.app.ai.LlmProviderDiagnostics
+import com.capsule.app.RuntimeFlags
+import com.capsule.app.ai.NanoLlmProvider
 
 /**
  * T097 (spec/003) — debug-build only.
@@ -77,9 +79,68 @@ class DiagnosticsActivity : Activity() {
         root.addView(statusView)
         root.addView(toggleButton)
         root.addView(resetButton)
+
+        // T157 — cluster diagnostics block (debug-only). Three controls:
+        //   1. Toggle cluster emit          — flips RuntimeFlags.clusterEmitEnabled.
+        //   2. Force-emit synthetic cluster — flips RuntimeFlags.devClusterForceEmit.
+        //   3. Reset cluster modelLabel lock — restores Nano.MODEL_LABEL.
+        // Status text refreshed after each press so the device-under-test
+        // reflects the live state of the kill switches.
+        val clusterTitle = TextView(this).apply {
+            text = "Cluster diagnostics"
+            textSize = 16f
+            setPadding(0, 32, 0, 16)
+        }
+
+        val clusterStatus = TextView(this).apply {
+            textSize = 13f
+            setPadding(0, 0, 0, 24)
+        }
+
+        fun refreshClusterStatus() {
+            val emit = RuntimeFlags.clusterEmitEnabled
+            val force = RuntimeFlags.devClusterForceEmit
+            val lock = RuntimeFlags.clusterModelLabelLock
+            clusterStatus.text = buildString {
+                append("clusterEmitEnabled=$emit\n")
+                append("devClusterForceEmit=$force\n")
+                append("modelLabelLock=$lock")
+            }
+        }
+
+        val toggleClusterEmit = Button(this).apply {
+            text = "Toggle cluster emit"
+            setOnClickListener {
+                RuntimeFlags.clusterEmitEnabled = !RuntimeFlags.clusterEmitEnabled
+                refreshClusterStatus()
+            }
+        }
+
+        val toggleDevForceEmit = Button(this).apply {
+            text = "Force-emit synthetic cluster"
+            setOnClickListener {
+                RuntimeFlags.devClusterForceEmit = !RuntimeFlags.devClusterForceEmit
+                refreshClusterStatus()
+            }
+        }
+
+        val resetModelLabelLock = Button(this).apply {
+            text = "Reset cluster modelLabel lock"
+            setOnClickListener {
+                RuntimeFlags.clusterModelLabelLock = NanoLlmProvider.MODEL_LABEL
+                refreshClusterStatus()
+            }
+        }
+
+        root.addView(clusterTitle)
+        root.addView(clusterStatus)
+        root.addView(toggleClusterEmit)
+        root.addView(toggleDevForceEmit)
+        root.addView(resetModelLabelLock)
         setContentView(root)
 
         refreshStatus()
+        refreshClusterStatus()
     }
 
     private fun refreshStatus() {
