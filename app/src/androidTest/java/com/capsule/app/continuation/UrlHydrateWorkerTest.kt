@@ -246,6 +246,10 @@ class UrlHydrateWorkerTest {
         @Throws(RemoteException::class)
         override fun fetchPublicUrl(url: String, timeoutMs: Long): FetchResultParcel =
             onFetch(url, timeoutMs)
+
+        override fun callLlmGateway(
+            request: com.capsule.app.net.ipc.LlmGatewayRequestParcel?
+        ): com.capsule.app.net.ipc.LlmGatewayResponseParcel? = null
     }
 
     private class FakeLlm(private val text: String) : LlmProvider {
