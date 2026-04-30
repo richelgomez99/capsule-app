@@ -210,4 +210,11 @@ interface IEnvelopeRepository {
     // hides stale clusters instantly).
     void observeClusters(IClusterObserver observer);
     void stopObservingClusters(IClusterObserver observer);
+
+    // Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss for the
+    // diary cluster card. Transitions the cluster row to DISMISSED with
+    // dismissedAt = now and writes a CLUSTER_DISMISSED audit row. Idempotent:
+    // calling on an already-terminal cluster is a no-op (returns false).
+    // Returns true iff a row was actually transitioned.
+    boolean markClusterDismissed(String clusterId);
 }

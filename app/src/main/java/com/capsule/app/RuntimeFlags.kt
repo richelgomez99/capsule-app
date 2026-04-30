@@ -57,14 +57,39 @@ object RuntimeFlags {
 
     /**
      * Spec 013 (FR-013-002) — runtime kill switch for cluster card
-     * surfacing read by `ClusterDetectionWorker`. Default `true`. When
-     * flipped to `false` the worker still computes clusters locally but
-     * suppresses any UI emission until the user re-enables it.
+     * surfacing read by `ClusterDetectionWorker` + `ClusterRepository`.
+     *
+     * **Default `false`** (Block 10 review FU#2). Until Block 6 lands
+     * the `ClusterSummariser` and the cluster-card interactivity
+     * handlers are wired beyond no-ops, surfacing a SURFACED cluster
+     * to a real user produces a dead-end (tap Summarize → nothing
+     * happens). The safe production default is therefore *off* — the
+     * detection worker still computes locally for telemetry, but no
+     * UI emission reaches the Diary slot until either:
+     *  1. the user explicitly opts in (Settings — future surface), or
+     *  2. a debug build flips [devClusterForceEmit] for stage demos.
      *
      * SharedPreferences key (Block 10 surface): `"cluster.emit_enabled"`.
      */
     @Volatile
     @JvmStatic
-    var clusterEmitEnabled: Boolean = true
+    var clusterEmitEnabled: Boolean = false
+        internal set
+
+    /**
+     * Phase 11 Block 10 (T156/T157) — debug-only stage-demo override.
+     * When `true` AND the build is `:debug`, the diagnostics surface
+     * has written a hand-curated synthetic cluster row that should be
+     * surfaced even if [clusterEmitEnabled] would otherwise suppress
+     * it. Production builds never see this flag flipped.
+     *
+     * SharedPreferences key (Block 10 surface): `"cluster.dev_force_emit"`.
+     * Mutator surface lives in `:debug` source set per the same model
+     * as 003 T097: flag *checks* live in main code (single volatile
+     * read); *writes* are debug-only.
+     */
+    @Volatile
+    @JvmStatic
+    var devClusterForceEmit: Boolean = false
         internal set
 }

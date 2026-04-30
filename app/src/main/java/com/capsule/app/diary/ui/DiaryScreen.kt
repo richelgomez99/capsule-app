@@ -416,7 +416,12 @@ private fun DayContentView(
                         state = cardState,
                         onSummarize = { /* T-future: wired when ClusterSummariser lands (Block 6/10) */ },
                         onOpenAll = { /* T-future: cluster detail navigation */ },
-                        onDismiss = { /* T-future: ClusterRepository.markDismissed */ },
+                        // Block 10 review FU#2 — Dismiss is wired end-to-end:
+                        // VM -> BinderDiaryRepository -> IEnvelopeRepository
+                        // .markClusterDismissed -> ClusterRepository.markDismissed
+                        // -> DAO updateState + audit row. The data-layer flow
+                        // re-emits without this row so the card vanishes.
+                        onDismiss = { viewModel.onDismissCluster(cluster.clusterId) },
                         onRetry = { /* T-future: re-enqueue summary */ },
                         reduceMotion = reduceMotion,
                     )
