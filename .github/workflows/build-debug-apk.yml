@@ -1,0 +1,130 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches:
+      - main
+      - 015-visual-refit
+      - 016-intent-set-migration
+      - 'phase-11-*'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write  # required by softprops/action-gh-release on tag push
+
+jobs:
+  build:
+    name: assembleDebug + tests + lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so the Release body can list commits since previous tag
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Materialize local.properties
+        # CI-only file; locally the developer's existing local.properties wins
+        # because we never commit one to git. Both paths converge on the same
+        # BuildConfig.* outputs read by app/build.gradle.kts.
+        # NOTE: The canonical prompt named the keys `debug.supabase.url` and
+        # `debug.supabase.anon.key`. The actual keys read by app/build.gradle.kts
+        # are `supabase.url` and `supabase.publishable.key` (publishable key is
+        # the public anon key — see comment in app/build.gradle.kts T014-019b).
+        # Using the names the build actually reads so sign-in flows work.
+        run: |
+          cat > local.properties <<EOF
+          sdk.dir=$ANDROID_HOME
+          cloud.gateway.url=${{ secrets.CLOUD_GATEWAY_URL || 'https://orbit-llm-gateway.vercel.app/llm' }}
+          supabase.url=${{ secrets.DEBUG_SUPABASE_URL }}
+          supabase.publishable.key=${{ secrets.DEBUG_SUPABASE_ANON_KEY }}
+          EOF
+
+      - name: Compile debug Kotlin
+        run: ./gradlew :app:compileDebugKotlin --stacktrace
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Run custom lint module tests
+        run: ./gradlew :build-logic:lint:test --stacktrace
+
+      - name: Run :app:lintDebug
+        run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Assemble debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: orbit-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.sha }}
+          path: |
+            app/build/reports/tests/testDebugUnitTest/**
+            app/build/reports/lint-results-debug.html
+            build-logic/lint/build/reports/tests/test/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Stage APK for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cp app/build/outputs/apk/debug/app-debug.apk orbit-debug.apk
+
+      - name: Compute changelog since previous tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: changelog
+        run: |
+          current_tag="${GITHUB_REF#refs/tags/}"
+          prev_tag="$(git describe --tags --abbrev=0 "${current_tag}^" 2>/dev/null || true)"
+          {
+            echo "## Orbit alpha — ${current_tag}"
+            echo
+            echo "Built by [workflow run ${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
+            echo
+            echo "### Install (Linux + S24 Ultra)"
+            echo '```'
+            echo "adb install -r orbit-debug.apk"
+            echo '```'
+            echo
+            echo "Full sideload steps: see [INSTALL-ALPHA.md](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${current_tag}/INSTALL-ALPHA.md)."
+            echo
+            if [ -n "$prev_tag" ]; then
+              echo "### Commits since ${prev_tag}"
+              echo
+              git log --pretty=format:'- %s (%h)' "${prev_tag}..${current_tag}"
+            else
+              echo "### Commits"
+              echo
+              git log --pretty=format:'- %s (%h)' -20 "${current_tag}"
+            fi
+          } > release-body.md
+          echo "body_path=release-body.md" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: orbit-debug.apk
+          body_path: ${{ steps.changelog.outputs.body_path }}
+          draft: false
+          prerelease: false

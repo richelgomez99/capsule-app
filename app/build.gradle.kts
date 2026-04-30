@@ -97,6 +97,19 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // DEBUG ONLY — same credentials as Android default debug keystore;
+            // CANNOT produce a Play Store-installable APK. Committed to git so
+            // every CI build signs with the same key, letting `adb install -r`
+            // replace prior installs without INSTALL_FAILED_UPDATE_INCOMPATIBLE.
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -110,6 +123,7 @@ android {
             buildConfigField("String", "DEBUG_SUPABASE_PASSWORD", "\"\"")
         }
         debug {
+            signingConfig = signingConfigs.getByName("debug")
             // T014-019b — debug-only test credentials for one-shot seeding from
             // DebugSupabaseSeed. Empty by default; populate in local.properties.
             buildConfigField("String", "DEBUG_SUPABASE_EMAIL", "\"$debugSupabaseEmail\"")
