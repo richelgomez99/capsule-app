@@ -79,8 +79,11 @@ object DateTimeParser {
 
     private fun parseIso(text: String, zone: ZoneId): ZonedDateTime? {
         // Offset/zoned form first: "2026-05-04T15:30:00Z", "...+02:00".
+        // Convert to caller zone so wall-clock fields reflect the device's
+        // timezone (e.g. UTC 20:00 → 16:00 EDT). Same instant, different
+        // zone — DST-safe via java.time.
         runCatching {
-            return ZonedDateTime.parse(text)
+            return ZonedDateTime.parse(text).withZoneSameInstant(zone)
         }.onFailure { /* fall through */ }
         runCatching {
             val odt = java.time.OffsetDateTime.parse(text)

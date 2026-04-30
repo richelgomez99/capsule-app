@@ -341,6 +341,12 @@ class ClusterEvalRunner : Activity() {
                 summaryReports.put(report)
             }
 
+            // FU#1: embedding-text length distribution from the
+            // `hydrated_text` corpus fed to `embed()` for this fixture.
+            val hydratedTexts = (0 until envelopesJson.length()).map { i ->
+                envelopesJson.getJSONObject(i).optString("hydrated_text")
+            }
+
             JSONObject().apply {
                 put("status", "OK")
                 put("clustersFormed", formed)
@@ -352,6 +358,7 @@ class ClusterEvalRunner : Activity() {
                     "tokenOverlapJaccard",
                     bestOverlap ?: JSONObject.NULL
                 )
+                put("embeddingTextLengthDistribution", tokenLengthStats(hydratedTexts))
             }
         } catch (t: Throwable) {
             Log.w(LOG_TAG, "fixture detection failed: ${fixture.optString("id")}", t)
@@ -418,11 +425,15 @@ class ClusterEvalRunner : Activity() {
             val envs = fx.optJSONArray("envelopes") ?: continue
 
             val vectors = ArrayList<FloatArray>(envs.length())
+            val embeddedTexts = ArrayList<String>(envs.length())
             for (i in 0 until envs.length()) {
                 val text = envs.getJSONObject(i).optString("hydrated_text")
                 if (text.isBlank()) continue
                 val emb = try { llm.embed(text) } catch (_: Throwable) { null }
-                if (emb != null) vectors += emb.vector
+                if (emb != null) {
+                    vectors += emb.vector
+                    embeddedTexts += text
+                }
             }
 
             val measured = pairwiseMinCosine(vectors)
@@ -456,6 +467,7 @@ class ClusterEvalRunner : Activity() {
                     put("measured_cosine_min", measured ?: JSONObject.NULL)
                     put("delta", delta ?: JSONObject.NULL)
                     put("breaches_positive_floor", floorBreach)
+                    put("embeddingTextLengthDistribution", tokenLengthStats(embeddedTexts))
                 }
             )
         }
@@ -584,11 +596,38 @@ class ClusterEvalRunner : Activity() {
         }
     }
 
+    /**
+     * Block 12 FU#2: lowercase split on non-alphanumeric; drop stopwords;
+     * keep tokens of length ≥ 2 so corpus-relevant terms (AI, LLM, OS,
+     * UX, API, iOS, M1) survive into Jaccard scoring. Stopword list is
+     * intentionally minimal — add only on measured noise.
+     */
     private fun tokenise(text: String): Set<String> =
         text.lowercase(Locale.US)
             .split(Regex("[^a-z0-9]+"))
-            .filter { it.length >= 3 }
+            .filter { it.length >= 2 && it !in STOPWORDS }
             .toSet()
+
+    /**
+     * Block 12 FU#1: per-fixture embedding-text length distribution
+     * (token count of every `hydrated_text` actually fed to `embed()`).
+     * Lets the May-4 operator triage a `calibration_floor_breach` as a
+     * fixture-quality issue (single short envelope → noisy embedding)
+     * vs. a Nano regression at a glance.
+     */
+    private fun tokenLengthStats(texts: List<String>): JSONObject {
+        val counts = texts.map { tokenise(it).size }
+        return JSONObject().apply {
+            put("samples", counts.size)
+            put("min", counts.minOrNull() ?: JSONObject.NULL)
+            put("max", counts.maxOrNull() ?: JSONObject.NULL)
+            put(
+                "mean",
+                if (counts.isEmpty()) JSONObject.NULL
+                else counts.average()
+            )
+        }
+    }
 
     private fun jaccard(a: Set<String>, b: Set<String>): Double {
         if (a.isEmpty() && b.isEmpty()) return 1.0
@@ -629,5 +668,15 @@ class ClusterEvalRunner : Activity() {
     companion object {
         private const val LOG_TAG = "ClusterEvalRunner"
         private const val FIXTURE_DIR = "fixtures/clusters"
+
+        // Block 12 FU#2: keep this list small. Add words only when
+        // measured corpus noise demands it — every entry is a possible
+        // signal sink in the token-overlap Jaccard score.
+        private val STOPWORDS: Set<String> = setOf(
+            "a", "an", "the", "is", "of", "to", "in", "and", "or",
+            "but", "on", "at", "for", "with", "as", "by", "from",
+            "that", "this", "it", "be", "are", "was", "were", "we",
+            "our", "they", "their", "its", "so", "if", "not", "no",
+        )
     }
 }

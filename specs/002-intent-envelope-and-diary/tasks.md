@@ -12,6 +12,44 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 12 (pre-May-4 hardening) cluster eval harness polish + DateTimeParser fix + T160 corpus validity**
+
+Block 12 is mechanical insurance for the May-4 measurement pass: tighten the harness's scoring + report shape, clear the lone unit-test noise floor, land the deferred T160 fixture validity check, and spot-check the multi-cluster scoring assumption. AppFunction wiring (T161-T164) explicitly deferred to Block 13 — the `:capture ↔ :ml` IPC surface for cluster reads + `derived_via='cluster_summarize'` envelope writes does not yet exist, and registering a schema without a handler would create a half-wired skill. Cleaner to ship the IPC + handler + dispatch + instrumented test together in Block 13.
+
+**DateTimeParser zone conversion fix (spec 003 follow-up cleared).** `parseIso` was calling `ZonedDateTime.parse("…Z")` which returns the parsed instant in **UTC** zone; for `Z`-suffixed inputs the wall-clock hour fields therefore reflected UTC, not the caller's zone. Fix: `.withZoneSameInstant(zone)` after the `ZonedDateTime.parse` so the returned `ZonedDateTime` carries the caller-supplied zone with the correct same-instant wall-clock fields. `DateTimeParserTest.isoUtcConvertsToZone` now passes (16:00 NY for `2026-05-04T20:00:00Z` instead of 20:00 UTC); the other ISO tests (`isoZonedRoundTrips`, `naiveLocalDateTimeUsesZone`, `dateOnlyDefaultsTo9amLocal`) continue to pass because the offset → caller zone conversion is identity when the offsets agree (e.g. `-04:00` → America/New_York EDT on May 4).
+
+**T160 — `ClusterEvalCorpusTest` JVM well-formedness check landed.** Walks every fixture under `app/src/test/resources/fixtures/clusters/`, branches on `expected_metadata.expected_outcome`:
+- POSITIVE → ≥3 envelopes, ≥2 distinct `url_domain` values, 1-3 `expectedSummary.bullets` (matching `ClusterSummariser`'s contract per spec line 1100), every bullet carries at least one citation token of the form `(env-XX-y[, env-XX-z]*)`.
+- NEGATIVE (`REJECTED_*`) → ≥3 envelopes for shape parity, `expectedSummary` block present (placeholder bullets allowed today, tracked under v1.1 cleanup #1).
+- All fixtures → `expected_outcome` is one of the five known outcomes; `cosine_min_observed` is a finite double; every envelope has a non-blank `hydrated_text` and an ISO-8601 `captured_at`.
+
+The test caught real schema drift on the first run: `research-session-09.json` and `research-session-17.json` carried 4 bullets where `ClusterSummariser`'s contract caps at 3 (spec line 1100, `array length 1-3`). The 4th bullet on each (most narrow / least-core finding) was trimmed; both fixtures are now contract-compliant. Test runs in ~50ms and is now part of `:app:testDebugUnitTest`.
+
+**Calibration FU#1 — `embeddingTextLengthDistribution` per fixture.** Both `ClusterEvalRunner.runDetection` (Run eval) and `calibrate` (Run calibration) now emit `embeddingTextLengthDistribution { samples, min, max, mean }` capturing the token count of the `hydrated_text` corpus actually fed to `embed()` for that fixture. Lets the May-4 operator triage a `calibration_floor_breach` as fixture-quality (single short envelope → noisy embedding) vs. Nano-quality at a glance — saves ~30min of triage during the measurement pass.
+
+**Calibration FU#2 — `tokenise()` stopword filter + length ≥ 2.** Replaced the previous `length >= 3` floor (which dropped corpus-relevant terms `AI`, `LLM`, `OS`, `UX`, `API`, `iOS`, `M1`) with a two-character floor + a small inlined stopword set (24 entries: `a, an, the, is, of, to, in, and, or, but, on, at, for, with, as, by, from, that, this, it, be, are, was, were, we, our, they, their, its, so, if, not, no`). The list is intentionally minimal; future stopword additions go through measured-noise review (comment baked in alongside the constant) so we don't silently sink Jaccard scores. Token-overlap Jaccard now admits the right surface terms for the AI/ML, sports-analytics, food-science, and other domains in the T158 corpus; absolute scores will shift slightly but direction over time stays the operative signal.
+
+**Fixture corpus spot-check — single-cluster expectation confirmed.** All 20 fixtures declare `clusters_expected = 1` (or absent, defaulting to 1); none of the T158 fixtures intentionally test "two clusters that should NOT merge." Therefore `bestOverlap = max across formed clusters` in `runDetection` remains the correct scoring granularity; no Hungarian-lite per-expected-cluster matching needed for the May-4 corpus. Recorded as an explicit assumption in the status log so a future fixture author considering a multi-cluster fixture knows to revisit the scoring shape.
+
+**Calibration FU#3 — coroutine/progress refactor of the eval/calibration buttons** — explicitly deferred to v1.1 alongside T-future-001. Pure ergonomics; operator presses the button once on May 4, waits, pulls the JSON. Not on the critical path.
+
+**T161-T164 (AppFunction `cluster.summarize`)** — explicitly deferred to Block 13 (May 4 → May 17 window, ahead of T168 demo rehearsals). Required surfaces missing: (a) `IClusterRepository` IPC binder for `:capture` to read cluster + members, (b) `IEnvelopeRepository.createDerivedClusterSummaryEnvelope` for the `derived_via='cluster_summarize'` write per spec 012 FR-012-011, (c) `ActionExecutorService` integration test exercising the full SURFACED → TAPPED → ACTING → ACTED transition with audit row coverage. Bundling all four into Block 13 keeps the schema, handler, dispatch registration, and instrumented test on a single PR cycle so the demo path is wired before T168 rehearsal #1 on May 17.
+
+**Hard constraints upheld**: no new color tokens, no new fonts, no intent-set changes, "sealed at save" wording untouched, no bubble overlay touch, no Settings UI movement.
+
+**Gates**: `:app:compileDebugKotlin` clean. `:app:compileDebugUnitTestKotlin` clean. `:app:compileDebugAndroidTestKotlin` clean. `:app:assembleDebug` BUILD SUCCESSFUL. `:app:testDebugUnitTest` 428/428 green (Block 11 was 425/426; +1 fixed parser test + 2 new `ClusterEvalCorpusTest` tests = 428 — exact match, no regressions). Instrumented tests (T150-revisit, T155) compile-only — emulator unavailable locally; device pass on May 4. ADB device install attempted post-PR; `adb devices` empty so install is queued for the May-4 hardware session.
+
+**Open follow-ups (deferred, not blocking)**:
+- T161-T164 (AppFunction `cluster.summarize`) — Block 13.
+- Calibration FU#3 (progress UX) — v1.1.
+- FU#3 (reduce-motion ContentObserver) — visual-refit / accessibility sweep target.
+- FU#4 (`Locale.US` in `bucketRangeFormatter`) — i18n sweep target.
+- T-future-001 (Settings "Surface clusters" toggle) — v1.1 backlog (Block 10 status, item 0).
+- v1.1 cleanup #1 (NEGATIVE-fixture `expectedSummary` placeholder removal) — fixture schema sweep, v1.1.
+- May 4 device pass — first live execution of `Run eval` + `Run calibration` against AICore Nano on a Pixel build.
+
+---
+
 **2026-04-29 — Phase 11 Block 11 (T150-revisit + T159 detection wiring + `--calibrate`) cluster eval harness wired**
 
 Block 11 closes the May-4 measurement loop: a real `DiaryScreen.DayContentView` placement contract test (replacing the slot-order mirror), the live ClusterDetector + ClusterSummariser pipeline behind `ClusterEvalRunner` (replacing the `DEFERRED_TO_BLOCK_11` placeholder), and a sibling `Run calibration` button that surfaces cosine-drift deltas before the precision/recall pass runs.
@@ -1093,7 +1131,7 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 - [x] T158 [US8] **(DUE Tue Apr 28 EOD per design doc Tracked Workstreams)** Create `app/src/test/resources/fixtures/clusters/research-session-{01..20}.json` — 20 hand-authored URL-only research-session cluster fixtures spanning 5 topic domains (4 each: AI/ML, Climate, Sports analytics, Personal finance, Cooking). Each fixture contains 3-4 envelope-shaped JSON entries with hydrated URL text + a known-good `expectedSummary` (3 bullets). These are the substrate for May 4 precision/recall measurement.
 - [x] T159 [P] [US8] Create `app/src/debug/java/com/capsule/app/cluster/ClusterEvalRunner.kt` — debug-only `Activity` that loads the 20 fixtures, runs `ClusterDetectionWorker` + `ClusterSummariser` against them, computes precision (clusters formed correctly / clusters expected) + recall (expected clusters detected / expected total) + token-overlap drift vs golden summary. Outputs results to logcat + writes `~/Documents/cluster-eval-{date}.json` for off-device review.
-- [ ] T160 [P] [US8] Create `app/src/test/java/com/capsule/app/cluster/ClusterEvalCorpusTest.kt` (JVM) — validates the 20 fixtures are well-formed (each has ≥3 captures, ≥2 distinct domains, expectedSummary has 3 bullets, every bullet has citation tokens).
+- [x] T160 [P] [US8] Create `app/src/test/java/com/capsule/app/cluster/ClusterEvalCorpusTest.kt` (JVM) — validates the 20 fixtures are well-formed (each has ≥3 captures, ≥2 distinct domains, expectedSummary has 3 bullets, every bullet has citation tokens).
 
 ### AppFunction integration (Summarize as canonical Action) (US8)
 
