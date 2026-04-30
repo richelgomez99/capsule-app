@@ -264,6 +264,22 @@ class DiaryViewModel(
         return day == isoDate
     }
 
+    // ---- Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss ----
+
+    /**
+     * User tapped the cluster-card "Dismiss" affordance. Fire-and-forget;
+     * the cluster row transitions to DISMISSED on disk and the data-layer
+     * flow re-emits with the row removed, so the card vanishes from the
+     * Diary slot on the next collection. IPC errors are swallowed (the
+     * card is best-effort UI; the worst case is a stale visual that
+     * disappears on the next page change).
+     */
+    fun onDismissCluster(clusterId: String) {
+        scope.launch {
+            runCatching { repository.dismissCluster(clusterId) }
+        }
+    }
+
     override fun onCleared() {
         currentJob?.cancel()
         undoExpiryJob?.cancel()

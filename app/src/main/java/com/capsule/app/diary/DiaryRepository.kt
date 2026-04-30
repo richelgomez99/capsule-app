@@ -86,4 +86,15 @@ interface DiaryRepository {
      * with no clusters and the cluster slot stays hidden.
      */
     fun observeClusters(): Flow<List<ClusterCardModel>> = flowOf(emptyList())
+
+    /**
+     * Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss for
+     * a cluster card. Transitions the cluster row to DISMISSED and
+     * audits `CLUSTER_DISMISSED`. Returns `true` iff a row was actually
+     * transitioned (idempotent on already-terminal rows).
+     *
+     * Default no-op so existing JVM test fakes don't have to implement
+     * it; production wiring is in `BinderDiaryRepository`.
+     */
+    suspend fun dismissCluster(clusterId: String): Boolean = false
 }

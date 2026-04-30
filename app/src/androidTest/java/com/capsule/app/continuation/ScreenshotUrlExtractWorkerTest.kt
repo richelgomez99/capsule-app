@@ -202,6 +202,7 @@ class ScreenshotUrlExtractWorkerTest {
         override fun observeClusters(observer: com.capsule.app.data.ipc.IClusterObserver) = error("unused")
 
         override fun stopObservingClusters(observer: com.capsule.app.data.ipc.IClusterObserver) = error("unused")
+        override fun markClusterDismissed(clusterId: String?): Boolean = error("unused")
         override fun extractActionsForEnvelope(envelopeId: String): String = error("unused")
         override fun createDerivedTodoEnvelope(
             parentEnvelopeId: String,

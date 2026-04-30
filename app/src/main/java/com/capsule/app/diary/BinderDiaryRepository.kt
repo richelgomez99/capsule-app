@@ -264,4 +264,10 @@ class BinderDiaryRepository(
             members = members
         )
     }
+
+    // Phase 11 Block 10 (T148 review FU#2) — user-driven dismiss.
+    override suspend fun dismissCluster(clusterId: String): Boolean {
+        val repo = connect()
+        return withContext(Dispatchers.IO) { repo.markClusterDismissed(clusterId) }
+    }
 }

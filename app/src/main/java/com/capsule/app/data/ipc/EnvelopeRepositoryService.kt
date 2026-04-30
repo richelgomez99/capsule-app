@@ -95,7 +95,13 @@ class EnvelopeRepositoryService : Service() {
             actionExtractor = actionExtractor,
             weeklyDigestDelegate = weeklyDigestDelegate,
             // Spec 002 Phase 11 Block 5 / T135 — cluster read surface.
-            clusterRepository = ClusterRepository(db.clusterDao())
+            // Block 10 (T148 review FU#2): repository now owns dismiss
+            // writes too, so wire the audit log + clock for CLUSTER_DISMISSED rows.
+            clusterRepository = ClusterRepository(
+                clusterDao = db.clusterDao(),
+                auditLogDao = db.auditLogDao(),
+                auditWriter = auditWriter
+            )
         )
         // T088 — same service binder pool exposes the audit-log surface on a
         // distinct intent action so the Settings / audit viewer process can
