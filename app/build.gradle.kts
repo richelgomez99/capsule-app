@@ -125,6 +125,22 @@ android {
         aidl = true
         buildConfig = true
     }
+
+    // T159 — expose the 20 hand-authored cluster fixtures (T158) to the
+    // debug-only ClusterEvalRunner Activity via the AssetManager. The
+    // fixtures live under `app/src/test/resources/fixtures/clusters/`
+    // for unit-test loading; the same directory is mounted as a debug
+    // assets root so the runner can `assets.open("fixtures/clusters/...")`.
+    // Release APKs do NOT include the test/resources tree.
+    sourceSets {
+        getByName("debug") {
+            assets.srcDirs(
+                "src/debug/assets",
+                "src/test/resources"
+            )
+        }
+    }
+
     lint {
         abortOnError = true
     }

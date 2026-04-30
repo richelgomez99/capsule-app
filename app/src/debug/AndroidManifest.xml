@@ -25,5 +25,19 @@
             </intent-filter>
         </activity>
 
+        <!-- T159 (spec/002 Block 10) — debug-only cluster eval harness. Same
+             security envelope as DiagnosticsActivity above: lives in :debug,
+             never merged into release. Launcher category lets the operator
+             run the eval from the device launcher on May 4. -->
+        <activity
+            android:name="com.capsule.app.cluster.ClusterEvalRunner"
+            android:exported="true"
+            android:label="Capsule Cluster Eval">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
     </application>
 </manifest>
