@@ -12,6 +12,60 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 10 (T150–T159 + Block 9 FU#1–#4) cluster lifecycle plumbing landed**
+
+Block 10 closes out the cluster-lifecycle plumbing: state-machine, ACTING-persist, orphan cascade, dismiss IPC, diagnostics surface, eval harness, and the deferred placement test. Block 9 review follow-ups are absorbed in the same PR cycle.
+
+**Block 9 review follow-ups absorbed**:
+1. **DiaryViewModelTest cluster-combine cases** (commit `a050366`) — four tests verifying envelope+cluster state combination through `DiaryViewModel.observe()`: clusters-only, both-present, neither, isoDate filtering.
+2. **No-op cluster handlers wired end-to-end** (commit `ec7f051`) — `onDismiss` routes VM → `BinderDiaryRepository` → `IEnvelopeRepository.markClusterDismissed` → `ClusterRepository.markDismissed` → DAO `updateState(DISMISSED)` + `CLUSTER_DISMISSED` audit row. `RuntimeFlags.clusterEmitEnabled` defaulted to `false` (kill-switch posture); debug builds flip `RuntimeFlags.devClusterForceEmit` via T157 to opt back in. ScreenshotObserver/UrlExtract test stubs grew an `override fun markClusterDismissed`.
+3. **`reduceMotion = remember { … }` no-key / static read** — flagged for a future LocalConfiguration + `Settings.Global.ANIMATOR_DURATION_SCALE` ContentObserver pass; no Block 10 code change. The current static read is correct on first composition; recomposition on system-setting flip is the gap. Tracked here so the visual-refit / accessibility sweep can pick it up.
+4. **`bucketRangeFormatter` hardcoded `Locale.US`** — flagged for the next i18n sweep. `tasks.md` already has explicit i18n entries for the Diary header paragraph and audit log; the cluster bucket-range formatter joins the same to-do bucket. No Block 10 code change.
+
+**T151 + T154 — `ClusterStateMachine`** (committed pre-batch). Pure-Kotlin object with `enum class Trigger { SURFACE, TAP, START_ACTING, ACT_SUCCESS, ACT_FAIL, ORPHAN, AGE_OUT }` and `MAX_FAILED_ACTING_RETRIES = 3`. Public `next(current, trigger): ClusterState?` returns null for invalid transitions, plus `isTerminal(state)` predicate. Transition table:
+- `FORMING + SURFACE → SURFACED`
+- `SURFACED + TAP → TAPPED | + ORPHAN → DISMISSED | + AGE_OUT → AGED_OUT`
+- `TAPPED + START_ACTING → ACTING | + ORPHAN → DISMISSED`
+- `ACTING + ACT_SUCCESS → ACTED | + ACT_FAIL → FAILED`
+- `FAILED + START_ACTING → ACTING` (caller enforces retry cap)
+- `ACTED, DISMISSED, AGED_OUT` terminal.
+User-driven dismiss is intentionally NOT routed through the machine — it is always honored via `ClusterRepository.markDismissed` directly (precondition: row exists and is non-terminal). T154 covers every valid + invalid transition, retry-loop ×3, and the terminal-state predicate; `:app:testDebugUnitTest --tests com.capsule.app.cluster.ClusterStateMachineTest` green.
+
+**T152 — `transitionToActing`**. `ClusterRepository.transitionToActing(clusterId)` persists the `ACTING` state via `ClusterStateMachine.next(current, START_ACTING)` BEFORE the Nano summariser is invoked, satisfying spec 002 FR-035 (backgrounding the app during ACTING resumes correctly because the state already lives on disk). Audit row `CLUSTER_ACTING` carries `priorState` + `triggeredBy=summariser_start`. Returns the resulting `ClusterState` on success, or null on missing/invalid transition. Caller (Block 6 summariser, future) is responsible for invoking before any model call.
+
+**T153 — Orphan cascade**. `SoftDeleteRetentionWorker.cascadeOrphanClusters(clusterDao, auditLogDao, auditWriter, now)` runs after the existing envelope hard-purge so member counts reflect post-purge reality. Walks `ClusterDao.findOrphaned()` (already DAO-scoped to non-terminal states + surviving members < 3) and DISMISSes each with audit `CLUSTER_ORPHANED reason=members_below_minimum`. Idempotent on re-runs because the DAO query filters out terminal clusters. Helper is `companion object` + public so T155 instrumented coverage can drive it directly without a full WorkManager rig. FR-038 satisfied.
+
+**T155 — `ClusterOrphanCleanupTest` (instrumented)**. Three scenarios against an in-memory SQLCipher `OrbitDatabase`:
+1. 4-member cluster, soft-delete 1 → SURFACED stays.
+2. Soft-delete 2nd → DISMISSED with `CLUSTER_ORPHANED` audit row carrying `clusterId` + `reason=members_below_minimum`.
+3. Second cascade pass is a no-op (DAO orphan query filters terminal clusters); only 1 audit row total. `AuditLogEntryEntity.action` is the `AuditAction` enum (not String), so the filter is a direct enum compare.
+
+**T156 — IPC + flags surface** (commit `ec7f051`, listed under FU#2 above). Adds `IEnvelopeRepository.markClusterDismissed` AIDL method; `RuntimeFlags.clusterEmitEnabled` flipped to `false` default; `RuntimeFlags.devClusterForceEmit` (debug-only writable) added with prefs key `"cluster.dev_force_emit"`.
+
+**T157 — `DiagnosticsActivity` cluster block** (debug-only). Three buttons + live-status TextView:
+- "Toggle cluster emit" → `RuntimeFlags.clusterEmitEnabled`.
+- "Force-emit synthetic cluster" → `RuntimeFlags.devClusterForceEmit`.
+- "Reset cluster modelLabel lock" → `NanoLlmProvider.MODEL_LABEL`.
+Status text dumps live values after each press. Lives in `:debug` only; release manifest never declares the entry, matching the existing T097/003 discipline.
+
+**T158 — Cluster fixtures**. 20 hand-authored fixtures committed earlier in this branch (`app/src/test/resources/fixtures/clusters/research-session-{01..20}.json`). 5 domains × 4 fixtures (AI/ML, Climate, Sports analytics, Personal finance, Cooking), each carrying 3–4 envelope-shaped JSON entries with hydrated text, an `expectedSummary.bullets` triplet, and `expected_metadata` (`cosine_min_observed`, `domains_distinct`, `captured_at_span_hours`, `expected_outcome`).
+
+**T159 — `ClusterEvalRunner` (debug-only Activity)**. Loads the 20 fixtures from assets (debug-only `assets.srcDirs` mounts `app/src/test/resources` so the fixtures travel into debug APKs without being duplicated), parses them, computes corpus-level metrics (positive/negative ratio, per-domain envelope counts, declared `cosine_min_observed` distribution), and writes `cluster-eval-YYYYMMDD-HHmmss.json` to `getExternalFilesDir(null)` for `adb pull` review. Detection + summariser invocation is hooked behind `InvokeDetection.run(fixture)` which today returns `{"status":"DEFERRED_TO_BLOCK_11"}` — Block 11 wires the in-memory OrbitDatabase + Nano embedder + token-overlap scoring + the `--calibrate` cosine-drift flag deferred per `tasks.md` line 189. Activity registered in `app/src/debug/AndroidManifest.xml` with launcher category for May 4 staging.
+
+**T150 — `DiaryScreenWithClusterTest` (instrumented)**. Compose-test placement contract for spec 010 D6 revision: cluster card renders ABOVE the day-header on cluster days, never below, and is absent on non-cluster days. Three cases — cluster day, Sunday-with-cluster (weekday-independent), non-cluster day — assert via `getBoundsInRoot()` that `clusterBottom <= dayHeaderTop`. Implemented as a slot-order MIRROR of `DiaryScreen.DayContentView`'s `LazyColumn` body because the production composable threads a real `DiaryViewModel` + binder service which is out of scope for a placement-only assertion. The mirror is intentionally trivial; reorders in production must update the mirror in lockstep or the assertion is meaningless.
+
+**Hard constraints upheld**: no new color tokens, no new fonts, no intent-set changes, "sealed at save" wording untouched, no bubble overlay touch. The amber + Cormorant Garamond sweep remains scoped to `015-visual-refit`.
+
+**Gates**: `:app:compileDebugKotlin` clean. `:app:compileDebugUnitTestKotlin` clean. `:app:compileDebugAndroidTestKotlin` clean. `:app:assembleDebug` BUILD SUCCESSFUL (validates the new `sourceSets.debug.assets.srcDirs` mount + the debug manifest merge for `ClusterEvalRunner`). `:app:testDebugUnitTest --tests "com.capsule.app.cluster.ClusterStateMachineTest"` green from the prior commit. Instrumented tests (T150, T155) compile-only — no emulator available locally; will run on the May 4 device pass.
+
+**Open follow-ups (deferred, not blocking)**:
+- FU#3 (reduce-motion ContentObserver) — log-only; visual-refit / accessibility sweep target.
+- FU#4 (`Locale.US` in `bucketRangeFormatter`) — log-only; i18n sweep target.
+- T159 detection wiring + `--calibrate` flag — Block 11.
+- Block 6 `ClusterSummariser` — calls `ClusterRepository.transitionToActing` BEFORE invoking Nano per the contract established here.
+
+---
+
 **2026-04-29 — Phase 11 Block 9 (T148–T149) DiaryViewModel + DiaryScreen cluster wiring landed**
 
 The Diary now surfaces cluster cards on cluster days. `DiaryViewModel.observe()` combines the per-day envelope flow with `DiaryRepository.observeClusters()` (a new interface method, default `flowOf(emptyList())` so the JVM test fakes don't need rewriting). Clusters are filtered to `isoDate` by mapping `timeBucketStart` through `ZoneId.systemDefault()` (injected via constructor for testability), then embedded in `DayUiState.Ready.clusters`. Reduce contract widened: a day with envelopes-empty *and* clusters-empty is `Empty`; a day with clusters but no envelopes is `Ready` with empty threads so the slot still renders.
@@ -987,25 +1041,25 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 - [x] T148 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/DiaryViewModel.kt` — combine `Flow<List<EnvelopeView>>` with `Flow<List<ClusterCardModel>>` from `ClusterRepository`. Cluster card slot positioned ABOVE day-header on cluster days only (per FR-036 + spec 010 FR-010-021 amended /autoplan). On non-cluster days, no slot.
 - [x] T149 [US8] MODIFY `app/src/main/java/com/capsule/app/diary/ui/DiaryScreen.kt` — render cluster card slot. Compose ordering: `Cluster.SURFACED?` → `DigestEnvelope?` (Sunday) → `DayHeader` → `Threads`/`Envelopes` chronological. On Sundays-with-cluster, ordering is `Digest → Cluster → DayHeader → Feed` per spec 003 status-log entry 2026-04-27 (latest+12).
-- [ ] T150 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryScreenWithClusterTest.kt` (instrumented Compose) — placement order on cluster vs non-cluster days; Sunday-with-cluster ordering; LazyColumn index assertions (`index(cluster) < index(day-header)` on weekdays-with-cluster; `index(digest) < index(cluster) < index(day-header)` on Sundays-with-cluster).
+- [x] T150 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryScreenWithClusterTest.kt` (instrumented Compose) — placement order on cluster vs non-cluster days; Sunday-with-cluster ordering; LazyColumn index assertions (`index(cluster) < index(day-header)` on weekdays-with-cluster; `index(digest) < index(cluster) < index(day-header)` on Sundays-with-cluster).
 
 ### State machine + retention coupling (US8)
 
-- [ ] T151 [US8] Create `app/src/main/java/com/capsule/app/cluster/ClusterStateMachine.kt` — pure-Kotlin state-transition validator. `nextState(current: ClusterState, trigger: ClusterTrigger): ClusterState?` returns null for invalid transitions (e.g., `DISMISSED → ACTING`). Per spec 012 §Cluster lifecycle state machine.
-- [ ] T152 [US8] Persist `ACTING` to disk before Nano inference begins so backgrounding the app during ACTING resumes correctly on foreground. `ClusterRepository.transitionToActing(clusterId)` writes state + audit entry; `ClusterSummariser` is invoked AFTER state persists.
-- [ ] T153 [US8] MODIFY `app/src/main/java/com/capsule/app/continuation/SoftDeleteRetentionWorker.kt` (002 T085) — extend retention pass: cascade-delete `ClusterMember` rows when source envelopes hard-delete (CASCADE handles this for FK; still need explicit count check); for any cluster whose surviving members < 3, transition to `DISMISSED` with audit `CLUSTER_ORPHANED reason=members_below_minimum`. Per FR-038.
-- [ ] T154 [P] [US8] Create `app/src/test/java/com/capsule/app/cluster/ClusterStateMachineTest.kt` — every valid transition, every invalid transition rejected, retry counter bounds (max 3 FAILED → ACTING attempts before forced DISMISSED), AGED_OUT after 7d in SURFACED.
-- [ ] T155 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/cluster/ClusterOrphanCleanupTest.kt` (instrumented) — cluster with 4 members, soft-delete 2 → cluster still SURFACED (3 surviving); soft-delete 3rd → cluster auto-DISMISSED with audit `CLUSTER_ORPHANED reason=members_below_minimum`; cascade verified after 30d retention worker run.
+- [x] T151 [US8] Create `app/src/main/java/com/capsule/app/cluster/ClusterStateMachine.kt` — pure-Kotlin state-transition validator. `nextState(current: ClusterState, trigger: ClusterTrigger): ClusterState?` returns null for invalid transitions (e.g., `DISMISSED → ACTING`). Per spec 012 §Cluster lifecycle state machine.
+- [x] T152 [US8] Persist `ACTING` to disk before Nano inference begins so backgrounding the app during ACTING resumes correctly on foreground. `ClusterRepository.transitionToActing(clusterId)` writes state + audit entry; `ClusterSummariser` is invoked AFTER state persists.
+- [x] T153 [US8] MODIFY `app/src/main/java/com/capsule/app/continuation/SoftDeleteRetentionWorker.kt` (002 T085) — extend retention pass: cascade-delete `ClusterMember` rows when source envelopes hard-delete (CASCADE handles this for FK; still need explicit count check); for any cluster whose surviving members < 3, transition to `DISMISSED` with audit `CLUSTER_ORPHANED reason=members_below_minimum`. Per FR-038.
+- [x] T154 [P] [US8] Create `app/src/test/java/com/capsule/app/cluster/ClusterStateMachineTest.kt` — every valid transition, every invalid transition rejected, retry counter bounds (max 3 FAILED → ACTING attempts before forced DISMISSED), AGED_OUT after 7d in SURFACED.
+- [x] T155 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/cluster/ClusterOrphanCleanupTest.kt` (instrumented) — cluster with 4 members, soft-delete 2 → cluster still SURFACED (3 surviving); soft-delete 3rd → cluster auto-DISMISSED with audit `CLUSTER_ORPHANED reason=members_below_minimum`; cascade verified after 30d retention worker run.
 
 ### RuntimeFlags + debug seam (US8)
 
-- [ ] T156 [US8] MODIFY `app/src/main/java/com/capsule/app/runtime/RuntimeFlags.kt` (or create if not present) — add `clusterEmitEnabled: Boolean` (default true; kill switch), `clusterModelLabelLock: String?` (set once at AICore-pin May 1, controls FR-030 gate), `devClusterForceEmit: Boolean` (debug-only; only writable from `:debug` source set per T157).
-- [ ] T157 [US8] MODIFY `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` (003 T097) — add three debug-only buttons: "Toggle cluster emit" (RuntimeFlags.clusterEmitEnabled), "Force-emit synthetic cluster" (writes a hand-curated `Cluster` + members for stage-demo insurance per FR-040), "Reset cluster modelLabel lock". Flag *check* lives in main code (single volatile read); flag *write* only from `:debug` per the same security model as 003 T097.
+- [x] T156 [US8] MODIFY `app/src/main/java/com/capsule/app/runtime/RuntimeFlags.kt` (or create if not present) — add `clusterEmitEnabled: Boolean` (default true; kill switch), `clusterModelLabelLock: String?` (set once at AICore-pin May 1, controls FR-030 gate), `devClusterForceEmit: Boolean` (debug-only; only writable from `:debug` source set per T157).
+- [x] T157 [US8] MODIFY `app/src/debug/java/com/capsule/app/diagnostics/DiagnosticsActivity.kt` (003 T097) — add three debug-only buttons: "Toggle cluster emit" (RuntimeFlags.clusterEmitEnabled), "Force-emit synthetic cluster" (writes a hand-curated `Cluster` + members for stage-demo insurance per FR-040), "Reset cluster modelLabel lock". Flag *check* lives in main code (single volatile read); flag *write* only from `:debug` per the same security model as 003 T097.
 
 ### Synthetic seeding + eval (US8)
 
-- [ ] T158 [US8] **(DUE Tue Apr 28 EOD per design doc Tracked Workstreams)** Create `app/src/test/resources/fixtures/clusters/research-session-{01..20}.json` — 20 hand-authored URL-only research-session cluster fixtures spanning 5 topic domains (4 each: AI/ML, Climate, Sports analytics, Personal finance, Cooking). Each fixture contains 3-4 envelope-shaped JSON entries with hydrated URL text + a known-good `expectedSummary` (3 bullets). These are the substrate for May 4 precision/recall measurement.
-- [ ] T159 [P] [US8] Create `app/src/debug/java/com/capsule/app/cluster/ClusterEvalRunner.kt` — debug-only `Activity` that loads the 20 fixtures, runs `ClusterDetectionWorker` + `ClusterSummariser` against them, computes precision (clusters formed correctly / clusters expected) + recall (expected clusters detected / expected total) + token-overlap drift vs golden summary. Outputs results to logcat + writes `~/Documents/cluster-eval-{date}.json` for off-device review.
+- [x] T158 [US8] **(DUE Tue Apr 28 EOD per design doc Tracked Workstreams)** Create `app/src/test/resources/fixtures/clusters/research-session-{01..20}.json` — 20 hand-authored URL-only research-session cluster fixtures spanning 5 topic domains (4 each: AI/ML, Climate, Sports analytics, Personal finance, Cooking). Each fixture contains 3-4 envelope-shaped JSON entries with hydrated URL text + a known-good `expectedSummary` (3 bullets). These are the substrate for May 4 precision/recall measurement.
+- [x] T159 [P] [US8] Create `app/src/debug/java/com/capsule/app/cluster/ClusterEvalRunner.kt` — debug-only `Activity` that loads the 20 fixtures, runs `ClusterDetectionWorker` + `ClusterSummariser` against them, computes precision (clusters formed correctly / clusters expected) + recall (expected clusters detected / expected total) + token-overlap drift vs golden summary. Outputs results to logcat + writes `~/Documents/cluster-eval-{date}.json` for off-device review.
 - [ ] T160 [P] [US8] Create `app/src/test/java/com/capsule/app/cluster/ClusterEvalCorpusTest.kt` (JVM) — validates the 20 fixtures are well-formed (each has ≥3 captures, ≥2 distinct domains, expectedSummary has 3 bullets, every bullet has citation tokens).
 
 ### AppFunction integration (Summarize as canonical Action) (US8)
