@@ -12,7 +12,30 @@
 
 ## Status / Adjustments log
 
-**2026-04-29 — Phase 11 Block 6 (T137–T140) ClusterSummariser + PromptSanitizer landed**
+**2026-04-29 — Phase 11 Block 7 (T141–T144) Agent-voice UI primitives + lint guard landed**
+
+All three Compose primitives needed by `ClusterSuggestionCard` (Block 8) are now in place, along with the lint guard that keeps the ✦ glyph reserved to agent-voice surfaces.
+
+**`CapsulePalette` (Colors.kt)** — first concrete design-token surface for spec 002. Defines six tokens — `paper`, `ink`, `inkStrong`, `inkFaint`, `rule`, **`inkAccentCluster`** — in mirrored Light + Dark `Tokens` data classes. The new `--ink-accent-cluster` (muted indigo: `#3D4A6B` light / `#8FA3CC` dark) is reserved exclusively for `AgentVoiceMark` per spec 010 D4. `current(dark)` returns the active palette so primitives can opt in without a Material theme dependency. (More tokens will be added incrementally as primitives need them; this block scopes only what `ClusterSuggestionCard` requires.)
+
+**`AgentVoiceMark` (T141)** — `Canvas` + `Path` renderer for the ✦ glyph. 12-vertex polygon with alternating outer/inner radii (inner = 0.42 × outer, tuned for visual balance), oriented with the top point straight up. No font dependency — pixel-stable across devices, identical mechanism to the planned `WaxSeal`. Default tint `--ink-accent-cluster`; default size 14 sp.
+
+**`ClusterActionRow` (T142)** — 1-3 inline action labels separated by 1 px vertical hairline rules. Geist 14 sp regular (font-family inherited from theme so we don't fork). 48 dp tap targets via `defaultMinSize` + 16 dp horizontal padding. No Material button chrome (no rounded fill, no ripple background). Disabled actions render in `--ink-faint` and ignore taps. `require(actions.size in 1..3)` enforces the FR-010-020 cap at the API boundary.
+
+**`NoAgentVoiceMarkOutsideAgentSurfacesDetector` (T143)** — issue id `OrbitNoAgentVoiceMarkOutsideAgentSurfaces`, severity ERROR, category CORRECTNESS. Triggers on both call expressions and reference expressions named `AgentVoiceMark`. Allow-list (file simple-names without `.kt`): `ClusterSuggestionCard`, `AgentVoiceMark` (the primitive's own file may reference itself for previews). Registered in `OrbitIssueRegistry`. Adding a new agent-voice surface is a deliberate decision — the allow-list edit lives in the same PR.
+
+**`NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest` (T144)** — 3 cases: allowed in `ClusterSuggestionCard.kt`, flagged in `EnvelopeRow.kt`, allowed in the primitive's own file. `allowMissingSdk()` matches the existing `NoHttpClientOutsideNetDetectorTest` pattern.
+
+**Gates:** `:app:compileDebugKotlin` clean. `:build-logic:lint:test` 8/8 green (5 existing + 3 new). `:app:lintDebug` shows only a pre-existing `MissingClass` for `ActionsSettingsActivity` (unrelated, predates Phase 11).
+
+**Out of scope (deferred):**
+- `ClusterSuggestionCard.kt` itself — Block 8 (T145–T147).
+- ViewModel + DiaryScreen wiring — Block 9 (T148–T149).
+- Compose snapshot harness for the primitives — covered transitively by `ClusterSuggestionCardTest` (T146).
+
+---
+
+
 
 Foreground cluster summarisation now has a complete inference path with prompt-injection defence in depth, per FR-031–FR-035 and /autoplan E2 (DEMO-DAY-CRITICAL). Block 6 closes the model-side gap; Block 7's UI primitives + Block 9's Diary integration consume the surface unchanged.
 
@@ -905,10 +928,10 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 ### ClusterSuggestionCard primitive (US8)
 
-- [ ] T141 [P] [US8] Create `app/src/main/java/com/capsule/app/ui/primitives/AgentVoiceMark.kt` — `Canvas.drawPath` rendering of `✦` six-pointed star at 14 sp in `--ink-accent-cluster` per spec 010 FR-010-019 (locked /autoplan). `--ink-accent-cluster` token added to `app/src/main/java/com/capsule/app/ui/tokens/Colors.kt`. Lint-protected — see T143.
-- [ ] T142 [P] [US8] Create `app/src/main/java/com/capsule/app/ui/primitives/ClusterActionRow.kt` — Geist 14 sp regular sentence-case, content-column left-aligned, `--ink` color, vertical hairline rules `│` separators (1 px `--rule`), 48 dp touch targets, no Material button chrome. Per spec 010 FR-010-020 (revised /autoplan).
-- [ ] T143 [P] [US8] Create `build-logic/lint/src/main/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetector.kt` — sibling to `NoHttpClientOutsideNetDetector`. Allow-list initially `["ClusterSuggestionCard.kt"]`. Failing build prevents accidental ✦ usage outside agent surfaces.
-- [ ] T144 [P] [US8] Create `build-logic/lint/src/test/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest.kt` — verifies allow-list enforcement.
+- [x] T141 [P] [US8] Create `app/src/main/java/com/capsule/app/ui/primitives/AgentVoiceMark.kt` — `Canvas.drawPath` rendering of `✦` six-pointed star at 14 sp in `--ink-accent-cluster` per spec 010 FR-010-019 (locked /autoplan). `--ink-accent-cluster` token added to `app/src/main/java/com/capsule/app/ui/tokens/Colors.kt`. Lint-protected — see T143.
+- [x] T142 [P] [US8] Create `app/src/main/java/com/capsule/app/ui/primitives/ClusterActionRow.kt` — Geist 14 sp regular sentence-case, content-column left-aligned, `--ink` color, vertical hairline rules `│` separators (1 px `--rule`), 48 dp touch targets, no Material button chrome. Per spec 010 FR-010-020 (revised /autoplan).
+- [x] T143 [P] [US8] Create `build-logic/lint/src/main/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetector.kt` — sibling to `NoHttpClientOutsideNetDetector`. Allow-list initially `["ClusterSuggestionCard.kt"]`. Failing build prevents accidental ✦ usage outside agent surfaces.
+- [x] T144 [P] [US8] Create `build-logic/lint/src/test/java/com/capsule/lint/NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest.kt` — verifies allow-list enforcement.
 - [ ] T145 [US8] Create `app/src/main/java/com/capsule/app/diary/ui/ClusterSuggestionCard.kt` — Compose primitive rendering all 6 states per spec 010 FR-010-024. Uses `AgentVoiceMark` + `ClusterActionRow`. Internal padding: 16 dp top/bottom, content-column horizontal alignment per design.md §4.5.1. Citation foot rendering: Berkeley Mono 10 sp `--ink-faint` reference list. Dismissal trace renders post-dismissal at the same Diary position. Fade-in respects reduce-motion.
 - [ ] T146 [P] [US8] Create `app/src/test/java/com/capsule/app/diary/ui/ClusterSuggestionCardTest.kt` (Compose snapshot) — all 6 states (SURFACED, ACTING ellipsis cycling, FAILED retry, STALE timestamp, DISMISSED-trace, SLOW-NETWORK). Both palettes × both font scales (100% + 130%).
 - [ ] T147 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/diary/DiaryClusterSuggestionCardTest.kt` (instrumented Compose) — full tap flow: render → tap Summarize → ACTING transition → result render with citations; dismiss during ACTING is no-op; dismiss after ACTED leaves trace persisted across navigation; swipe-to-dismiss equivalence; reduce-motion respected; per spec 010 FR-010-023.
