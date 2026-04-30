@@ -5,6 +5,16 @@
 **Status**: Draft (planning only)
 **Input**: Rename four shipped intent labels to the v2 set, add `READ_LATER`, add nullable `ContactRef` for `FOR_SOMEONE`, retire the user-facing `"Unassigned"` copy in favour of `"—"`. No row recategorization beyond renames; sentinel `AMBIGUOUS` retained but removed from the chip palette.
 
+## Clarifications
+
+### Session 2026-04-29
+
+- Q: Should `ContactRef` be 3 nullable cols on `intent_envelope` or a separate join table? → A: 3 nullable TEXT cols on `intent_envelope` (1:1 cardinality at v1; no hot-path join; cheap-grep affordance; precedent matches `intentHistoryJson`'s append-only single-row design). FR-005 column shape REVISED to source-keyed: `contactRefId TEXT`, `contactRefName TEXT`, `contactRefSource TEXT` with constrained vocabulary `{manual, device_contacts, phone_history}` enforced via Room CHECK constraint. `contactRefId` holds Android `ContactsContract.Contacts.LOOKUP_KEY` (stable across contact-merges) when source is `device_contacts` or `phone_history`; null when source is `manual`. CHECK constraint enforces: `contactRefId NOT NULL ⇔ contactRefSource IN ('device_contacts','phone_history')`. v2 multi-recipient migration → separate spec when that requirement actually surfaces; not pre-spec'd here.
+- Q: Migration audit-layer timestamp format? → A: ISO-8601 UTC via `Instant.toString()` (e.g., `"2026-04-29T12:34:56Z"`). Matches existing `intentHistoryJson` layer convention; survives Kotlinx serialization round-trip; greppable in DB dumps.
+- Q: Malformed `intentHistoryJson` behavior — destructive replacement is acceptable? → A: Locked. Malformed history is REPLACED with a fresh single-element array containing only the rename layer (prior history lost). `Log.w("migration_3_4_malformed_history", row_id)` emitted per occurrence. Migration test MUST include one malformed-history fixture asserting the warning fires and the rename completes successfully.
+- Q: "—" character — em-dash (U+2014) vs en-dash (U+2013)? → A: **Em-dash U+2014** confirmed. Grep gate added to FR-007: `grep -rn '"—"' app/src/main` shows em-dash only; U+2013 must not appear as a label substitute.
+- Q: "Unassigned" sweep scope — which file trees? → A: Sweep covers all of `app/src/main/**` INCLUDING `app/src/main/res/values*/strings.xml` (all locale variants) AND `app/src/main/aidl/**/*.aidl`. EXCLUDES `app/src/test/**` and `app/src/androidTest/**` (test fixtures may legitimately reference the historical string for migration testing). Grep gates: `grep -rn "Unassigned" app/src/main` returns zero; `grep -rn "Unassigned" app/src/test app/src/androidTest` may return matches and that is allowed.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Existing alpha user upgrades the app (Priority: P1)
@@ -57,16 +67,20 @@ Every UI surface that previously displayed `"Unassigned"` for an `AMBIGUOUS` env
 
 ### User Story 4 — `ContactRef` schema columns exist on `intent_envelope` (Priority: P3)
 
-The entity gains three nullable columns — `contactRefDisplayName`, `contactRefPhoneE164`, `contactRefEmail` — for forward-compatibility with the `FOR_SOMEONE` follow-up flow. No UI writes to these columns yet (capture-sheet contact-picker is deferred to spec 017). Migration adds the columns; existing rows back-fill `NULL` on all three.
+The entity gains three nullable columns — `contactRefId`, `contactRefName`, `contactRefSource` — for forward-compatibility with the `FOR_SOMEONE` follow-up flow. No UI writes to these columns yet (capture-sheet contact-picker is deferred to spec 017). Migration adds the columns; existing rows back-fill `NULL` on all three.
+
+`contactRefSource` is a constrained vocabulary enforced at the schema layer via Room CHECK constraint. Allowed values for v1: `manual` (user typed/pasted), `device_contacts` (resolved against the contact picker), `phone_history` (recent calls/messages). `contactRefId` stores Android `ContactsContract.Contacts.LOOKUP_KEY` (stable across contact-merges) when source ∈ `{device_contacts, phone_history}`; `NULL` when source = `manual`. A second CHECK constraint enforces: `contactRefId NOT NULL ⇔ contactRefSource IN ('device_contacts','phone_history')`.
 
 **Why this priority**: Schema-only at v1; user value lands in spec 017+. Bundled into this migration so future schema bumps don't have to touch the intent set again.
 
-**Independent Test**: Inspect the post-migration schema; assert the three columns exist with type `TEXT` and `DEFAULT NULL`. Insert a v3-fixture envelope with `intent='FOR_SOMEONE'`; assert the three columns are `NULL` post-migration.
+**Independent Test**: Inspect the post-migration schema; assert the three columns exist with type `TEXT` and `DEFAULT NULL` and that both CHECK constraints are present. Insert a v3-fixture envelope with `intent='FOR_SOMEONE'`; assert the three columns are `NULL` post-migration. Insert a v4 row with `contactRefSource='manual'` + `contactRefId='abc'` and assert the second CHECK constraint rejects it.
 
 **Acceptance Scenarios**:
 
-1. **Given** the v4 schema, **When** `PRAGMA table_info(intent_envelope)` is queried, **Then** the result includes columns `contactRefDisplayName TEXT`, `contactRefPhoneE164 TEXT`, `contactRefEmail TEXT`, all nullable.
-2. **Given** a `FOR_SOMEONE` envelope post-migration, **When** the row is read, **Then** all three contact-ref columns are `NULL` (no fabricated data).
+1. **Given** the v4 schema, **When** `PRAGMA table_info(intent_envelope)` is queried, **Then** the result includes columns `contactRefId TEXT`, `contactRefName TEXT`, `contactRefSource TEXT`, all nullable.
+2. **Given** the v4 schema, **When** the table DDL is inspected, **Then** two CHECK constraints exist: (a) `contactRefSource IN ('manual','device_contacts','phone_history') OR contactRefSource IS NULL`, (b) `(contactRefId IS NULL) OR (contactRefSource IN ('device_contacts','phone_history'))`.
+3. **Given** a `FOR_SOMEONE` envelope post-migration, **When** the row is read, **Then** all three contact-ref columns are `NULL` (no fabricated data).
+4. **Given** a v4 row insert with `contactRefSource='manual'` and `contactRefId='abc'`, **When** the insert runs, **Then** SQLite raises a CHECK constraint violation.
 
 ---
 
@@ -74,7 +88,7 @@ The entity gains three nullable columns — `contactRefDisplayName`, `contactRef
 
 - **Unknown legacy label string in DB**: Should not happen (only the five known values are emitted by current code), but if encountered, the migration treats it as a no-op (leaves the value unchanged) rather than failing the upgrade. Cloud round-trip later would surface it as `AMBIGUOUS` via `toIntentOrAmbiguous()`.
 - **Empty `intentHistoryJson`** (`""` or `null`): Treated as `"[]"` before appending the rename layer; final value is a single-element JSON array.
-- **Malformed `intentHistoryJson`** (not parsable as JSON array): Migration logs a warning and replaces with a fresh single-element array containing the rename layer, preserving the rename guarantee at the cost of losing any prior history. The migration test must include a malformed-history fixture.
+- **Malformed `intentHistoryJson`** (not parsable as JSON array): Migration emits `Log.w("migration_3_4_malformed_history", row_id)` and replaces with a fresh single-element array containing only the rename layer, preserving the rename guarantee at the cost of losing any prior history. The migration test MUST include a malformed-history fixture asserting both the warning fires and the rename completes successfully. (Locked 2026-04-29 — see Clarifications.)
 - **A row already migrated** (e.g., re-run scenario): The migration is gated by Room's version table; not re-runnable. No idempotency concern.
 - **A row with `intent='AMBIGUOUS'` and a non-empty history**: History preserved as-is; no new layer appended (no rename happened).
 - **`READ_LATER` value is never present in v3 data**: Correct — it's a brand-new label introduced post-migration. Migration writes no `READ_LATER` rows.
@@ -85,11 +99,11 @@ The entity gains three nullable columns — `contactRefDisplayName`, `contactRef
 
 - **FR-001**: The `Intent` enum MUST contain exactly six values: `REMIND_ME`, `INSPIRATION`, `REFERENCE`, `READ_LATER`, `FOR_SOMEONE`, `AMBIGUOUS`. Five user-pickable + one defensive sentinel.
 - **FR-002**: `MIGRATION_3_4` MUST rename every `intent_envelope.intent` value from `'WANT_IT' → 'REMIND_ME'` and `'INTERESTING' → 'INSPIRATION'`. `'REFERENCE'`, `'FOR_SOMEONE'`, `'AMBIGUOUS'` MUST be left unchanged.
-- **FR-003**: For each row whose `intent` is renamed by FR-002, the migration MUST append a new layer to `intentHistoryJson` recording the original label, the new label, the migration reason `"spec-016 intent-set rename"`, and a timestamp.
+- **FR-003**: For each row whose `intent` is renamed by FR-002, the migration MUST append a new layer to `intentHistoryJson` recording the original label, the new label, the migration reason `"spec-016 intent-set rename"`, and a timestamp in **ISO-8601 UTC format via `Instant.toString()`** (e.g., `"2026-04-29T12:34:56Z"`).
 - **FR-004**: Rows whose `intent` is unchanged (`REFERENCE`, `FOR_SOMEONE`, `AMBIGUOUS`) MUST NOT receive a new history layer.
-- **FR-005**: `MIGRATION_3_4` MUST add three nullable `TEXT` columns to `intent_envelope`: `contactRefDisplayName`, `contactRefPhoneE164`, `contactRefEmail`. All existing rows back-fill `NULL`.
+- **FR-005**: `MIGRATION_3_4` MUST add three nullable `TEXT` columns to `intent_envelope`: `contactRefId`, `contactRefName`, `contactRefSource`. All existing rows back-fill `NULL` on all three. Two CHECK constraints MUST be added in the same migration: (a) `contactRefSource IN ('manual','device_contacts','phone_history') OR contactRefSource IS NULL` (constrained vocabulary), (b) `(contactRefId IS NULL) OR (contactRefSource IN ('device_contacts','phone_history'))` (id-source coupling). `contactRefId` is the Android `ContactsContract.Contacts.LOOKUP_KEY` when source ∈ `{device_contacts, phone_history}`; null otherwise.
 - **FR-006**: The chip palettes in `ChipRow` (overlay) and `IntentChipPicker` (Diary reassign) MUST render exactly the five user-pickable labels in the documented order (Remind me, Inspiration, Reference, Read later, For someone). `AMBIGUOUS` MUST NOT appear as a chip.
-- **FR-007**: All UI surfaces that resolve a label for `Intent.AMBIGUOUS` MUST display `"—"` (em-dash, U+2014) instead of `"Unassigned"`. The string `"Unassigned"` MUST NOT appear in `app/src/main/**` after the change.
+- **FR-007**: All UI surfaces that resolve a label for `Intent.AMBIGUOUS` MUST display `"—"` (em-dash, **U+2014**) instead of `"Unassigned"`. Sweep scope: all of `app/src/main/**` INCLUDING `app/src/main/res/values*/strings.xml` (all locale variants) AND `app/src/main/aidl/**/*.aidl`; EXCLUDING `app/src/test/**` and `app/src/androidTest/**` (test fixtures may legitimately reference the historical string). Grep gates: `grep -rn "Unassigned" app/src/main` returns zero matches; en-dash U+2013 MUST NOT appear as a label substitute (`grep -rn '"–"' app/src/main` returns zero matches in label-resolver call sites).
 - **FR-008**: Every `when (intent: Intent)` exhaustive branch and every string-keyed label resolver in `app/src/main/**` MUST cover all six new enum values without falling through to `AMBIGUOUS` for renamed labels.
 - **FR-009**: `Intent.valueOf(...)` and `toIntentOrAmbiguous()` MUST continue to defensive-fallback to `AMBIGUOUS` on unrecognized strings (e.g., a stale cloud response with an old label name).
 - **FR-010**: `OrbitDatabase.version` MUST be bumped from 3 to 4 and `app/schemas/com.capsule.app.data.OrbitDatabase/4.json` MUST be generated and committed.
@@ -101,7 +115,7 @@ The entity gains three nullable columns — `contactRefDisplayName`, `contactRef
 
 - **`Intent` enum** — Six values; five user-pickable, one sentinel. Stored in `intent_envelope.intent` as `TEXT`.
 - **`intent_envelope.intentHistoryJson`** — JSON array of layer objects; each layer records a label transition. The migration appends one layer per renamed row.
-- **`ContactRef`** (new Kotlin data class, no Room entity yet) — `displayName: String`, `phoneE164: String?`, `email: String?`. Maps to three nullable columns on `intent_envelope`. Used by `FOR_SOMEONE` envelopes; null otherwise. UI surface deferred to spec 017.
+- **`ContactRef`** (new Kotlin data class, no Room entity yet) — `id: String?` (Android `ContactsContract.Contacts.LOOKUP_KEY`; null when source = `manual`), `name: String` (display name), `source: ContactRefSource` (sealed/enum: `MANUAL`, `DEVICE_CONTACTS`, `PHONE_HISTORY`). Maps to three nullable columns on `intent_envelope` (`contactRefId`, `contactRefName`, `contactRefSource`). Used by `FOR_SOMEONE` envelopes; null otherwise. Two CHECK constraints enforce vocabulary + id-source coupling at the schema layer (see FR-005). UI surface deferred to spec 017.
 
 ## Success Criteria *(mandatory)*
 
