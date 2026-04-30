@@ -2,6 +2,7 @@ package com.capsule.app.data
 
 import com.capsule.app.RuntimeFlags
 import com.capsule.app.audit.AuditLogWriter
+import com.capsule.app.cluster.ClusterStateMachine
 import com.capsule.app.data.dao.AuditLogDao
 import com.capsule.app.data.dao.ClusterDao
 import com.capsule.app.data.model.AuditAction
@@ -116,5 +117,49 @@ class ClusterRepository(
             )
         )
         return true
+    }
+
+    /**
+     * Phase 11 Block 10 (T152) — persist ACTING **before** Nano
+     * inference begins. Spec 002 FR-035 requires the on-disk state to
+     * already be ACTING when the summariser is invoked, so a crash
+     * mid-inference leaves a forensics trail rather than a stuck
+     * TAPPED row.
+     *
+     * Routes through [ClusterStateMachine] so we get the same
+     * 'invalid trigger from current state' semantics as the worker
+     * paths (e.g. you can't transition ACTED → ACTING). Returns the
+     * resulting [ClusterState] on success or `null` if the cluster
+     * doesn't exist / the transition is invalid.
+     *
+     * Audit: writes a `CLUSTER_ACTING` row with priorState +
+     * triggeredBy=summariser_start.
+     */
+    suspend fun transitionToActing(clusterId: String): ClusterState? {
+        val current = clusterDao.byId(clusterId) ?: return null
+        val nextState = ClusterStateMachine.next(
+            current.state,
+            ClusterStateMachine.Trigger.START_ACTING
+        ) ?: return null
+        val now = clock()
+        clusterDao.updateState(
+            id = clusterId,
+            newState = nextState.name,
+            stateChangedAt = now,
+            dismissedAt = null
+        )
+        auditLogDao?.insert(
+            auditWriter.build(
+                action = AuditAction.CLUSTER_ACTING,
+                description = "Cluster transitioning to ACTING (summariser start)",
+                envelopeId = null,
+                extraJson = JSONObject().apply {
+                    put("clusterId", clusterId)
+                    put("priorState", current.state.name)
+                    put("triggeredBy", "summariser_start")
+                }.toString()
+            )
+        )
+        return nextState
     }
 }
