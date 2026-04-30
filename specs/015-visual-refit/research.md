@@ -194,9 +194,61 @@ refs.
 4. ~~**`inkAccentCluster` deprecation strategy**~~ — **RESOLVED**:
    retire the field immediately in Phase 0 c3 (no deprecation window —
    `AgentVoiceMark` was the sole consumer).
-5. **Font subsetting** — confirm we may subset Cormorant Garamond to
-   Latin Extended-A (drops Cyrillic/Vietnamese). Reduces APK size delta.
-   *Open.*
+5. ~~**Font subsetting**~~ — **RESOLVED 2026-04-29**: subset Cormorant
+   Garamond to **Latin + Latin Extended-A** only; drop Cyrillic +
+   Vietnamese. Inter and JetBrains Mono ship unsubsetted (already small +
+   widely deployed). If/when Vietnamese or Cyrillic localization lands,
+   swap in a fuller subset behind a locale-qualified font resource (e.g.,
+   `res/font-vi/`) or product flavor. Phase 0 c2 task includes running
+   the subset (`pyftsubset` or equivalent) before wiring the TTFs into
+   `res/font/`.
 6. **Material You / dynamic color** — confirm fixed palette (no Material
    You) is acceptable to product. LD-001 implies yes; calling out
    explicitly. *Open — likely a non-issue but worth a one-line confirm.*
+
+## 8. SC-005 acceptance checklist (verbatim — locked 2026-04-29)
+
+This checklist is the **objective gate** for SC-005. Every commit on
+`015-visual-refit` is reviewed by Claude (separate session) against the
+properties below. Properties 1–6 (Phase 1+) and 1–5 (Phase 0) are
+mechanical grep/test gates with no judgment; property 7 (Phase 1+) is the
+only structural review item and is deliberately **structural, not
+pixel-perfect** because the JSX is a spec, not a golden image —
+pixel-diffing against off-platform prototypes (different rendering engine,
+different fonts, different scale) is failure-noise that doesn't tell us
+anything useful.
+
+Paparazzi/Roborazzi adoption is **deferred to a separate post-Demo
+decision**. Adding screenshot-test infra mid-refit is the exact scope
+creep punted on in Block 8; this branch isn't the moment to land it.
+
+### Phase 0 commits — verifiable properties
+
+1. Token additions land in `tokens/` only (`BrandAccent #e8b06a`,
+   `BrandAccentDim`, `BrandAccentInk`; `Type.kt` with Cormorant Garamond,
+   Inter, JetBrains Mono families wired to `res/font/`).
+2. `RuntimeFlags.useNewVisualLanguage` exists, defaults `false`.
+3. Zero file changes outside `tokens/`, `primitives/`, and `res/font/`
+   (screen code untouched).
+4. Lint allow-list for `AgentVoiceMark` remains intact (Block 7's
+   `NoAgentVoiceMarkOutsideAgentSurfaces` test 8/8 green).
+5. `:app:compileDebugKotlin` clean.
+
+### Phase 1+ commits — verifiable properties (per refitted screen)
+
+1. New Composables read color **only** through `tokens/Colors.kt`
+   references — zero `Color(0xFF...)` hex literals in screen files
+   (grep gate).
+2. Fonts come **only** through `tokens/Type.kt` — zero inline
+   `FontFamily(Font(R.font.x))` in screen files (grep gate).
+3. No Material You / dynamic-color: any `MaterialTheme` wrap sets
+   `dynamicColor = false` or equivalent.
+4. Logic-flow tests for the refitted screen pass unchanged (state-machine
+   + tap-flow tests assert behavior, not pixels).
+5. Lint allow-list unchanged.
+6. Screens **not** in the current phase's scope show zero diff
+   (`git diff --stat` against the parent branch shows no touches).
+7. Screenshot of the refitted screen attached to the PR for visual
+   evidence — Claude review confirms **structural composition** matches
+   the JSX (header layout, hairline rules, action row position, source
+   glyph row), **not** pixel-perfect color match.

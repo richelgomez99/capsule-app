@@ -41,6 +41,16 @@ These were resolved before spec authoring. Do not relitigate during implementati
 - **LD-005 — Bubble overlay refit (Phase 5) deferred to post-Demo Day (May 22, 2026).**
   The bubble in the working tree is the demo bubble; do not touch it pre-Demo Day.
 
+## Clarifications
+
+### Session 2026-04-29
+
+- Q: What objective pass/fail criterion gates SC-005 against the design-bundle reference renders? → A: Per-commit Claude review against a verbatim property checklist materialized in `research.md` §8 (mechanical grep/test gates 1–6 per phase + one structural-composition screenshot review item). No pixel-diff tooling — Paparazzi/Roborazzi adoption deferred to a post-Demo decision; pixel-diffing against off-platform JSX prototypes (different engine/fonts/scale) is failure-noise.
+- Q: Cormorant Garamond font subsetting policy for v1? → A: Subset to Latin + Latin Extended-A only; drop Cyrillic + Vietnamese. Inter and JetBrains Mono ship unsubsetted. If/when Vietnamese or Cyrillic localization lands, swap in a fuller subset behind a locale-qualified font resource or flavor.
+- Q: WCAG AA contrast threshold — what counts as "body size" for the cream-on-bgDeep + brand-accent-italic-on-bgDeep edge case? → A: Pin body = 14sp regular (matches `bodyLarge`). Require 4.5:1 minimum for both cream and brand-accent on bgDeep at body size. If brand-accent italic fails 4.5:1 at 14sp, accent-italic spans MUST only render at ≥18sp (display tier — `displaySmall` 17sp bumped to 18sp, or `displayMedium`/`displayLarge`); accent italic is forbidden at body sizes that don't qualify for WCAG AA "large text" 3:1 relaxation.
+- Q: SC-002 lint baseline scope after rebase onto fresh main? → A: Expand baseline to enumerate both pre-existing warnings explicitly: `MissingClass ActionsSettingsActivity` AND `RemoveWorkManagerInitializer`. Any third warning fails the gate. No `lint-baseline.xml` introduced in this branch (avoids scope creep); fixing `RemoveWorkManagerInitializer` is non-refit work and is NOT a Phase 0 prerequisite.
+- Q: How is `RuntimeFlags.useNewVisualLanguage` observed across an Activity lifecycle when flipped mid-session? → A: Read once at Activity create and pass via `LocalRuntimeFlags` Composition Local. No reactive observer. Mid-session flip has no visible effect until the next Activity recreate (background+foreground or manual restart). Flag is process-scoped at v1.
+
 ## User Scenarios & Testing
 
 This refit is presentation-only. There are no new user-facing capabilities; the
@@ -122,14 +132,23 @@ flag = true vs the design bundle reference renders.
 ---
 
 ### Edge Cases
-
-- **Flag flips mid-session**: existing screen instances may need recomposition;
+`RuntimeFlags.useNewVisualLanguage` is read
+  **once at Activity create** and passed down via a `LocalRuntimeFlags`
+  Composition Local. No reactive observer. A mid-session flip has no
+  visible effect until the next Activity recreate (background+foreground
+  or manual restart). The flag is process-scoped atrecomposition;
   acceptable to require Activity restart for the boundary case in v1.
 - **Font load failure**: `Cormorant Garamond` / `JetBrains Mono` fail to load
   → fall back to system serif / monospace; UI remains legible.
 - **Dynamic color (Material You)**: refit uses fixed `BrandAccent`, not
   Material You. This is intentional — Quiet Almanac is a fixed palette.
-- **Accessibility**: text contrast on `bgDeep` (#080b14) with `cream` (#f3ead8)
+- **Accessibility****4.5:1 minimum at body size = 14sp regular** (matching
+  `bodyLarge` in the type scale). Brand-accent italic spans on `bgDeep` MUST
+  ALSO hit 4.5:1 at body size; if they fail at 14sp, accent italic is
+  permitted only at ≥18sp (display tier — `displaySmall` 17sp must be bumped
+  to 18sp for italic spans, or italic is restricted to `displayMedium` /
+  `displayLarge`). Accent italic at body sizes that rely on WCAG AA
+  "large text" 3:1 relaxation is **forbidden**d8)
   must hit WCAG AA at body size; serif italic accent at WCAG AA min for body.
 - **Existing screens during partial rollout**: when only Phase 1 has landed,
   flag-ON Diary still renders existing diary; only Cluster screens use new
@@ -139,7 +158,10 @@ flag = true vs the design bundle reference renders.
 
 ### Functional Requirements
 
-- **FR-015-001**: System MUST add a `RuntimeFlags.useNewVisualLanguage: Boolean`
+- **FR-015-001**: System MUST add a `RuntimeFlag The flag MUST be read **once
+  at Activity create** and propagated via a `LocalRuntimeFlags` Composition
+  Local; refit composables MUST NOT observe the flag reactively. (See
+  Edge Cases — flag flips mid-session.)s.useNewVisualLanguage: Boolean`
   flag, default `false`, in `app/src/main/java/com/capsule/app/RuntimeFlags.kt`.
   All refit composables MUST read this flag (or accept it as a parameter from
   a flag-aware host) before adopting new tokens.
@@ -198,11 +220,26 @@ layer.
 ### Measurable Outcomes
 
 - **SC-001**: `:app:compileDebugKotlin` is clean after every commit on
-  `015-visual-refit`.
-- **SC-002**: `:app:lintDebug` shows no new warnings beyond the pre-existing
-  `MissingClass` for `ActionsSettingsActivity`.
-- **SC-003**: `:build-logic:lint:test` is green (8/8) after Phase 0 commit 3
-  consolidates `AgentVoiceMark` to brand accent. The
+  `015-visual-refit`.two
+  pre-existing inherited warnings: `MissingClass ActionsSettingsActivity`
+  AND `RemoveWorkManagerInitializer`. Any third warning fails the gate.
+  No `lint-baseline.xml` is introduced on this branch; fixing
+  `RemoveWorkManagerInitializer` is out of scope (non-refit work)rnings beyond the pre-existing
+  `MissingClass` for `ActionsSettingsActivity`.every commit passes the
+  per-phase property checklist enumerated verbatim in `research.md` §8.
+  Phase 0 commits MUST satisfy all 5 Phase-0 properties (token scope,
+  flag presence, tokens/primitives/font-only diff, lint allow-list intact,
+  `:app:compileDebugKotlin` clean). Phase 1+ commits MUST satisfy all 7
+  per-screen properties (zero hex literals in screen files, zero inline
+  `FontFamily(Font(R.font.x))` in screen files, no Material You /
+  `dynamicColor = true`, logic-flow tests unchanged, lint allow-list
+  unchanged, off-phase screens show zero diff via `git diff --stat`,
+  PR-attached screenshot whose **structural composition** — header
+  layout, hairline rules, action row position, source glyph row — Claude
+  confirms matches the JSX). Properties 1–6 (Phase 1+) and 1–5 (Phase 0)
+  are mechanical grep/test gates; property 7 (Phase 1+) is the only
+  structural review item and is deliberately not pixel-diffed. No
+  Paparazzi/Roborazzi screenshot-test infra is added in this branch.
   `NoAgentVoiceMarkOutsideAgentSurfaces` allow-list is unchanged.
 - **SC-004**: All existing instrumented tests for Diary, Cluster, Settings,
   and Capture sheet remain green with `useNewVisualLanguage = false`.
