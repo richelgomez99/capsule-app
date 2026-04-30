@@ -41,7 +41,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ClusterEntity::class,
         ClusterMemberEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class OrbitDatabase : RoomDatabase() {
@@ -99,7 +99,7 @@ abstract class OrbitDatabase : RoomDatabase() {
                 DB_NAME
             )
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
         }
     }

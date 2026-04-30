@@ -73,6 +73,19 @@ interface EnvelopeStorageBackend {
     ): Boolean
 
     /**
+     * Spec 002 Phase 11 Block 13 / spec 012 FR-012-011 — atomically
+     * insert a DERIVED envelope produced by the `cluster.summarize`
+     * AppFunction plus its audit row. Unlike [insertDigestTransaction]
+     * the cluster-summary path has no partial unique index to defend
+     * against (clusters are append-only and one cluster maps to at
+     * most one ACTED row); a successful insert is unconditional.
+     */
+    suspend fun insertClusterSummaryTransaction(
+        envelope: IntentEnvelopeEntity,
+        auditEntry: AuditLogEntryEntity
+    )
+
+    /**
      * T074 / 003 US3 — read-only window query used by
      * `WeeklyDigestDelegate` to assemble the digest input. Filters out
      * deleted, archived, ambiguous-intent, and DIGEST/DERIVED envelopes

@@ -128,6 +128,7 @@ class SilentWrapPredicateTest {
         override suspend fun softDeleteTransaction(id: String, deletedAt: Long, auditEntry: AuditLogEntryEntity) = error("unused")
         override suspend fun restoreFromTrashTransaction(id: String, auditEntry: AuditLogEntryEntity) = error("unused")
         override suspend fun hardDeleteTransaction(id: String, auditEntry: AuditLogEntryEntity) = error("unused")
+        override suspend fun insertClusterSummaryTransaction(envelope: IntentEnvelopeEntity, auditEntry: AuditLogEntryEntity) = error("unused")
         override suspend fun listIdsSoftDeletedBefore(cutoffMillis: Long): List<String> = emptyList()
         override suspend fun undoSealTransaction(envelopeId: String) = error("unused")
         override fun observeDay(dayLocal: String): Flow<List<IntentEnvelopeEntity>> = emptyFlow()

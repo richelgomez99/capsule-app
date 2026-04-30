@@ -11,10 +11,12 @@ import com.capsule.app.continuation.ContinuationEngine
 import com.capsule.app.data.ActionsRepositoryDelegate
 import com.capsule.app.data.AppFunctionRegistry
 import com.capsule.app.data.ClusterRepository
+import com.capsule.app.data.ClusterSummarizeDelegate
 import com.capsule.app.data.EnvelopeRepositoryImpl
 import com.capsule.app.data.LocalRoomBackend
 import com.capsule.app.data.OrbitDatabase
 import com.capsule.app.data.WeeklyDigestDelegate
+import com.capsule.app.ai.ClusterSummariser
 import com.capsule.app.ai.DigestComposer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -86,6 +88,25 @@ class EnvelopeRepositoryService : Service() {
             composer = DigestComposer(LlmProviderRouter.createPreferLocal(applicationContext)),
             auditWriter = auditWriter
         )
+        // Spec 002 Phase 11 Block 13 (T163) — cluster.summarize delegate.
+        // Constructed eagerly so `summarizeCluster` over the binder
+        // resolves without a second lookup. Reuses the local-preferring
+        // LlmProvider so the same cloud-fallback semantics apply as
+        // weekly digest + per-envelope summaries.
+        val clusterRepo = ClusterRepository(
+            clusterDao = db.clusterDao(),
+            auditLogDao = db.auditLogDao(),
+            auditWriter = auditWriter
+        )
+        val clusterSummarizeDelegate = ClusterSummarizeDelegate(
+            database = db,
+            backend = backend,
+            clusterRepository = clusterRepo,
+            summariser = ClusterSummariser(
+                llmProvider = LlmProviderRouter.createPreferLocal(applicationContext)
+            ),
+            auditWriter = auditWriter
+        )
         repository = EnvelopeRepositoryImpl(
             backend = backend,
             auditWriter = auditWriter,
@@ -97,11 +118,8 @@ class EnvelopeRepositoryService : Service() {
             // Spec 002 Phase 11 Block 5 / T135 — cluster read surface.
             // Block 10 (T148 review FU#2): repository now owns dismiss
             // writes too, so wire the audit log + clock for CLUSTER_DISMISSED rows.
-            clusterRepository = ClusterRepository(
-                clusterDao = db.clusterDao(),
-                auditLogDao = db.auditLogDao(),
-                auditWriter = auditWriter
-            )
+            clusterRepository = clusterRepo,
+            clusterSummarizeDelegate = clusterSummarizeDelegate
         )
         // T088 — same service binder pool exposes the audit-log surface on a
         // distinct intent action so the Settings / audit viewer process can

@@ -54,6 +54,16 @@ enum class AuditAction {
     CLUSTER_ACTING,
     /** Cluster reached terminal ACTED — Summarize bullets rendered with citations. */
     CLUSTER_ACTED,
+    /**
+     * Spec 002 Phase 11 Block 13 / spec 012 FR-012-011 — emitted in the
+     * SAME transaction as the DERIVED envelope insert produced by the
+     * `cluster.summarize` AppFunction. CLUSTER_ACTED on its own
+     * captures the state transition; this row carries provenance
+     * (`derivedEnvelopeId`, `derivedVia`, `modelLabel`) atomically with
+     * the envelope so spec 012 readers see one or zero rows, never a
+     * partial commit.
+     */
+    CLUSTER_SUMMARY_GENERATED,
     /** Nano inference returned error/null/timeout, or sanitizer rejected the output. */
     CLUSTER_FAILED,
     /** User dismissed the cluster card (swipe or ×). */

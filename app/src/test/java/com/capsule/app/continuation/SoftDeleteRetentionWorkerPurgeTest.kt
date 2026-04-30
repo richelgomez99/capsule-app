@@ -73,6 +73,10 @@ class SoftDeleteRetentionWorkerPurgeTest {
             envelope: com.capsule.app.data.entity.IntentEnvelopeEntity,
             auditEntry: AuditLogEntryEntity
         ): Boolean = error("unused")
+        override suspend fun insertClusterSummaryTransaction(
+            envelope: com.capsule.app.data.entity.IntentEnvelopeEntity,
+            auditEntry: AuditLogEntryEntity
+        ) = error("unused")
         override suspend fun listRegularEnvelopesInWindow(
             windowStartDayLocal: String,
             windowEndDayLocalInclusive: String,

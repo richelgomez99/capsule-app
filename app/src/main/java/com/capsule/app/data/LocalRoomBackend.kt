@@ -112,6 +112,23 @@ class LocalRoomBackend(
         false
     }
 
+    /**
+     * Spec 002 Phase 11 Block 13 / T163 — single-transaction insert +
+     * CLUSTER_ACTED-related audit row for the `cluster.summarize`
+     * AppFunction's DERIVED output. No partial unique index applies —
+     * the cluster's lifecycle (FORMING → ACTING → ACTED) provides
+     * idempotency at the state-machine layer.
+     */
+    override suspend fun insertClusterSummaryTransaction(
+        envelope: com.capsule.app.data.entity.IntentEnvelopeEntity,
+        auditEntry: com.capsule.app.data.entity.AuditLogEntryEntity
+    ) {
+        database.withTransaction {
+            envelopeDao.insert(envelope)
+            auditDao.insert(auditEntry)
+        }
+    }
+
     override suspend fun listRegularEnvelopesInWindow(
         windowStartDayLocal: String,
         windowEndDayLocalInclusive: String,

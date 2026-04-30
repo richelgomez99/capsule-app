@@ -1,0 +1,1161 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "97022137193d9c64cbc997090c775fb8",
+    "entities": [
+      {
+        "tableName": "intent_envelope",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `contentType` TEXT NOT NULL, `textContent` TEXT, `imageUri` TEXT, `textContentSha256` TEXT, `intent` TEXT NOT NULL, `intentConfidence` REAL, `intentSource` TEXT NOT NULL, `intentHistoryJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `day_local` TEXT NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `deletedAt` INTEGER, `sharedContinuationResultId` TEXT, `kind` TEXT NOT NULL, `derivedFromEnvelopeIdsJson` TEXT, `todoMetaJson` TEXT, `derivedVia` TEXT, `appCategory` TEXT NOT NULL, `activityState` TEXT NOT NULL, `tzId` TEXT NOT NULL, `hourLocal` INTEGER NOT NULL, `dayOfWeekLocal` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentType",
+            "columnName": "contentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "textContent",
+            "columnName": "textContent",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageUri",
+            "columnName": "imageUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "textContentSha256",
+            "columnName": "textContentSha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "intent",
+            "columnName": "intent",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentConfidence",
+            "columnName": "intentConfidence",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "intentSource",
+            "columnName": "intentSource",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intentHistoryJson",
+            "columnName": "intentHistoryJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dayLocal",
+            "columnName": "day_local",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeleted",
+            "columnName": "isDeleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deletedAt",
+            "columnName": "deletedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sharedContinuationResultId",
+            "columnName": "sharedContinuationResultId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "derivedFromEnvelopeIdsJson",
+            "columnName": "derivedFromEnvelopeIdsJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "todoMetaJson",
+            "columnName": "todoMetaJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "derivedVia",
+            "columnName": "derivedVia",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "state.appCategory",
+            "columnName": "appCategory",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.activityState",
+            "columnName": "activityState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.tzId",
+            "columnName": "tzId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.hourLocal",
+            "columnName": "hourLocal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state.dayOfWeekLocal",
+            "columnName": "dayOfWeekLocal",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_intent_envelope_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          },
+          {
+            "name": "index_intent_envelope_intent",
+            "unique": false,
+            "columnNames": [
+              "intent"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_intent` ON `${TABLE_NAME}` (`intent`)"
+          },
+          {
+            "name": "index_intent_envelope_day_local",
+            "unique": false,
+            "columnNames": [
+              "day_local"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_day_local` ON `${TABLE_NAME}` (`day_local`)"
+          },
+          {
+            "name": "index_intent_envelope_kind_day_local",
+            "unique": false,
+            "columnNames": [
+              "kind",
+              "day_local"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_kind_day_local` ON `${TABLE_NAME}` (`kind`, `day_local`)"
+          }
+        ]
+      },
+      {
+        "tableName": "continuation",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `type` TEXT NOT NULL, `status` TEXT NOT NULL, `inputUrl` TEXT, `scheduledAt` INTEGER NOT NULL, `startedAt` INTEGER, `completedAt` INTEGER, `attemptCount` INTEGER NOT NULL, `failureReason` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inputUrl",
+            "columnName": "inputUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scheduledAt",
+            "columnName": "scheduledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attemptCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "failureReason",
+            "columnName": "failureReason",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_continuation_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_continuation_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_continuation_type_status",
+            "unique": false,
+            "columnNames": [
+              "type",
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_type_status` ON `${TABLE_NAME}` (`type`, `status`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "continuation_result",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `continuationId` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `producedAt` INTEGER NOT NULL, `title` TEXT, `domain` TEXT, `canonicalUrl` TEXT, `canonicalUrlHash` TEXT, `excerpt` TEXT, `summary` TEXT, `summaryModel` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`continuationId`) REFERENCES `continuation`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "continuationId",
+            "columnName": "continuationId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "producedAt",
+            "columnName": "producedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "domain",
+            "columnName": "domain",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canonicalUrl",
+            "columnName": "canonicalUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "canonicalUrlHash",
+            "columnName": "canonicalUrlHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "excerpt",
+            "columnName": "excerpt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summaryModel",
+            "columnName": "summaryModel",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_continuation_result_continuationId",
+            "unique": false,
+            "columnNames": [
+              "continuationId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_result_continuationId` ON `${TABLE_NAME}` (`continuationId`)"
+          },
+          {
+            "name": "index_continuation_result_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_continuation_result_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_continuation_result_canonicalUrlHash",
+            "unique": true,
+            "columnNames": [
+              "canonicalUrlHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_continuation_result_canonicalUrlHash` ON `${TABLE_NAME}` (`canonicalUrlHash`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "continuation",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "continuationId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "audit_log",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `at` INTEGER NOT NULL, `action` TEXT NOT NULL, `description` TEXT NOT NULL, `envelopeId` TEXT, `extraJson` TEXT, `llmProvider` TEXT, `llmModel` TEXT, `promptDigestSha256` TEXT, `tokenCount` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "at",
+            "columnName": "at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "action",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "extraJson",
+            "columnName": "extraJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "llmProvider",
+            "columnName": "llmProvider",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "llmModel",
+            "columnName": "llmModel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "promptDigestSha256",
+            "columnName": "promptDigestSha256",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tokenCount",
+            "columnName": "tokenCount",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_audit_log_at",
+            "unique": false,
+            "columnNames": [
+              "at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_at` ON `${TABLE_NAME}` (`at`)"
+          },
+          {
+            "name": "index_audit_log_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_audit_log_action",
+            "unique": false,
+            "columnNames": [
+              "action"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_audit_log_action` ON `${TABLE_NAME}` (`action`)"
+          }
+        ]
+      },
+      {
+        "tableName": "action_proposal",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `functionId` TEXT NOT NULL, `schemaVersion` INTEGER NOT NULL, `argsJson` TEXT NOT NULL, `previewTitle` TEXT NOT NULL, `previewSubtitle` TEXT, `confidence` REAL NOT NULL, `provenance` TEXT NOT NULL, `state` TEXT NOT NULL, `sensitivityScope` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `stateChangedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "functionId",
+            "columnName": "functionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schemaVersion",
+            "columnName": "schemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "argsJson",
+            "columnName": "argsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "previewTitle",
+            "columnName": "previewTitle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "previewSubtitle",
+            "columnName": "previewSubtitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "confidence",
+            "columnName": "confidence",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "provenance",
+            "columnName": "provenance",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sensitivityScope",
+            "columnName": "sensitivityScope",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stateChangedAt",
+            "columnName": "stateChangedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_action_proposal_envelopeId",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_proposal_envelopeId` ON `${TABLE_NAME}` (`envelopeId`)"
+          },
+          {
+            "name": "index_action_proposal_state",
+            "unique": false,
+            "columnNames": [
+              "state"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_proposal_state` ON `${TABLE_NAME}` (`state`)"
+          },
+          {
+            "name": "index_action_proposal_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_proposal_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          },
+          {
+            "name": "index_action_proposal_envelopeId_functionId",
+            "unique": true,
+            "columnNames": [
+              "envelopeId",
+              "functionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_action_proposal_envelopeId_functionId` ON `${TABLE_NAME}` (`envelopeId`, `functionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "action_execution",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `proposalId` TEXT NOT NULL, `functionId` TEXT NOT NULL, `outcome` TEXT NOT NULL, `outcomeReason` TEXT, `dispatchedAt` INTEGER NOT NULL, `completedAt` INTEGER, `latencyMs` INTEGER, `episodeId` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`proposalId`) REFERENCES `action_proposal`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proposalId",
+            "columnName": "proposalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "functionId",
+            "columnName": "functionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "outcome",
+            "columnName": "outcome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "outcomeReason",
+            "columnName": "outcomeReason",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "dispatchedAt",
+            "columnName": "dispatchedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "latencyMs",
+            "columnName": "latencyMs",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_action_execution_proposalId",
+            "unique": false,
+            "columnNames": [
+              "proposalId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_execution_proposalId` ON `${TABLE_NAME}` (`proposalId`)"
+          },
+          {
+            "name": "index_action_execution_outcome",
+            "unique": false,
+            "columnNames": [
+              "outcome"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_execution_outcome` ON `${TABLE_NAME}` (`outcome`)"
+          },
+          {
+            "name": "index_action_execution_dispatchedAt",
+            "unique": false,
+            "columnNames": [
+              "dispatchedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_action_execution_dispatchedAt` ON `${TABLE_NAME}` (`dispatchedAt`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "action_proposal",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "proposalId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "appfunction_skill",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`functionId` TEXT NOT NULL, `appPackage` TEXT NOT NULL, `displayName` TEXT NOT NULL, `description` TEXT NOT NULL, `schemaVersion` INTEGER NOT NULL, `argsSchemaJson` TEXT NOT NULL, `sideEffects` TEXT NOT NULL, `reversibility` TEXT NOT NULL, `sensitivityScope` TEXT NOT NULL, `registeredAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`functionId`))",
+        "fields": [
+          {
+            "fieldPath": "functionId",
+            "columnName": "functionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appPackage",
+            "columnName": "appPackage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "displayName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schemaVersion",
+            "columnName": "schemaVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "argsSchemaJson",
+            "columnName": "argsSchemaJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sideEffects",
+            "columnName": "sideEffects",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reversibility",
+            "columnName": "reversibility",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sensitivityScope",
+            "columnName": "sensitivityScope",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "registeredAt",
+            "columnName": "registeredAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "functionId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_appfunction_skill_functionId_schemaVersion",
+            "unique": true,
+            "columnNames": [
+              "functionId",
+              "schemaVersion"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_appfunction_skill_functionId_schemaVersion` ON `${TABLE_NAME}` (`functionId`, `schemaVersion`)"
+          },
+          {
+            "name": "index_appfunction_skill_appPackage",
+            "unique": false,
+            "columnNames": [
+              "appPackage"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_appfunction_skill_appPackage` ON `${TABLE_NAME}` (`appPackage`)"
+          }
+        ]
+      },
+      {
+        "tableName": "skill_usage",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `skillId` TEXT NOT NULL, `executionId` TEXT NOT NULL, `proposalId` TEXT NOT NULL, `episodeId` TEXT, `outcome` TEXT NOT NULL, `latencyMs` INTEGER NOT NULL, `invokedAt` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`skillId`) REFERENCES `appfunction_skill`(`functionId`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`executionId`) REFERENCES `action_execution`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "skillId",
+            "columnName": "skillId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "executionId",
+            "columnName": "executionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proposalId",
+            "columnName": "proposalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "outcome",
+            "columnName": "outcome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latencyMs",
+            "columnName": "latencyMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "invokedAt",
+            "columnName": "invokedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_skill_usage_skillId",
+            "unique": false,
+            "columnNames": [
+              "skillId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_skill_usage_skillId` ON `${TABLE_NAME}` (`skillId`)"
+          },
+          {
+            "name": "index_skill_usage_executionId",
+            "unique": false,
+            "columnNames": [
+              "executionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_skill_usage_executionId` ON `${TABLE_NAME}` (`executionId`)"
+          },
+          {
+            "name": "index_skill_usage_invokedAt",
+            "unique": false,
+            "columnNames": [
+              "invokedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_skill_usage_invokedAt` ON `${TABLE_NAME}` (`invokedAt`)"
+          },
+          {
+            "name": "index_skill_usage_outcome",
+            "unique": false,
+            "columnNames": [
+              "outcome"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_skill_usage_outcome` ON `${TABLE_NAME}` (`outcome`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "appfunction_skill",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "skillId"
+            ],
+            "referencedColumns": [
+              "functionId"
+            ]
+          },
+          {
+            "table": "action_execution",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "executionId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "cluster",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `cluster_type` TEXT NOT NULL, `state` TEXT NOT NULL, `timeBucketStart` INTEGER NOT NULL, `timeBucketEnd` INTEGER NOT NULL, `similarityScore` REAL NOT NULL, `model_label` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `stateChangedAt` INTEGER NOT NULL, `dismissedAt` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "clusterType",
+            "columnName": "cluster_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeBucketStart",
+            "columnName": "timeBucketStart",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeBucketEnd",
+            "columnName": "timeBucketEnd",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "similarityScore",
+            "columnName": "similarityScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modelLabel",
+            "columnName": "model_label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stateChangedAt",
+            "columnName": "stateChangedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dismissedAt",
+            "columnName": "dismissedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "idx_cluster_state",
+            "unique": false,
+            "columnNames": [
+              "state"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_cluster_state` ON `${TABLE_NAME}` (`state`)"
+          },
+          {
+            "name": "idx_cluster_time_bucket",
+            "unique": false,
+            "columnNames": [
+              "timeBucketStart",
+              "timeBucketEnd"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_cluster_time_bucket` ON `${TABLE_NAME}` (`timeBucketStart`, `timeBucketEnd`)"
+          }
+        ]
+      },
+      {
+        "tableName": "cluster_member",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`clusterId` TEXT NOT NULL, `envelopeId` TEXT NOT NULL, `memberIndex` INTEGER NOT NULL, PRIMARY KEY(`clusterId`, `envelopeId`), FOREIGN KEY(`clusterId`) REFERENCES `cluster`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`envelopeId`) REFERENCES `intent_envelope`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "clusterId",
+            "columnName": "clusterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "envelopeId",
+            "columnName": "envelopeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "memberIndex",
+            "columnName": "memberIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "clusterId",
+            "envelopeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_cluster_member_clusterId",
+            "unique": false,
+            "columnNames": [
+              "clusterId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cluster_member_clusterId` ON `${TABLE_NAME}` (`clusterId`)"
+          },
+          {
+            "name": "idx_cluster_member_envelope",
+            "unique": false,
+            "columnNames": [
+              "envelopeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `idx_cluster_member_envelope` ON `${TABLE_NAME}` (`envelopeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "cluster",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "clusterId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "intent_envelope",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "envelopeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '97022137193d9c64cbc997090c775fb8')"
+    ]
+  }
+}
