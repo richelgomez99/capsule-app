@@ -79,7 +79,15 @@ class EnvelopeRepositoryImpl(
      * reason as [actionsDelegate]: 002 contract tests construct the
      * Impl with the smaller surface and never call this method.
      */
-    private val weeklyDigestDelegate: WeeklyDigestDelegate? = null
+    private val weeklyDigestDelegate: WeeklyDigestDelegate? = null,
+    /**
+     * Spec 002 Phase 11 Block 5 / T133–T135 — cluster read surface.
+     * Nullable so existing 002 contract tests keep building; production
+     * binds it in `EnvelopeRepositoryService`. When `null`, the
+     * `observeClusters` AIDL method emits nothing (a single empty
+     * list) and `stopObservingClusters` is a no-op.
+     */
+    private val clusterRepository: ClusterRepository? = null
 ) : IEnvelopeRepository.Stub() {
 
     /** envelopeId → millis-deadline after which `undo()` returns false. */
@@ -774,6 +782,53 @@ class EnvelopeRepositoryImpl(
         val delegate = weeklyDigestDelegate ?: return "FAILED:digest_disabled"
         return runBlocking { delegate.runWeeklyDigest(targetDayLocal) }
     }
+
+    // ---- Spec 002 Phase 11 Block 5 — cluster surface (T134/T135) ----
+
+    override fun observeClusters(observer: com.capsule.app.data.ipc.IClusterObserver) {
+        val key = IBinderKey(observer.asBinder())
+        observerJobs.remove(key)?.cancel()
+        val repo = clusterRepository
+        if (repo == null) {
+            // No cluster source wired (e.g. 002 contract tests).
+            // Emit one empty page so callers don't deadlock and return.
+            scope.launch(Dispatchers.IO) {
+                try {
+                    observer.onClustersChanged(emptyList())
+                } catch (_: android.os.RemoteException) {
+                    // Observer already dead — nothing to clean up.
+                }
+            }
+            return
+        }
+        val job = scope.launch(Dispatchers.IO) {
+            repo.observeSurfaced().collectLatest { cards ->
+                try {
+                    observer.onClustersChanged(cards.map { it.toParcel() })
+                } catch (_: android.os.RemoteException) {
+                    // Observer died — stop the collection.
+                    observerJobs.remove(key)?.cancel()
+                }
+            }
+        }
+        observerJobs[key] = job
+    }
+
+    override fun stopObservingClusters(observer: com.capsule.app.data.ipc.IClusterObserver) {
+        val key = IBinderKey(observer.asBinder())
+        observerJobs.remove(key)?.cancel()
+    }
+
+    private fun ClusterCardModel.toParcel(): com.capsule.app.data.ipc.ClusterCardParcel =
+        com.capsule.app.data.ipc.ClusterCardParcel(
+            clusterId = clusterId,
+            state = state.name,
+            timeBucketStart = timeBucketStart,
+            timeBucketEnd = timeBucketEnd,
+            modelLabel = modelLabel,
+            memberEnvelopeIds = members.map { it.envelopeId },
+            memberIndices = members.map { it.memberIndex }
+        )
 
     // ---- Helpers ----
 
