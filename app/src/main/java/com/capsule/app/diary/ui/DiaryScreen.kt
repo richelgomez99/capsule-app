@@ -41,6 +41,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.provider.Settings
@@ -376,8 +377,17 @@ private fun ErrorView(message: String) {
     }
 }
 
+/**
+ * Phase 11 Block 11 / T150-revisit — exposed at `internal` so the
+ * instrumented placement test
+ * (`app/src/androidTest/.../DiaryScreenWithClusterTest`) can drive
+ * this composable directly with a fake [DiaryViewModel] + fixture
+ * [DayUiState.Ready], replacing the fragile mirror used in Block 10.
+ * Test-tags on the cluster card and day header are stable seams for
+ * `getBoundsInRoot()` placement assertions.
+ */
 @Composable
-private fun DayContentView(
+internal fun DayContentView(
     state: DayUiState.Ready,
     viewModel: DiaryViewModel,
     onReassign: (String, Intent) -> Unit,
@@ -424,6 +434,7 @@ private fun DayContentView(
                         onDismiss = { viewModel.onDismissCluster(cluster.clusterId) },
                         onRetry = { /* T-future: re-enqueue summary */ },
                         reduceMotion = reduceMotion,
+                        modifier = Modifier.testTag(DiaryScreenTestTags.CLUSTER_SLOT),
                     )
                 }
             }
@@ -436,7 +447,8 @@ private fun DayContentView(
             DayHeader(
                 isoDate = state.isoDate,
                 paragraph = state.header,
-                generationLocale = state.generationLocale
+                generationLocale = state.generationLocale,
+                modifier = Modifier.testTag(DiaryScreenTestTags.DAY_HEADER),
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -476,10 +488,11 @@ private fun DayContentView(
 private fun DayHeader(
     isoDate: String,
     paragraph: String,
-    generationLocale: String
+    generationLocale: String,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -581,4 +594,15 @@ private fun formatBucketRange(startMillis: Long, endMillis: Long): String {
     val start = Instant.ofEpochMilli(startMillis).atZone(zone).format(bucketRangeFormatter)
     val end = Instant.ofEpochMilli(endMillis).atZone(zone).format(bucketRangeFormatter)
     return "$start → $end"
+}
+
+/**
+ * Phase 11 Block 11 / T150-revisit — stable Compose `testTag` seams for
+ * the diary placement-contract test. Visible at `internal` so the
+ * androidTest source set can reference the same constants the
+ * production composable applies; never read from the user UI.
+ */
+internal object DiaryScreenTestTags {
+    const val CLUSTER_SLOT = "diary-cluster-slot"
+    const val DAY_HEADER = "diary-day-header"
 }
