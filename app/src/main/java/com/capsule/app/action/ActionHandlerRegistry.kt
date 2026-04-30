@@ -1,6 +1,7 @@
 package com.capsule.app.action
 
 import com.capsule.app.action.handler.CalendarActionHandler
+import com.capsule.app.action.handler.ClusterSummarizeActionHandler
 import com.capsule.app.action.handler.ShareActionHandler
 import com.capsule.app.action.handler.TodoActionHandler
 
@@ -20,7 +21,8 @@ object ActionHandlerRegistry {
     private val handlers: Map<String, ActionHandler> = mapOf(
         "calendar.createEvent" to CalendarActionHandler(),
         "tasks.createTodo"     to TodoActionHandler(),
-        "share.delegate"       to ShareActionHandler()
+        "share.delegate"       to ShareActionHandler(),
+        "cluster.summarize"    to ClusterSummarizeActionHandler()
     )
 
     fun lookup(functionId: String): ActionHandler? = handlers[functionId]

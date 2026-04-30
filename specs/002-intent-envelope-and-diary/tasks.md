@@ -12,6 +12,36 @@
 
 ## Status / Adjustments log
 
+**2026-04-29 — Phase 11 Block 13 (T161-T164 cluster.summarize AppFunction + `derived_via` column + Block 12 cleanup)**
+
+Block 13 closes the May-4 demo path: ships the `cluster.summarize` AppFunction end-to-end so SURFACED clusters can transition through ACTING → ACTED with an auditable derived envelope, plus the small Block 12 carry-over (fixture-path resilience + a future-proofing comment on the rejection-class enum).
+
+**Schema — `intent_envelope.derivedVia TEXT` (v3 → v4 additive ALTER, spec 012 FR-012-011 sentinel value `'cluster_summarize'`).** Adds the column nullable, no back-fill required: existing REGULAR + DIGEST rows keep `derivedVia = NULL`; only the new DERIVED rows produced by this skill carry `'cluster_summarize'`. Column lives in camelCase to match repo convention; the spec's snake-case `derived_via` is the *value* semantic, not the column name. New migration test (`OrbitDatabaseMigrationV3toV4Test`) seeds 50 v3 rows, runs `MIGRATION_3_4` only, asserts (a) the helper validates against the regenerated `4.json`, (b) every existing row has `derivedVia = NULL`, (c) a fresh DERIVED insert with `derivedVia = 'cluster_summarize'` round-trips intact.
+
+**IPC — `IEnvelopeRepository.summarizeCluster(clusterId)` AIDL method.** Outcome string mirrors `WeeklyDigestDelegate`: `"GENERATED:<envelopeId>"` on success, `"FAILED:<reason>"` on failure (`cluster_not_found`, `invalid_state`, `summariser_threw`, `summary_failed`, `insert_failed`). State transitions route through `ClusterStateMachine`: success = `ACT_SUCCESS` (ACTING → ACTED), failure = `ACT_FAIL` (ACTING → FAILED). The existing `FAILED → START_ACTING` retry path (capped at `MAX_FAILED_ACTING_RETRIES = 3`) means transient failures get re-tried automatically without re-surfacing as a new chip.
+
+**Delegate — `ClusterSummarizeDelegate`.** New file. Owns the full transaction: hydrates the cluster + members, runs `ClusterSummariser` (spec 002's existing prompt + citation validator), constructs an `IntentEnvelopeEntity(kind = DERIVED, derivedVia = "cluster_summarize", derivedFromEnvelopeIdsJson = JSONArray(memberIds), textContent = bullets.joinToString("\n"))`, and atomically inserts it together with a `CLUSTER_SUMMARY_GENERATED` audit row via the new `EnvelopeStorageBackend.insertClusterSummaryTransaction`. The state-transition audit (`CLUSTER_ACTED` / `CLUSTER_FAILED`) is written separately by `ClusterRepository.transitionToActed` / `transitionToFailed` so the forensics trail captures *both* "summary persisted" and "cluster transitioned" as distinct events (FR-035).
+
+**AppFunction registration — `BuiltInAppFunctionSchemas.CLUSTER_SUMMARIZE`.** `functionId = "cluster.summarize"`, `sideEffects = LOCAL_DB_WRITE`, `reversibility = REVERSIBLE_24H`, `sensitivityScope = PERSONAL`. `argsSchemaJson` requires `clusterId` (string, 1-64 chars); optional `proposalId` for downstream proposal-table linkage. Handler `ClusterSummarizeActionHandler` is a thin pass-through to the binder method (no `:capture`-side state needed) — measures latency around the binder call and maps the outcome string to `HandlerResult.Success` / `HandlerResult.Failed`. Registered in `ActionHandlerRegistry` as the fourth entry (`calendar.createEvent`, `tasks.createTodo`, `share.delegate`, `cluster.summarize`).
+
+**Instrumented test — `ClusterSummarizeActionTest`.** In-memory SQLCipher-backed `OrbitDatabase`. Fake `LlmProvider` extracts `[env-...]` tokens from the prompt and emits one cited bullet per id (deterministic + cheap, no Nano dependency). Seeds a SURFACED 3-member cluster, calls `ClusterSummarizeDelegate.summarizeCluster`, asserts: (a) outcome `"GENERATED:<id>"`; (b) DERIVED envelope persisted with `derivedVia = "cluster_summarize"` and citations JSON containing every member id; (c) source envelopes UNCHANGED (FR-012-006 forensics rule); (d) cluster state = ACTED with `dismissedAt = null`; (e) exactly one each of `CLUSTER_ACTING`, `CLUSTER_SUMMARY_GENERATED`, `CLUSTER_ACTED` audit rows; zero `CLUSTER_FAILED`. Failure-path test exercises `summarizeCluster("does-not-exist")` → `"FAILED:cluster_not_found"` + zero writes.
+
+**Block 12 carry-over.** `ClusterEvalCorpusTest.fixtureDir` now resolves via classpath (`javaClass.getResource("/fixtures/clusters")`) with module-relative + workspace-relative fallbacks; works whether JUnit's cwd is the module or the workspace root. Comment added above `knownOutcomes`: future rejection classes (e.g. `REJECTED_NO_HYDRATION`) MUST be added to the enum here before introducing a fixture that uses them — the test breaks intentionally if a fixture references an unknown outcome.
+
+**Hard constraints upheld**: no new color tokens, no new fonts, no intent-set changes, "sealed at save" wording untouched, no bubble overlay touch, no Settings UI movement.
+
+**Gates**: `:app:compileDebugKotlin` clean. `:app:compileDebugUnitTestKotlin` clean. `:app:compileDebugAndroidTestKotlin` clean. `:app:assembleDebug` BUILD SUCCESSFUL. `:app:testDebugUnitTest` 428/428 green (no regression from Block 12 baseline; instrumented additions are AndroidTest-only and require a device). New AndroidTests (`OrbitDatabaseMigrationV3toV4Test`, `ClusterSummarizeActionTest`) compile-only — emulator unavailable locally; device pass scheduled alongside the May-4 hardware session.
+
+**Open follow-ups (deferred, not blocking)**:
+- AndroidTest device pass for the two new instrumented tests — May 4.
+- Calibration FU#3 (progress UX) — v1.1.
+- FU#3 (reduce-motion ContentObserver) — visual-refit / accessibility sweep target.
+- FU#4 (`Locale.US` in `bucketRangeFormatter`) — i18n sweep target.
+- T-future-001 (Settings "Surface clusters" toggle) — v1.1 backlog.
+- v1.1 cleanup #1 (NEGATIVE-fixture `expectedSummary` placeholder removal) — fixture schema sweep, v1.1.
+
+---
+
 **2026-04-29 — Phase 11 Block 12 (pre-May-4 hardening) cluster eval harness polish + DateTimeParser fix + T160 corpus validity**
 
 Block 12 is mechanical insurance for the May-4 measurement pass: tighten the harness's scoring + report shape, clear the lone unit-test noise floor, land the deferred T160 fixture validity check, and spot-check the multi-cluster scoring assumption. AppFunction wiring (T161-T164) explicitly deferred to Block 13 — the `:capture ↔ :ml` IPC surface for cluster reads + `derived_via='cluster_summarize'` envelope writes does not yet exist, and registering a schema without a handler would create a half-wired skill. Cleaner to ship the IPC + handler + dispatch + instrumented test together in Block 13.
@@ -1135,10 +1165,10 @@ Three gate misses from Block 1 / Block 2 closed before Block 3 lands.
 
 ### AppFunction integration (Summarize as canonical Action) (US8)
 
-- [ ] T161 [P] [US8] MODIFY `app/src/main/java/com/capsule/app/data/BuiltInAppFunctionSchemas.kt` (003) — add `summarize_cluster` schema. Inputs: `cluster_id` (string, required). Outputs: `bullets` (array of `{text: string, cite_envelope_ids: string[]}`, length 1-3). Function metadata: `requires_user_confirm=false` (Summarize is a no-op on source envelopes per spec 012 FR-012-006), `produces_derived_envelope=true` per spec 012 FR-012-011.
-- [ ] T162 [US8] Create `app/src/main/java/com/capsule/app/action/handler/ClusterSummarizeHandler.kt` — implements the `summarize_cluster` AppFunction. Reads cluster + members → calls `ClusterSummariser` → writes derived envelope (`derived_via='cluster_summarize'`, `derived_from=member_envelope_ids`) per spec 012 FR-012-011 → transitions cluster to `ACTED` → audit `CLUSTER_ACTED`. Routes through 003's `ActionExecutorService` for unified audit + (no undo for Summarize since no source mutation).
-- [ ] T163 [US8] MODIFY `app/src/main/java/com/capsule/app/action/AppFunctionInvoker.kt` (003) — register `summarize_cluster → ClusterSummarizeHandler` in the dispatch table.
-- [ ] T164 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/action/ClusterSummarizeActionTest.kt` (instrumented) — full flow: cluster surfaced → user taps Summarize → ActionExecutor routes → ClusterSummarizeHandler runs → derived envelope persisted → cluster ACTED → audit row written.
+- [x] T161 [P] [US8] MODIFY `app/src/main/java/com/capsule/app/data/BuiltInAppFunctionSchemas.kt` (003) — add `summarize_cluster` schema. Inputs: `cluster_id` (string, required). Outputs: `bullets` (array of `{text: string, cite_envelope_ids: string[]}`, length 1-3). Function metadata: `requires_user_confirm=false` (Summarize is a no-op on source envelopes per spec 012 FR-012-006), `produces_derived_envelope=true` per spec 012 FR-012-011.
+- [x] T162 [US8] Create `app/src/main/java/com/capsule/app/action/handler/ClusterSummarizeHandler.kt` — implements the `summarize_cluster` AppFunction. Reads cluster + members → calls `ClusterSummariser` → writes derived envelope (`derived_via='cluster_summarize'`, `derived_from=member_envelope_ids`) per spec 012 FR-012-011 → transitions cluster to `ACTED` → audit `CLUSTER_ACTED`. Routes through 003's `ActionExecutorService` for unified audit + (no undo for Summarize since no source mutation).
+- [x] T163 [US8] MODIFY `app/src/main/java/com/capsule/app/action/AppFunctionInvoker.kt` (003) — register `summarize_cluster → ClusterSummarizeHandler` in the dispatch table.
+- [x] T164 [P] [US8] Create `app/src/androidTest/java/com/capsule/app/action/ClusterSummarizeActionTest.kt` (instrumented) — full flow: cluster surfaced → user taps Summarize → ActionExecutor routes → ClusterSummarizeHandler runs → derived envelope persisted → cluster ACTED → audit row written.
 
 ### Acceptance gate (US8, physical device)
 

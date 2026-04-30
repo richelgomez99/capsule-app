@@ -112,9 +112,46 @@ object BuiltInAppFunctionSchemas {
         sensitivityScope = SensitivityScope.SHARE_DELEGATED
     )
 
+    /**
+     * Spec 002 Phase 11 Block 13 / T161 — `cluster.summarize` AppFunction.
+     * Local-DB write (DERIVED envelope) with reversible 24h soft-delete
+     * window (the derived envelope can be deleted like any other and
+     * the cluster will retry on FAILED → ACTING). PERSONAL scope —
+     * runs entirely on-device through the local-preferring LlmProvider.
+     *
+     * `proposalId` is optional because cluster.summarize is invoked from
+     * the cluster card, NOT from an `action_proposal` row produced by
+     * the per-envelope extractor. Forward-compat: when a future
+     * Sonnet-driven planner emits a proposal pointing at a cluster, the
+     * same schema accepts it.
+     */
+    val CLUSTER_SUMMARIZE = AppFunctionSchema(
+        functionId = "cluster.summarize",
+        appPackage = ORBIT_PKG,
+        displayName = "Summarize cluster",
+        description = "Generate cited bullets from a research-session cluster's members.",
+        schemaVersion = 1,
+        argsSchemaJson = """
+            {
+              "${"$"}schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "required": ["clusterId"],
+              "properties": {
+                "clusterId":  { "type": "string", "minLength": 1, "maxLength": 64 },
+                "proposalId": { "type": "string", "minLength": 1, "maxLength": 64 }
+              },
+              "additionalProperties": false
+            }
+        """.trimIndent(),
+        sideEffects = AppFunctionSideEffect.LOCAL_DB_WRITE,
+        reversibility = Reversibility.REVERSIBLE_24H,
+        sensitivityScope = SensitivityScope.PERSONAL
+    )
+
     val ALL: List<AppFunctionSchema> = listOf(
         CALENDAR_CREATE_EVENT,
         TASKS_CREATE_TODO,
-        SHARE_DELEGATE
+        SHARE_DELEGATE,
+        CLUSTER_SUMMARIZE
     )
 }

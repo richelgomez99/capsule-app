@@ -195,3 +195,22 @@ internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_cluster_member_envelope ON cluster_member(envelopeId)")
     }
 }
+
+/**
+ * Spec 002 Phase 11 Block 13 / spec 012 FR-012-011 — additive column on
+ * `intent_envelope` recording the AppFunction `function_id` that produced
+ * a DERIVED row (e.g. `'cluster_summarize'`). NULL for REGULAR + DIGEST
+ * + every existing row, so this is a strictly additive ALTER. Pre-Phase-11
+ * derived rows (DIGESTs landed before v4) keep `derivedVia = NULL`; spec
+ * 012 readers treat NULL on a DERIVED row as "unknown derivation path"
+ * and fall back to row-shape inference.
+ *
+ * Spec 012 schema uses snake_case (`derived_via`); we keep the column
+ * name camelCase here to match the rest of `intent_envelope`. The
+ * stored *value* is what carries semantic meaning across surfaces.
+ */
+internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE intent_envelope ADD COLUMN derivedVia TEXT")
+    }
+}

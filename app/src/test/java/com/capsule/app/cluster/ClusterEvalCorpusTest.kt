@@ -35,7 +35,22 @@ import java.io.File
  */
 class ClusterEvalCorpusTest {
 
-    private val fixtureDir = File("src/test/resources/fixtures/clusters")
+    // Block 12 cleanup carry-over (2026-04-29): JUnit's working directory is
+    // the module root when run from Gradle, but the IDE may invoke the test
+    // with the workspace root as cwd. Try the classpath resource first
+    // (works in both), fall back to module-relative for legacy CLI runs.
+    private val fixtureDir: File = run {
+        val viaClasspath = javaClass.getResource("/fixtures/clusters")?.toURI()?.let(::File)
+        when {
+            viaClasspath != null && viaClasspath.isDirectory -> viaClasspath
+            File("src/test/resources/fixtures/clusters").isDirectory ->
+                File("src/test/resources/fixtures/clusters")
+            else -> File("app/src/test/resources/fixtures/clusters")
+        }
+    }
+    // If a future fixture introduces REJECTED_NO_HYDRATION or any other
+    // rejection class, this test breaks intentionally — expand the enum,
+    // then re-run.
     private val knownOutcomes = setOf(
         "POSITIVE",
         "REJECTED_SINGLE_DOMAIN",

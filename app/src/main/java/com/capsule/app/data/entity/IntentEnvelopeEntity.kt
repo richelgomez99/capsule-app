@@ -49,6 +49,15 @@ data class IntentEnvelopeEntity(
      * `{"items":[{"text":"…","done":false,"dueEpochMillis":null}],"derivedFromProposalId":"…"}`.
      * Null on every other envelope. See specs/003-orbit-actions/tasks.md T063.
      */
-    val todoMetaJson: String? = null
+    val todoMetaJson: String? = null,
+    /**
+     * Spec 002 Phase 11 Block 13 / spec 012 FR-012-011 — the AppFunction
+     * `function_id` that produced this DERIVED row, e.g.
+     * `"cluster_summarize"`. Null for REGULAR + DIGEST and forward-compat
+     * for any spec 012 derived path that lands later. Carries the
+     * `function_id` semantic from spec 012 line 126 (`derived_via TEXT`)
+     * — we use camelCase here to match the rest of `intent_envelope`.
+     */
+    val derivedVia: String? = null
 )
 

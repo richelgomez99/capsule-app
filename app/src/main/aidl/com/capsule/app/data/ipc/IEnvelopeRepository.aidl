@@ -217,4 +217,15 @@ interface IEnvelopeRepository {
     // calling on an already-terminal cluster is a no-op (returns false).
     // Returns true iff a row was actually transitioned.
     boolean markClusterDismissed(String clusterId);
+
+    // Spec 002 Phase 11 Block 13 (T161/T162) — cluster.summarize AppFunction
+    // entry point. Resolves [clusterId], transitions to ACTING (forensics
+    // before Nano), runs ClusterSummariser, and on success persists a
+    // DERIVED IntentEnvelope with derivedVia="cluster_summarize" plus a
+    // CLUSTER_SUMMARY_GENERATED audit row in one transaction, then
+    // transitions the cluster to ACTED. Returns the same outcome-string
+    // contract as runWeeklyDigest: "GENERATED:<envelopeId>" /
+    // "FAILED:<reason>". The caller (ClusterSummarizeActionHandler)
+    // re-fetches the envelope by id via getEnvelope when needed.
+    String summarizeCluster(String clusterId);
 }

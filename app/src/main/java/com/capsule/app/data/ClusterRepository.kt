@@ -162,4 +162,93 @@ class ClusterRepository(
         )
         return nextState
     }
+
+    /**
+     * Phase 11 Block 13 (T163) — terminal happy-path transition. Called
+     * by [ClusterSummarizeDelegate] AFTER the derived envelope has been
+     * persisted by `EnvelopeStorageBackend.insertClusterSummaryTransaction`.
+     * Routes through [ClusterStateMachine.Trigger.ACT_SUCCESS] so the
+     * ACTING → ACTED contract is enforced (callers cannot skip the
+     * ACTING write that establishes the forensics trail).
+     *
+     * Audit: writes [AuditAction.CLUSTER_ACTED] with `derivedEnvelopeId`
+     * so spec 012 readers can join the cluster row to the derived
+     * envelope without a second query.
+     */
+    suspend fun transitionToActed(
+        clusterId: String,
+        derivedEnvelopeId: String
+    ): ClusterState? {
+        val current = clusterDao.byId(clusterId) ?: return null
+        val nextState = ClusterStateMachine.next(
+            current.state,
+            ClusterStateMachine.Trigger.ACT_SUCCESS
+        ) ?: return null
+        val now = clock()
+        clusterDao.updateState(
+            id = clusterId,
+            newState = nextState.name,
+            stateChangedAt = now,
+            dismissedAt = null
+        )
+        auditLogDao?.insert(
+            auditWriter.build(
+                action = AuditAction.CLUSTER_ACTED,
+                description = "Cluster summarised → DERIVED envelope created",
+                envelopeId = derivedEnvelopeId,
+                extraJson = JSONObject().apply {
+                    put("clusterId", clusterId)
+                    put("priorState", current.state.name)
+                    put("derivedEnvelopeId", derivedEnvelopeId)
+                    put("triggeredBy", "summariser_success")
+                }.toString()
+            )
+        )
+        return nextState
+    }
+
+    /**
+     * Phase 11 Block 13 (T163) — terminal failure transition. Called by
+     * [ClusterSummarizeDelegate] when the summariser returns null
+     * (validation failed, citations rejected, prompt sanitiser refused,
+     * Nano errored). Routes through [ClusterStateMachine.Trigger.ACT_FAIL]
+     * so the cluster lands in FAILED — eligible for one of up to
+     * [ClusterStateMachine.MAX_FAILED_ACTING_RETRIES] retries via the
+     * existing FAILED → ACTING path; the chip re-appears via the
+     * UI's `observeSurfaced` filter (spec 002 FR-038).
+     *
+     * Audit: writes [AuditAction.CLUSTER_FAILED] with `reason` so the
+     * forensics trail captures *why* (e.g. `summary_failed`,
+     * `cluster_not_found`, `member_count_below_minimum`).
+     */
+    suspend fun transitionToFailed(
+        clusterId: String,
+        reason: String
+    ): ClusterState? {
+        val current = clusterDao.byId(clusterId) ?: return null
+        val nextState = ClusterStateMachine.next(
+            current.state,
+            ClusterStateMachine.Trigger.ACT_FAIL
+        ) ?: return null
+        val now = clock()
+        clusterDao.updateState(
+            id = clusterId,
+            newState = nextState.name,
+            stateChangedAt = now,
+            dismissedAt = null
+        )
+        auditLogDao?.insert(
+            auditWriter.build(
+                action = AuditAction.CLUSTER_FAILED,
+                description = "Cluster summarisation failed",
+                envelopeId = null,
+                extraJson = JSONObject().apply {
+                    put("clusterId", clusterId)
+                    put("priorState", current.state.name)
+                    put("reason", reason)
+                }.toString()
+            )
+        )
+        return nextState
+    }
 }

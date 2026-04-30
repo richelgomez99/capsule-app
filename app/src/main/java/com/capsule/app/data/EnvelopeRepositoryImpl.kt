@@ -87,7 +87,15 @@ class EnvelopeRepositoryImpl(
      * `observeClusters` AIDL method emits nothing (a single empty
      * list) and `stopObservingClusters` is a no-op.
      */
-    private val clusterRepository: ClusterRepository? = null
+    private val clusterRepository: ClusterRepository? = null,
+    /**
+     * Spec 002 Phase 11 Block 13 / T161-T164 — `cluster.summarize`
+     * AppFunction delegate. Nullable for the same reason as the rest:
+     * 002 contract tests use the smaller surface. Production wires it
+     * in `EnvelopeRepositoryService`. When null, [summarizeCluster]
+     * returns `"FAILED:summariser_disabled"`.
+     */
+    private val clusterSummarizeDelegate: ClusterSummarizeDelegate? = null
 ) : IEnvelopeRepository.Stub() {
 
     /** envelopeId → millis-deadline after which `undo()` returns false. */
@@ -823,6 +831,14 @@ class EnvelopeRepositoryImpl(
     override fun markClusterDismissed(clusterId: String): Boolean {
         val repo = clusterRepository ?: return false
         return runBlocking { repo.markDismissed(clusterId) }
+    }
+
+    // Spec 002 Phase 11 Block 13 (T161/T162) — cluster.summarize entry point.
+    // Outcome-string contract matches runWeeklyDigest so the calling
+    // `ClusterSummarizeActionHandler` parses GENERATED:/FAILED: uniformly.
+    override fun summarizeCluster(clusterId: String): String {
+        val delegate = clusterSummarizeDelegate ?: return "FAILED:summariser_disabled"
+        return runBlocking { delegate.summarizeCluster(clusterId) }
     }
 
     private fun ClusterCardModel.toParcel(): com.capsule.app.data.ipc.ClusterCardParcel =
