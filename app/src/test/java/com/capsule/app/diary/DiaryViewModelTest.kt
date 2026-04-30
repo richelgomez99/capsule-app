@@ -6,8 +6,11 @@ import com.capsule.app.ai.model.IntentClassification
 import com.capsule.app.ai.model.LlmProvenance
 import com.capsule.app.ai.model.SensitivityResult
 import com.capsule.app.ai.model.SummaryResult
+import com.capsule.app.data.ClusterCardModel
+import com.capsule.app.data.ClusterMemberRef
 import com.capsule.app.data.ipc.DayPageParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
+import com.capsule.app.data.model.ClusterState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,8 +21,10 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DiaryViewModelTest {
@@ -49,6 +54,9 @@ class DiaryViewModelTest {
 
     private class FakeRepo : DiaryRepository {
         val pages = MutableSharedFlow<DayPageParcel>(replay = 1)
+        // T148 follow-up — Block 9 review FU#1: drive the cluster flow
+        // from tests so we can verify combine + day-filter behaviour.
+        val clusters = MutableSharedFlow<List<ClusterCardModel>>(replay = 1)
         var throwOnObserve: Throwable? = null
         var reassignCalls = mutableListOf<Triple<String, String, String?>>()
         var archiveCalls = mutableListOf<String>()
@@ -95,6 +103,11 @@ class DiaryViewModelTest {
             error("FakeRepo.executeAction not stubbed")
         override suspend fun cancelWithinUndoWindow(executionId: String): Boolean = false
         override suspend fun setTodoItemDone(envelopeId: String, itemIndex: Int, done: Boolean) {}
+
+        // T148 follow-up — drives the cluster combine flow.
+        override fun observeClusters(): Flow<List<ClusterCardModel>> = flow {
+            clusters.collect { emit(it) }
+        }
     }
 
     /** Test fake recording every Orbit Actions hop. */
@@ -190,12 +203,14 @@ class DiaryViewModelTest {
     private fun newVm(
         repo: DiaryRepository,
         scope: CoroutineScope,
-        nano: LlmProvider = StubNano()
+        nano: LlmProvider = StubNano(),
+        zoneId: ZoneId = ZoneId.of("America/New_York")
     ): DiaryViewModel = DiaryViewModel(
         repository = repo,
         threadGrouper = ThreadGrouper(),
         dayHeaderGenerator = DayHeaderGenerator(nano, localeProvider = { "en-US" }),
-        scopeOverride = scope
+        scopeOverride = scope,
+        zoneId = zoneId
     )
 
     /**
@@ -208,11 +223,37 @@ class DiaryViewModelTest {
     private fun TestScopeVm(
         runScope: kotlinx.coroutines.test.TestScope,
         repo: DiaryRepository,
-        nano: LlmProvider = StubNano()
+        nano: LlmProvider = StubNano(),
+        zoneId: ZoneId = ZoneId.of("America/New_York")
     ): DiaryViewModel {
         val dispatcher = UnconfinedTestDispatcher(runScope.testScheduler)
         val vmScope = CoroutineScope(runScope.backgroundScope.coroutineContext + dispatcher)
-        return newVm(repo = repo, scope = vmScope, nano = nano)
+        return newVm(repo = repo, scope = vmScope, nano = nano, zoneId = zoneId)
+    }
+
+    /** Synthetic cluster anchored at [zone] / [localDate] / [hourOfDay]. */
+    private fun cluster(
+        id: String,
+        localDate: String,
+        hourOfDay: Int = 12,
+        zone: ZoneId = ZoneId.of("America/New_York"),
+        memberCount: Int = 4
+    ): ClusterCardModel {
+        val start = java.time.LocalDate.parse(localDate)
+            .atTime(hourOfDay, 0)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+        return ClusterCardModel(
+            clusterId = id,
+            state = ClusterState.SURFACED,
+            timeBucketStart = start,
+            timeBucketEnd = start + 30 * 60_000L,
+            modelLabel = "nano-test",
+            members = (1..memberCount).map {
+                ClusterMemberRef(envelopeId = "$id-m$it", memberIndex = it - 1)
+            }
+        )
     }
 
     @Test
@@ -427,5 +468,87 @@ class DiaryViewModelTest {
         // Must not crash — runCatching{} wrapper inside the VM swallows.
         vm.onToggleTodoItem("env-9", 0, done = true)
         advanceUntilIdle()
+    }
+
+    // ---- Spec 002 Phase 11 Block 9 follow-up #1 (T148 backfill) ----------
+    // Cluster flow combine + ZoneId-aware day filter coverage.
+
+    @Test
+    fun observe_clusterOnIsoDate_appearsInReadyClusters() = runTest {
+        val repo = FakeRepo()
+        val zone = ZoneId.of("America/New_York")
+        val vm = TestScopeVm(this, repo, zoneId = zone)
+        vm.observe("2026-04-20")
+        repo.pages.emit(DayPageParcel("2026-04-20", listOf(env("a"))))
+        repo.clusters.emit(listOf(cluster("c1", localDate = "2026-04-20", hourOfDay = 14, zone = zone)))
+        advanceUntilIdle()
+
+        val ready = vm.state.value as DayUiState.Ready
+        assertEquals(1, ready.clusters.size)
+        assertEquals("c1", ready.clusters.single().clusterId)
+    }
+
+    @Test
+    fun observe_clusterOnDifferentDay_isFilteredOut() = runTest {
+        val repo = FakeRepo()
+        val zone = ZoneId.of("America/New_York")
+        val vm = TestScopeVm(this, repo, zoneId = zone)
+        vm.observe("2026-04-20")
+        repo.pages.emit(DayPageParcel("2026-04-20", listOf(env("a"))))
+        repo.clusters.emit(
+            listOf(
+                cluster("c-prev", localDate = "2026-04-19", hourOfDay = 14, zone = zone),
+                cluster("c-next", localDate = "2026-04-21", hourOfDay = 14, zone = zone)
+            )
+        )
+        advanceUntilIdle()
+
+        val ready = vm.state.value as DayUiState.Ready
+        assertTrue(
+            "Off-day clusters must not flow into Ready.clusters",
+            ready.clusters.isEmpty()
+        )
+    }
+
+    @Test
+    fun observe_clusterOnly_emptyEnvelopes_routesToReadyNotEmpty() = runTest {
+        val repo = FakeRepo()
+        val zone = ZoneId.of("America/New_York")
+        val vm = TestScopeVm(this, repo, zoneId = zone)
+        vm.observe("2026-04-20")
+        repo.pages.emit(DayPageParcel("2026-04-20", emptyList()))
+        repo.clusters.emit(listOf(cluster("c1", localDate = "2026-04-20", hourOfDay = 9, zone = zone)))
+        advanceUntilIdle()
+
+        // Day with a cluster but no envelopes is Ready (so the slot still
+        // renders), NOT Empty. Threads is empty; clusters is the single card.
+        val ready = vm.state.value
+        assertNotNull("State must be Ready when the day has only a cluster", ready as? DayUiState.Ready)
+        val r = ready as DayUiState.Ready
+        assertTrue("threads must be empty when no envelopes exist", r.threads.isEmpty())
+        assertEquals(1, r.clusters.size)
+    }
+
+    @Test
+    fun observe_clusterAt2330Local_staysOnSameDay_DSTBoundary() = runTest {
+        val repo = FakeRepo()
+        // US Eastern DST spring-forward day: 2026-03-08 02:00 → 03:00.
+        // A cluster at 23:30 local on 2026-03-08 must still resolve to
+        // 2026-03-08 (not 2026-03-09).
+        val zone = ZoneId.of("America/New_York")
+        val vm = TestScopeVm(this, repo, zoneId = zone)
+        vm.observe("2026-03-08")
+        repo.pages.emit(DayPageParcel("2026-03-08", listOf(env("a"))))
+        repo.clusters.emit(
+            listOf(cluster("c-late", localDate = "2026-03-08", hourOfDay = 23, zone = zone))
+        )
+        advanceUntilIdle()
+
+        val ready = vm.state.value as DayUiState.Ready
+        assertEquals(
+            "Cluster anchored at 23:00 local must stay on the same iso date across DST",
+            listOf("c-late"),
+            ready.clusters.map { it.clusterId }
+        )
     }
 }
