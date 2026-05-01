@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.Color
  *  - `--ink-strong`       → emphasis text
  *  - `--ink-faint`        → captions, citations, timestamps (Berkeley Mono 10 sp)
  *  - `--rule`             → 1 px hairline dividers
+ *  - `--brand-accent`     → Quiet Almanac amber accent (#e8b06a)
+ *  - `--brand-accent-dim` → 16% amber wash
+ *  - `--brand-accent-ink` → text/icon ink on amber fills
  *  - `--ink-accent-cluster` → AgentVoiceMark glyph **only** (FR-010-019,
  *    locked /autoplan 2026-04-26 — see [com.capsule.app.ui.primitives.AgentVoiceMark]).
  *    Lint detector `NoAgentVoiceMarkOutsideAgentSurfaces` enforces
@@ -31,6 +34,9 @@ object CapsulePalette {
         val inkStrong: Color,
         val inkFaint: Color,
         val rule: Color,
+        val brandAccent: Color,
+        val brandAccentDim: Color,
+        val brandAccentInk: Color,
         val inkAccentCluster: Color,
     )
 
@@ -40,6 +46,9 @@ object CapsulePalette {
         inkStrong = Color(0xFF000000),
         inkFaint = Color(0xFF8C8C8C),
         rule = Color(0xFFD9D6D0),
+        brandAccent = Color(0xFFE8B06A),
+        brandAccentDim = Color(0x29E8B06A),
+        brandAccentInk = Color(0xFF1A1206),
         // --ink-accent-cluster: a muted indigo, distinguishable from
         // ink without shouting. Tonally compatible with the wax-seal
         // ink vocabulary per spec 010 D4.
@@ -52,6 +61,9 @@ object CapsulePalette {
         inkStrong = Color(0xFFFFFFFF),
         inkFaint = Color(0xFF7C7A75),
         rule = Color(0xFF2A2A2A),
+        brandAccent = Color(0xFFE8B06A),
+        brandAccentDim = Color(0x29E8B06A),
+        brandAccentInk = Color(0xFF1A1206),
         inkAccentCluster = Color(0xFF8FA3CC),
     )
 
