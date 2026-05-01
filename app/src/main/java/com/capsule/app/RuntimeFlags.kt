@@ -92,4 +92,15 @@ object RuntimeFlags {
     @JvmStatic
     var devClusterForceEmit: Boolean = false
         internal set
+
+    /**
+     * Spec 015 Phase 0 — gates the Quiet Almanac visual language.
+     *
+     * Default `false`. The composition root reads this once into
+     * `LocalRuntimeFlags`; production code MUST NOT observe it reactively.
+     */
+    @Volatile
+    @JvmStatic
+    var useNewVisualLanguage: Boolean = false
+        internal set
 }
