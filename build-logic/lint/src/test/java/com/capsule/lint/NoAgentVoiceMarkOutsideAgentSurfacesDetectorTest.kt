@@ -8,10 +8,11 @@ import com.android.tools.lint.detector.api.Issue
 /**
  * Unit test for [NoAgentVoiceMarkOutsideAgentSurfacesDetector].
  *
- * Verifies spec 010 FR-010-019 enforcement: AgentVoiceMark calls
- * outside the agent-voice surface allow-list produce an error,
- * while usage inside the allow-list (`ClusterSuggestionCard.kt`)
- * is allowed.
+ * Verifies spec 010 FR-010-019 enforcement after spec 015's brand-amber
+ * consolidation: AgentVoiceMark calls outside the agent-voice surface
+ * allow-list produce an error, while usage inside the allow-list
+ * (`ClusterSuggestionCard.kt`) is allowed. Detector logic is independent
+ * of the glyph color token.
  */
 class NoAgentVoiceMarkOutsideAgentSurfacesDetectorTest : LintDetectorTest() {
 

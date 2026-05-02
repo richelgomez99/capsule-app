@@ -277,7 +277,7 @@ private fun CardSurface(
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
-                    color = palette.inkAccentCluster,
+                    color = palette.brandAccent,
                 ),
                 modifier = Modifier.testTag(TestTag.HEADER_LABEL),
             )

@@ -30,7 +30,7 @@ import kotlin.math.sin
  * `OrbitNoAgentVoiceMarkOutsideAgentSurfaces`) fails the build on any
  * other call site. The initial allow-list is `ClusterSuggestionCard.kt`.
  *
- * Color: [CapsulePalette.Tokens.inkAccentCluster] (`--ink-accent-cluster`).
+ * Color: [CapsulePalette.Tokens.brandAccent] per spec 015 LD-001.
  */
 @Composable
 fun AgentVoiceMark(
@@ -39,7 +39,7 @@ fun AgentVoiceMark(
     tint: Color? = null,
 ) {
     val palette = CapsulePalette.current(dark = isSystemInDarkTheme())
-    val color = tint ?: palette.inkAccentCluster
+    val color = tint ?: palette.brandAccent
     val sizeDp: Dp = with(LocalDensity.current) { size.toDp() }
 
     Canvas(modifier = modifier.size(sizeDp)) {
