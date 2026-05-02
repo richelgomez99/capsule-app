@@ -20,11 +20,10 @@ import androidx.compose.ui.graphics.Color
  *  - `--brand-accent`     → Quiet Almanac amber accent (#e8b06a)
  *  - `--brand-accent-dim` → 16% amber wash
  *  - `--brand-accent-ink` → text/icon ink on amber fills
- *  - `--ink-accent-cluster` → AgentVoiceMark glyph **only** (FR-010-019,
- *    locked /autoplan 2026-04-26 — see [com.capsule.app.ui.primitives.AgentVoiceMark]).
- *    Lint detector `NoAgentVoiceMarkOutsideAgentSurfaces` enforces
- *    that this token is used exclusively inside the agent-voice
- *    surface allow-list.
+ *
+ * Agent voice also uses `brandAccent` per spec 015 LD-001. The lint
+ * detector `NoAgentVoiceMarkOutsideAgentSurfaces` still enforces where
+ * [com.capsule.app.ui.primitives.AgentVoiceMark] may be rendered.
  */
 object CapsulePalette {
 
@@ -37,7 +36,6 @@ object CapsulePalette {
         val brandAccent: Color,
         val brandAccentDim: Color,
         val brandAccentInk: Color,
-        val inkAccentCluster: Color,
     )
 
     val Light: Tokens = Tokens(
@@ -49,10 +47,6 @@ object CapsulePalette {
         brandAccent = Color(0xFFE8B06A),
         brandAccentDim = Color(0x29E8B06A),
         brandAccentInk = Color(0xFF1A1206),
-        // --ink-accent-cluster: a muted indigo, distinguishable from
-        // ink without shouting. Tonally compatible with the wax-seal
-        // ink vocabulary per spec 010 D4.
-        inkAccentCluster = Color(0xFF3D4A6B),
     )
 
     val Dark: Tokens = Tokens(
@@ -64,7 +58,6 @@ object CapsulePalette {
         brandAccent = Color(0xFFE8B06A),
         brandAccentDim = Color(0x29E8B06A),
         brandAccentInk = Color(0xFF1A1206),
-        inkAccentCluster = Color(0xFF8FA3CC),
     )
 
     @Composable
