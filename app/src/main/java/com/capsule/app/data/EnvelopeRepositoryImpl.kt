@@ -152,7 +152,8 @@ class EnvelopeRepositoryImpl(
                 activityState = ActivityState.valueOf(state.activityState),
                 tzId = state.tzId,
                 hourLocal = state.hourLocal,
-                dayOfWeekLocal = state.dayOfWeekLocal
+                dayOfWeekLocal = state.dayOfWeekLocal,
+                sourceAppLabel = state.sourceAppLabel
             ),
             createdAt = now,
             dayLocal = dayLocal,
@@ -918,6 +919,7 @@ class EnvelopeRepositoryImpl(
         activityState = state.activityState.name,
         hourLocal = state.hourLocal,
         dayOfWeekLocal = state.dayOfWeekLocal,
+        sourceAppLabel = state.sourceAppLabel,
         intentHistoryJson = intentHistoryJson,
         canonicalUrl = latestResult?.canonicalUrl,
         deletedAtMillis = deletedAt,

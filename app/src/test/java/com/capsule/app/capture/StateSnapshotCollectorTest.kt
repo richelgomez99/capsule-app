@@ -16,7 +16,7 @@ class StateSnapshotCollectorTest {
         nowMillis: Long = FIXED_NOW,
         zone: ZoneId = ZoneId.of("UTC")
     ): StateSnapshotCollector = StateSnapshotCollector(
-        packageResolver = { _, _ -> category },
+        packageResolver = { _, _ -> StateSnapshotCollector.ForegroundApp(category) },
         activityStateSource = { activity },
         clock = { nowMillis },
         zoneProvider = { zone }
@@ -26,6 +26,21 @@ class StateSnapshotCollectorTest {
     fun snapshot_carriesResolverCategory() {
         val snap = collector(category = AppCategory.BROWSER).snapshot()
         assertEquals(AppCategory.BROWSER.name, snap.appCategory)
+    }
+
+    @Test
+    fun snapshot_carriesSourceAppLabel() {
+        val snap = StateSnapshotCollector(
+            packageResolver = { _, _ ->
+                StateSnapshotCollector.ForegroundApp(AppCategory.VIDEO, appLabel = "YouTube")
+            },
+            activityStateSource = { ActivityState.UNKNOWN },
+            clock = { FIXED_NOW },
+            zoneProvider = { ZoneId.of("UTC") }
+        ).snapshot()
+
+        assertEquals(AppCategory.VIDEO.name, snap.appCategory)
+        assertEquals("YouTube", snap.sourceAppLabel)
     }
 
     @Test
@@ -83,7 +98,7 @@ class StateSnapshotCollectorTest {
             packageResolver = { start, end ->
                 startSeen = start
                 endSeen = end
-                AppCategory.OTHER
+                StateSnapshotCollector.ForegroundApp(AppCategory.OTHER)
             },
             activityStateSource = { ActivityState.STILL },
             clock = { FIXED_NOW },
@@ -155,7 +170,7 @@ class StateSnapshotCollectorTest {
         val resolver = StateSnapshotCollector.PackageResolver { _, _ ->
             // Unused: the real resolver goes through UsageStatsManager; here
             // we assert the *mapping* itself is exhaustive.
-            AppCategory.OTHER
+            StateSnapshotCollector.ForegroundApp(AppCategory.OTHER)
         }
         // Directly sanity-check the dictionary mapping the collector uses.
         top30.forEach { pkg ->
@@ -168,7 +183,7 @@ class StateSnapshotCollectorTest {
         assertEquals(30, top30.size)
         // Touch the resolver reference so the compiler doesn't drop the
         // demonstration that StateSnapshotCollector *uses* this same path.
-        assertEquals(AppCategory.OTHER, resolver.resolveForegroundCategory(0, 0))
+        assertEquals(AppCategory.OTHER, resolver.resolveForegroundApp(0, 0).category)
     }
 
     companion object {

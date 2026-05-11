@@ -134,6 +134,7 @@ object ExportService {
             o.put("intentSource", e.intentSource.name)
             o.put("intentHistoryJson", e.intentHistoryJson)
             o.put("appCategory", e.state.appCategory.name)
+            e.state.sourceAppLabel?.let { o.put("sourceAppLabel", it) }
             o.put("activityState", e.state.activityState.name)
             o.put("tzId", e.state.tzId)
             o.put("hourLocal", e.state.hourLocal)
