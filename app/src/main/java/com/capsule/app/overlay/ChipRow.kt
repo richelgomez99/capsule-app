@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -51,10 +52,10 @@ import com.capsule.app.data.model.Intent
 import kotlinx.coroutines.delay
 
 /**
- * The 4-chip row shown when the silent-wrap predicate returned `ShowChipRow`.
+ * The 5-chip row shown when the silent-wrap predicate returned `ShowChipRow`.
  *
  * UX contract (spec.md FR-004, research.md §Chip Row UX, April 2026 polish):
- *  - 4 chips horizontally: Want it, Reference, For someone, Interesting.
+ *  - 5 chips horizontally: Want it, Reference, Read later, For someone, Interesting.
  *  - 2-second hairline countdown bar drains left-to-right across the top.
  *  - Tap: firm haptic + chip scales to 0.94 + invoke [onChipTap] (which
  *    collapses and seals via USER_CHIP).
@@ -133,7 +134,7 @@ fun ChipRow(
 
             Spacer(Modifier.height(10.dp))
 
-            // 4 chips, equal width, equal spacing.
+            // 5 chips, equal width, equal spacing.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -153,6 +154,13 @@ fun ChipRow(
                     icon = Icons.Filled.Bookmark,
                     modifier = Modifier.weight(1f),
                     onTap = { onChipTap(Intent.REFERENCE) }
+                )
+                IntentChip(
+                    intent = Intent.READ_LATER,
+                    label = "Read later",
+                    icon = Icons.Filled.Schedule,
+                    modifier = Modifier.weight(1f),
+                    onTap = { onChipTap(Intent.READ_LATER) }
                 )
                 IntentChip(
                     intent = Intent.FOR_SOMEONE,

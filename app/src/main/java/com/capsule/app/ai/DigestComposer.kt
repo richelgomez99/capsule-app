@@ -192,6 +192,7 @@ class DigestComposer(
     private fun intentLabel(raw: String): String = when (raw.uppercase()) {
         "WANT_IT" -> "Want it"
         "REFERENCE" -> "Reference"
+        "READ_LATER" -> "Read later"
         "FOR_SOMEONE" -> "For someone"
         "INTERESTING" -> "Interesting"
         "AMBIGUOUS" -> "Ambiguous"
@@ -212,7 +213,7 @@ class DigestComposer(
             "You are summarising a user's week of personal captures from " +
                 "their journal. Write 4–6 sentences. Friendly, observational, " +
                 "not promotional. No first person plural. Use the user's intent " +
-                "labels (\"Want it\", \"Reference\", \"For someone\", " +
+                "labels (\"Want it\", \"Reference\", \"Read later\", \"For someone\", " +
                 "\"Interesting\") when helpful. Do not enumerate every entry. " +
                 "Surface patterns: recurring topics, app-category shifts, " +
                 "intent shifts."

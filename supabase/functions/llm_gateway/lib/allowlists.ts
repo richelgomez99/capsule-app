@@ -12,20 +12,21 @@
 //   - handlers/extract_actions.ts (filter via per-request registeredFunctions)
 
 /**
- * Six valid intent labels. Mirrors the system prompt in
- * handlers/classify_intent.ts. Anything outside this set falls back to OTHER.
+ * Five product intent labels plus AMBIGUOUS. Mirrors Android's Intent enum
+ * and the system prompt in handlers/classify_intent.ts. Anything outside this
+ * set falls back to AMBIGUOUS.
  */
 export const INTENT_VALUES: ReadonlySet<string> = new Set([
-  "REMINDER",
-  "NOTE",
-  "QUESTION",
-  "TASK",
-  "EVENT",
-  "OTHER",
+  "WANT_IT",
+  "REFERENCE",
+  "READ_LATER",
+  "FOR_SOMEONE",
+  "INTERESTING",
+  "AMBIGUOUS",
 ]);
 
 /** Fallback when the model returns an out-of-set intent. */
-export const INTENT_FALLBACK = "OTHER";
+export const INTENT_FALLBACK = "AMBIGUOUS";
 
 /**
  * Seven valid sensitivity tags. Mirrors the system prompt in
@@ -52,7 +53,7 @@ export function sanitizeSensitivityTags(raw: readonly string[]): string[] {
   return filtered.length === 0 ? ["NONE"] : filtered;
 }
 
-/** Clamp an intent label to the closed set; unknowns become OTHER. */
+/** Clamp an intent label to the closed set; unknowns become AMBIGUOUS. */
 export function sanitizeIntent(raw: string): string {
   return INTENT_VALUES.has(raw) ? raw : INTENT_FALLBACK;
 }

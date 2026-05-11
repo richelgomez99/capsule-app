@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.capsule.app.data.model.Intent
 
 /**
- * T051 — reusable 4-chip intent picker used both by the overlay (via a
+ * T051 — reusable 5-chip intent picker used both by the overlay (via a
  * countdown wrapper) and by the diary (tap-to-reassign). No countdown, no
  * timeout — callers compose those behaviours around this if they need them.
  *
@@ -72,6 +73,14 @@ fun IntentChipPicker(
             selected = currentIntent == Intent.REFERENCE,
             modifier = Modifier.weight(1f),
             onTap = { onPick(Intent.REFERENCE) }
+        )
+        IntentChip(
+            intent = Intent.READ_LATER,
+            label = "Read later",
+            icon = Icons.Filled.Schedule,
+            selected = currentIntent == Intent.READ_LATER,
+            modifier = Modifier.weight(1f),
+            onTap = { onPick(Intent.READ_LATER) }
         )
         IntentChip(
             intent = Intent.FOR_SOMEONE,

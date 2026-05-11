@@ -1,9 +1,10 @@
 package com.capsule.app.data.model
 
-/** The four v1 intent labels + AMBIGUOUS (unassigned). */
+/** The five v1 product intent labels + AMBIGUOUS (unassigned). */
 enum class Intent {
     WANT_IT,
     REFERENCE,
+    READ_LATER,
     FOR_SOMEONE,
     INTERESTING,
     AMBIGUOUS
