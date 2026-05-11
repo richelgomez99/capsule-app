@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.capsule.app.data.entity.AuditLogEntryEntity
 import com.capsule.app.data.entity.ContinuationEntity
 import com.capsule.app.data.entity.ContinuationResultEntity
+import com.capsule.app.data.entity.EnvelopeNoteEntity
 import com.capsule.app.data.entity.IntentEnvelopeEntity
 import com.capsule.app.data.entity.IntentEnvelopeWithResults
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,7 @@ class LocalRoomBackend(
     private val envelopeDao = database.intentEnvelopeDao()
     private val continuationDao = database.continuationDao()
     private val continuationResultDao = database.continuationResultDao()
+    private val noteDao = database.envelopeNoteDao()
     private val auditDao = database.auditLogDao()
 
     override suspend fun sealTransaction(
@@ -203,6 +205,20 @@ class LocalRoomBackend(
 
     override suspend fun getEnvelope(id: String): IntentEnvelopeEntity? =
         envelopeDao.getById(id)
+
+    override suspend fun getLatestNoteForEnvelope(envelopeId: String): EnvelopeNoteEntity? =
+        noteDao.latestForEnvelope(envelopeId)
+
+    override suspend fun createOrUpdateLatestNote(note: EnvelopeNoteEntity) {
+        database.withTransaction {
+            val existing = noteDao.latestForEnvelope(note.envelopeId)
+            if (existing == null) {
+                noteDao.insert(note)
+            } else {
+                noteDao.updateText(existing.id, note.text, note.updatedAt ?: note.createdAt)
+            }
+        }
+    }
 
     override suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(
         hash: String

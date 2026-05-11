@@ -55,11 +55,14 @@ class EnvelopeDetailViewModel(
                 return@launch
             }
             val envelope = loaded.getOrThrow()
+            val latestNote = runCatching { repository.getLatestNote(envelopeId) }
+                .getOrNull()
             val audit = auditProvider?.let { provider ->
                 runCatching { provider(envelopeId) }.getOrDefault(emptyList())
             } ?: emptyList()
             _state.value = EnvelopeDetailUiState.Ready(
                 envelope = envelope,
+                latestNote = latestNote,
                 intentHistory = parseIntentHistory(envelope.intentHistoryJson),
                 auditTrail = audit
             )
@@ -90,6 +93,13 @@ class EnvelopeDetailViewModel(
     fun onRetryHydration() {
         scope.launch {
             runCatching { repository.retryHydration(envelopeId) }
+            refresh()
+        }
+    }
+
+    fun onSaveNote(text: String) {
+        scope.launch {
+            runCatching { repository.createOrUpdateLatestNote(envelopeId, text) }
             refresh()
         }
     }

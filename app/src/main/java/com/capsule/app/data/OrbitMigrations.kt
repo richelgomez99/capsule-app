@@ -240,3 +240,25 @@ internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
         )
     }
 }
+
+/** v7 — spec 017 note persistence for duplicate feedback actions. */
+internal val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS envelope_note (
+                id TEXT NOT NULL PRIMARY KEY,
+                envelopeId TEXT NOT NULL,
+                text TEXT NOT NULL,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER,
+                FOREIGN KEY(envelopeId) REFERENCES intent_envelope(id) ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_envelope_note_envelopeId_updatedAt " +
+                "ON envelope_note(envelopeId, updatedAt)"
+        )
+    }
+}

@@ -6,6 +6,7 @@ import com.capsule.app.ai.extract.ExtractOutcome
 import com.capsule.app.audit.AuditLogWriter
 import com.capsule.app.continuation.ContinuationEngine
 import com.capsule.app.data.entity.ContinuationEntity
+import com.capsule.app.data.entity.EnvelopeNoteEntity
 import com.capsule.app.data.entity.IntentEnvelopeEntity
 import com.capsule.app.data.entity.StateSnapshot
 import com.capsule.app.data.ipc.EnvelopeViewParcel
@@ -316,6 +317,26 @@ class EnvelopeRepositoryImpl(
         // dedupe-shared result if set, otherwise the envelope's own latest.
         val latest = backend.getLatestResultForEnvelope(envelopeId, entity.sharedContinuationResultId)
         entity.toViewParcel(latest)
+    }
+
+    override fun getLatestNote(envelopeId: String): String? = runBlocking {
+        backend.getLatestNoteForEnvelope(envelopeId)?.text
+    }
+
+    override fun createOrUpdateLatestNote(envelopeId: String, text: String): Boolean {
+        val clean = text.trim()
+        if (clean.isBlank()) return false
+        val now = clock()
+        val note = EnvelopeNoteEntity(
+            id = UUID.randomUUID().toString(),
+            envelopeId = envelopeId,
+            text = clean,
+            createdAt = now,
+            updatedAt = now
+        )
+        return runCatching {
+            runBlocking { backend.createOrUpdateLatestNote(note) }
+        }.isSuccess
     }
 
     override fun observeDay(isoDate: String, observer: IEnvelopeObserver) {

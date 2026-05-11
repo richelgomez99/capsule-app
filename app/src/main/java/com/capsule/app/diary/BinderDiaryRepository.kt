@@ -185,6 +185,16 @@ class BinderDiaryRepository(
         return withContext(Dispatchers.IO) { repo.getEnvelope(envelopeId) }
     }
 
+    override suspend fun getLatestNote(envelopeId: String): String? {
+        val repo = connect()
+        return withContext(Dispatchers.IO) { repo.getLatestNote(envelopeId) }
+    }
+
+    override suspend fun createOrUpdateLatestNote(envelopeId: String, text: String): Boolean {
+        val repo = connect()
+        return withContext(Dispatchers.IO) { repo.createOrUpdateLatestNote(envelopeId, text) }
+    }
+
     override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> {
         val repo = connect()
         return withContext(Dispatchers.IO) {

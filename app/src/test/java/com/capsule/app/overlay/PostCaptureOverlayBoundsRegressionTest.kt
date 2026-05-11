@@ -27,6 +27,7 @@ class PostCaptureOverlayBoundsRegressionTest {
         assertTrue(
             "Chip rows must keep the full-width target row.",
             src.contains("state is PostCaptureUi.ChipRow") &&
+                src.contains("state is PostCaptureUi.ReclassifyChipRow") &&
                 src.contains("modifier.fillMaxWidth()")
         )
         assertTrue(
@@ -46,6 +47,7 @@ class PostCaptureOverlayBoundsRegressionTest {
         assertTrue(
             "Chip rows must use MATCH_PARENT while compact post-capture states use WRAP_CONTENT.",
             src.contains("is PostCaptureUi.ChipRow -> WindowManager.LayoutParams.MATCH_PARENT") &&
+                src.contains("is PostCaptureUi.ReclassifyChipRow -> WindowManager.LayoutParams.MATCH_PARENT") &&
                 src.contains("else -> WindowManager.LayoutParams.WRAP_CONTENT")
         )
     }

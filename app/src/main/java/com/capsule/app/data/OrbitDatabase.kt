@@ -11,6 +11,7 @@ import com.capsule.app.data.dao.AuditLogDao
 import com.capsule.app.data.dao.ClusterDao
 import com.capsule.app.data.dao.ContinuationDao
 import com.capsule.app.data.dao.ContinuationResultDao
+import com.capsule.app.data.dao.EnvelopeNoteDao
 import com.capsule.app.data.dao.IntentEnvelopeDao
 import com.capsule.app.data.dao.SkillUsageDao
 import com.capsule.app.data.entity.ActionExecutionEntity
@@ -21,6 +22,7 @@ import com.capsule.app.data.entity.ClusterEntity
 import com.capsule.app.data.entity.ClusterMemberEntity
 import com.capsule.app.data.entity.ContinuationEntity
 import com.capsule.app.data.entity.ContinuationResultEntity
+import com.capsule.app.data.entity.EnvelopeNoteEntity
 import com.capsule.app.data.entity.IntentEnvelopeEntity
 import com.capsule.app.data.entity.SkillUsageEntity
 import com.capsule.app.data.security.KeystoreKeyProvider
@@ -39,9 +41,10 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         SkillUsageEntity::class,
         // 002 amendment Phase 11 — Cluster Engine
         ClusterEntity::class,
-        ClusterMemberEntity::class
+        ClusterMemberEntity::class,
+        EnvelopeNoteEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class OrbitDatabase : RoomDatabase() {
@@ -49,6 +52,7 @@ abstract class OrbitDatabase : RoomDatabase() {
     abstract fun intentEnvelopeDao(): IntentEnvelopeDao
     abstract fun continuationDao(): ContinuationDao
     abstract fun continuationResultDao(): ContinuationResultDao
+    abstract fun envelopeNoteDao(): EnvelopeNoteDao
     abstract fun auditLogDao(): AuditLogDao
 
     // 003 v1.1
@@ -104,7 +108,8 @@ abstract class OrbitDatabase : RoomDatabase() {
                     MIGRATION_2_3,
                     MIGRATION_3_4,
                     MIGRATION_4_5,
-                    MIGRATION_5_6
+                    MIGRATION_5_6,
+                    MIGRATION_6_7
                 )
                 .build()
         }

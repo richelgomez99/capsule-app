@@ -167,6 +167,16 @@ class CapsuleSealOrchestrator(
         if (ok) UndoOutcome.Removed else UndoOutcome.AlreadyInDiary
     }
 
+    override suspend fun reclassifyExisting(envelopeId: String, intent: Intent): Boolean =
+        withContext(Dispatchers.IO) {
+            val repo = repositoryProvider() ?: return@withContext false
+            runCatching {
+                repo.reassignIntent(envelopeId, intent.name, "duplicate_feedback_reclassify")
+            }.onFailure {
+                Log.w(TAG, "reassignIntent() rpc failed", it)
+            }.isSuccess
+        }
+
     private fun buildDraft(
         scrubbedText: String,
         intent: Intent,

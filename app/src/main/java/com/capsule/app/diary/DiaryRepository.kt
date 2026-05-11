@@ -39,6 +39,12 @@ interface DiaryRepository {
     /** T055b — single-envelope fetch for the detail screen. */
     suspend fun getEnvelope(envelopeId: String): EnvelopeViewParcel
 
+    /** Spec 017 — latest user note attached to an envelope, if any. */
+    suspend fun getLatestNote(envelopeId: String): String? = null
+
+    /** Spec 017 — create or edit the latest note attached to an envelope. */
+    suspend fun createOrUpdateLatestNote(envelopeId: String, text: String): Boolean = false
+
     /**
      * T056 — paginated list of ISO local dates (newest first) that have
      * at least one non-archived, non-deleted envelope. Backs the Diary's

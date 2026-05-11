@@ -155,6 +155,8 @@ class ScreenshotUrlExtractWorkerTest {
         override fun observeDay(isoDate: String, observer: IEnvelopeObserver) = error("unused")
         override fun stopObserving(observer: IEnvelopeObserver) = error("unused")
         override fun getEnvelope(envelopeId: String): EnvelopeViewParcel = error("unused")
+        override fun getLatestNote(envelopeId: String): String? = error("unused")
+        override fun createOrUpdateLatestNote(envelopeId: String, text: String): Boolean = error("unused")
         override fun reassignIntent(envelopeId: String, newIntentName: String, reasonOpt: String?) = error("unused")
         override fun archive(envelopeId: String) = error("unused")
         override fun delete(envelopeId: String) = error("unused")

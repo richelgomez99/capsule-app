@@ -3,6 +3,7 @@ package com.capsule.app.data
 import com.capsule.app.data.entity.AuditLogEntryEntity
 import com.capsule.app.data.entity.ContinuationEntity
 import com.capsule.app.data.entity.ContinuationResultEntity
+import com.capsule.app.data.entity.EnvelopeNoteEntity
 import com.capsule.app.data.entity.IntentEnvelopeEntity
 import com.capsule.app.data.entity.IntentEnvelopeWithResults
 import kotlinx.coroutines.flow.Flow
@@ -140,6 +141,12 @@ interface EnvelopeStorageBackend {
     fun observeDayWithResults(dayLocal: String): Flow<List<IntentEnvelopeWithResults>>
 
     suspend fun getEnvelope(id: String): IntentEnvelopeEntity?
+
+    suspend fun getLatestNoteForEnvelope(envelopeId: String): EnvelopeNoteEntity? = null
+
+    suspend fun createOrUpdateLatestNote(note: EnvelopeNoteEntity) {
+        error("createOrUpdateLatestNote not implemented")
+    }
 
     suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
 
