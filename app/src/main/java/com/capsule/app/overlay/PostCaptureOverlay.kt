@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +27,11 @@ fun PostCaptureOverlay(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.postCaptureUi.collectAsState()
+    val layoutModifier = if (state is PostCaptureUi.ChipRow) {
+        modifier.fillMaxWidth()
+    } else {
+        modifier.wrapContentSize()
+    }
 
     AnimatedContent(
         targetState = state,
@@ -34,7 +40,7 @@ fun PostCaptureOverlay(
         },
         contentKey = { it::class },
         label = "postCaptureUi",
-        modifier = modifier.fillMaxWidth()
+        modifier = layoutModifier
     ) { ui ->
         when (ui) {
             is PostCaptureUi.None -> Box(Modifier)
