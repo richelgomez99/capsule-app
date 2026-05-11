@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orbit · App v1</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    html, body { margin: 0; background: #07090f; color: #f3ead8; font-family: 'Inter', system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; overflow: hidden; }
+    #root { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="android-frame.jsx"></script>
+  <script type="text/babel" src="orbit-tokens.jsx"></script>
+  <script type="text/babel" src="orbit-screen-diary.jsx"></script>
+  <script type="text/babel" src="orbit-screen-capture.jsx"></script>
+  <script type="text/babel" src="orbit-screen-cluster.jsx"></script>
+  <script type="text/babel" src="orbit-screen-settings.jsx"></script>
+  <script type="text/babel" src="orbit-screen-bubble.jsx"></script>
+
+  <script type="text/babel">
+    const W = 412, H = 892;
+
+    // Wrapper — drops the screen into an AndroidDevice (no app bar; each
+    // screen renders its own editorial header).
+    function Frame({ children }) {
+      return (
+        <AndroidDevice width={W} height={H} dark={true}>
+          {children}
+        </AndroidDevice>
+      );
+    }
+
+    // Title slate — "why Orbit" cover. Personal voice, paged-document feel,
+    // the logo on display so a reviewer learns the mark + the philosophy in
+    // one read. Not technical specs — the founder's own words.
+    function Slate() {
+      return (
+        <div data-screen-label="00 About Orbit" style={{
+          width: 560, padding: '44px 48px 40px',
+          background: ORBIT.bgDeep,
+          color: ORBIT.cream,
+          fontFamily: SANS,
+          border: `1px solid ${ORBIT.rule}`,
+          borderRadius: 22,
+          alignSelf: 'center',
+        }}>
+          {/* Top row — wordmark + meta */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
+            <OrbitWordmark height={26} />
+            <MonoLabel size={9.5} color={ORBIT.creamFaint}>v1 · Android · Apr 2026</MonoLabel>
+          </div>
+
+          {/* Logo display — large, alone, paged */}
+          <div style={{
+            padding: '36px 0 32px',
+            borderTop: `1px solid ${ORBIT.rule}`,
+            borderBottom: `1px solid ${ORBIT.rule}`,
+            display: 'flex', alignItems: 'center', gap: 32,
+          }}>
+            <OrbitMark size={128} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <MonoLabel size={9.5} style={{ marginBottom: 6 }}>// the mark</MonoLabel>
+              <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: ORBIT.creamDim, lineHeight: 1.4 }}>
+                A self at the center, an ellipse around it, one bright thing held in tow. Not a hub-and-spoke. A gravity field.
+              </div>
+            </div>
+          </div>
+
+          {/* Headline — a line that says the whole product */}
+          <div style={{
+            fontFamily: SERIF, fontSize: 52, fontWeight: 300,
+            lineHeight: 1.02, letterSpacing: '-0.025em', marginTop: 32,
+          }}>
+            For the people whose attention<br/>
+            <span style={{ fontStyle: 'italic', color: ORBIT.accent }}>moves in seasons.</span>
+          </div>
+
+          {/* Personal essay — founder's voice, lightly edited */}
+          <div style={{ marginTop: 28, fontFamily: SERIF, fontSize: 17.5, color: ORBIT.cream, lineHeight: 1.5, letterSpacing: '-0.005em' }}>
+            <p style={{ margin: '0 0 14px' }}>
+              I built Orbit because <em style={{ color: ORBIT.creamDim }}>my own attention has always worked exactly like that</em> — a messy orbit of projects and intentions. Some pulled close by gravity. Urgent. Worked on daily. Others flying in from nowhere and sticking around for weeks.
+            </p>
+            <p style={{ margin: '0 0 14px', color: ORBIT.creamDim }}>
+              I'm a good multi-tasker. Doesn't stop me from losing things.
+            </p>
+            <p style={{ margin: '0 0 14px' }}>
+              Most productivity apps don't help with that. They assume you're a linear thinker — the planner, the builder, every other hat, all at once. People who pull that off get more done. <em style={{ color: ORBIT.creamDim }}>Most of us aren't built like that.</em>
+            </p>
+            <p style={{ margin: '0 0 14px' }}>
+              We have <em style={{ color: ORBIT.accent }}>seasons</em>. Some weeks I have an hour to spend on a mission. Other weeks, several. Some days, just-enough is the win.
+            </p>
+            <p style={{ margin: '0 0 14px' }}>
+              I wanted something that helps me move forward without losing what makes me human along the way.
+            </p>
+          </div>
+
+          {/* The "what it does" footer — quiet, grounded */}
+          <div style={{ marginTop: 30, padding: '22px 22px', background: ORBIT.bg, borderRadius: 14, border: `1px solid ${ORBIT.rule}` }}>
+            <MonoLabel size={9.5} color={ORBIT.accent} style={{ marginBottom: 10 }}>// so that's what Orbit does</MonoLabel>
+            <div style={{ fontFamily: SERIF, fontSize: 16, lineHeight: 1.5, color: ORBIT.cream }}>
+              It catches what you save — screenshots, clipboard, articles, anything you tell yourself you'll come back to. Pairs each capture with the intent you had at the moment of save. Surfaces the patterns you didn't notice. Suggests time blocks for the things you said mattered.
+              <br/><br/>
+              <span style={{ fontStyle: 'italic', color: ORBIT.accent }}>It keeps me, and the things that matter to me, in orbit.</span>
+            </div>
+          </div>
+
+          {/* Frame index — quiet, mono */}
+          <div style={{ marginTop: 30 }}>
+            <MonoLabel size={9.5} style={{ marginBottom: 12 }}>// in this canvas</MonoLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr', gap: '8px 14px', fontFamily: SANS, fontSize: 13, color: ORBIT.creamDim, lineHeight: 1.5 }}>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: ORBIT.accent, letterSpacing: '0.1em' }}>01</span>
+              <span><span style={{ color: ORBIT.cream }}>Diary</span> — the chronological feed; today's research-session pattern at the top.</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: ORBIT.accent, letterSpacing: '0.1em' }}>02</span>
+              <span><span style={{ color: ORBIT.cream }}>Capture</span> — bottom sheet from any share menu; intent sealed at save.</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: ORBIT.accent, letterSpacing: '0.1em' }}>03</span>
+              <span><span style={{ color: ORBIT.cream }}>Cluster</span> — three cited bullets and a calendar block proposal.</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: ORBIT.accent, letterSpacing: '0.1em' }}>04</span>
+              <span><span style={{ color: ORBIT.cream }}>Settings</span> — privacy is constitutional; the forget-everything button is real.</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: ORBIT.accent, letterSpacing: '0.1em' }}>05</span>
+              <span><span style={{ color: ORBIT.cream }}>Bubble</span> — copy anything; tap the bubble to keep it.</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection id="brief" title="Orbit — Android v1" subtitle="Five frames · the agent surface · Apr 26, 2026">
+            <DCArtboard id="slate" label="Why Orbit" width={560} height={1280} style={{ background: 'transparent' }}>
+              <Slate />
+            </DCArtboard>
+            <DCArtboard id="diary" label="01 · Diary (home)" width={W} height={H}>
+              <Frame><ScreenDiary /></Frame>
+            </DCArtboard>
+            <DCArtboard id="capture" label="02 · Capture sheet" width={W} height={H}>
+              <Frame><ScreenCapture /></Frame>
+            </DCArtboard>
+            <DCArtboard id="cluster" label="03 · Cluster · Summarize" width={W} height={H}>
+              <Frame><ScreenCluster /></Frame>
+            </DCArtboard>
+            <DCArtboard id="settings" label="04 · Settings (privacy)" width={W} height={H}>
+              <Frame><ScreenSettings /></Frame>
+            </DCArtboard>
+            <DCArtboard id="bubble" label="05 · Bubble overlay" width={W} height={H}>
+              <Frame><ScreenBubble /></Frame>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
