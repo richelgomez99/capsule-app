@@ -227,7 +227,7 @@ class CapsuleOverlayService : LifecycleService() {
         overlayLifecycleOwner.onCreate()
 
         val displayMetrics = resources.displayMetrics
-        val screenWidth = displayMetrics.widthPixels
+        val screenWidth = currentScreenBounds().width
         // Bubble size is 56dp, convert to pixels
         val bubbleWidthPx = (56 * displayMetrics.density).toInt()
 
@@ -333,8 +333,6 @@ class CapsuleOverlayService : LifecycleService() {
             stopSelf()
         }
 
-        val screenHeight = displayMetrics.heightPixels
-
         lifecycleScope.launch {
             vm.bubbleState.collectLatest { bubbleState ->
                 syncCollapsedOverlayPosition(view, params, bubbleState)
@@ -365,7 +363,8 @@ class CapsuleOverlayService : LifecycleService() {
                 if (ui is PostCaptureUi.None) {
                     hidePostCaptureOverlay()
                 } else {
-                    showPostCaptureOverlay(vm)
+                    showPostCaptureOverlay(vm, ui)
+                    updatePostCaptureOverlayLayout(ui)
                 }
             }
         }
@@ -454,20 +453,21 @@ class CapsuleOverlayService : LifecycleService() {
                         onTap = { vm.onBubbleTap() },
                         onDragStart = { vm.onBubbleDragStart() },
                         onDrag = { dx, dy ->
+                            val bounds = currentScreenBounds()
                             vm.onBubbleDrag(
                                 dx = dx,
                                 dy = dy,
-                                screenWidth = screenWidth,
-                                screenHeight = screenHeight,
+                                screenWidth = bounds.width,
+                                screenHeight = bounds.height,
                                 bubbleSizePx = bubbleWidthPx,
                                 dismissTargetMetrics = computeDismissTargetMetrics(
-                                    screenWidth = screenWidth,
-                                    screenHeight = screenHeight,
+                                    screenWidth = bounds.width,
+                                    screenHeight = bounds.height,
                                     bubbleSizePx = bubbleWidthPx
                                 )
                             )
                         },
-                        onDragEnd = { vm.onBubbleDragEnd(screenWidth, bubbleWidthPx) }
+                        onDragEnd = { vm.onBubbleDragEnd(currentScreenBounds().width, bubbleWidthPx) }
                     )
                 }
 
@@ -600,14 +600,11 @@ class CapsuleOverlayService : LifecycleService() {
     }
 
     /**
-     * Mount the [PostCaptureOverlay] in its own full-width window anchored
-     * to the bottom of the screen. The window is touchable (for chip taps +
-     * undo) but does not absorb background touches thanks to
-     * `FLAG_NOT_FOCUSABLE`. It spans `MATCH_PARENT` width with `WRAP_CONTENT`
-     * height so the pill is always fully visible regardless of where the
-     * bubble sits.
+        * Mount the [PostCaptureOverlay] in its own window anchored to the bottom
+        * of the screen. Chip rows use full width; compact pills switch to
+        * WRAP_CONTENT so they don't block touches across the entire launcher row.
      */
-    private fun showPostCaptureOverlay(vm: OverlayViewModel) {
+    private fun showPostCaptureOverlay(vm: OverlayViewModel, ui: PostCaptureUi) {
         if (postCaptureView != null) return
 
         val targetView = ComposeView(this).apply {
@@ -623,12 +620,14 @@ class CapsuleOverlayService : LifecycleService() {
 
         val bottomMarginPx = (24 * resources.displayMetrics.density).toInt()
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
+            postCaptureOverlayWidth(ui) ?: WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // NOT_FOCUSABLE: keyboards in other apps still work.
+            // NOT_TOUCH_MODAL: taps outside compact pill bounds pass through.
             // LAYOUT_NO_LIMITS: allowed to extend behind system bars.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -653,6 +652,42 @@ class CapsuleOverlayService : LifecycleService() {
         }
         postCaptureView = null
     }
+
+    private fun updatePostCaptureOverlayLayout(ui: PostCaptureUi) {
+        val targetView = postCaptureView ?: return
+        val params = targetView.layoutParams as? WindowManager.LayoutParams ?: return
+        val targetWidth = postCaptureOverlayWidth(ui) ?: return
+        if (params.width == targetWidth) return
+        params.width = targetWidth
+        params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        try {
+            windowManager.updateViewLayout(targetView, params)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update post-capture overlay layout", e)
+        }
+    }
+
+    private fun postCaptureOverlayWidth(ui: PostCaptureUi): Int? = when (ui) {
+        is PostCaptureUi.ChipRow -> WindowManager.LayoutParams.MATCH_PARENT
+        is PostCaptureUi.None -> null
+        else -> WindowManager.LayoutParams.WRAP_CONTENT
+    }
+
+    private fun currentScreenBounds(): ScreenBounds {
+        val bounds = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager.currentWindowMetrics.bounds
+        } else {
+            null
+        }
+        if (bounds != null) return ScreenBounds(bounds.width(), bounds.height())
+        val metrics = resources.displayMetrics
+        return ScreenBounds(metrics.widthPixels, metrics.heightPixels)
+    }
+
+    private data class ScreenBounds(
+        val width: Int,
+        val height: Int,
+    )
 
     // ---- T042: :ml EnvelopeRepositoryService bind/unbind lifecycle ----
 
