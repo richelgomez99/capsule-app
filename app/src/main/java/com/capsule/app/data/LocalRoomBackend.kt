@@ -204,6 +204,18 @@ class LocalRoomBackend(
     override suspend fun getEnvelope(id: String): IntentEnvelopeEntity? =
         envelopeDao.getById(id)
 
+    override suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(
+        hash: String
+    ): IntentEnvelopeEntity? = envelopeDao.findActiveByPrimaryCanonicalUrlHash(hash)
+
+    override suspend fun findActiveEnvelopeByTextContentSha256(
+        hash: String
+    ): IntentEnvelopeEntity? = envelopeDao.findActiveByTextContentSha256(hash)
+
+    override suspend fun recordDuplicateCaptureAttempt(auditEntry: AuditLogEntryEntity) {
+        auditDao.insert(auditEntry)
+    }
+
     override suspend fun listSoftDeletedWithinDays(
         days: Int,
         nowMillis: Long

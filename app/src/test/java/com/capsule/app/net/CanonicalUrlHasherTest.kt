@@ -45,15 +45,21 @@ class CanonicalUrlHasherTest {
     }
 
     @Test
-    fun hash_stripsTrailingSlash_butPreservesRoot() {
+    fun hash_stripsTrailingSlash_includingRoot() {
         val a = CanonicalUrlHasher.hash("https://example.com/path/")
         val b = CanonicalUrlHasher.hash("https://example.com/path")
         assertEquals(a, b)
 
         val root1 = CanonicalUrlHasher.hash("https://example.com/")
         val rootEmpty = CanonicalUrlHasher.hash("https://example.com")
-        // Per canonicalize: root "/" is preserved, empty path is stripped.
-        assertNotEquals(root1, rootEmpty)
+        assertEquals(root1, rootEmpty)
+    }
+
+    @Test
+    fun hash_stripsWwwHostPrefix() {
+        val a = CanonicalUrlHasher.hash("https://www.example.com/a")
+        val b = CanonicalUrlHasher.hash("https://example.com/a")
+        assertEquals(a, b)
     }
 
     @Test

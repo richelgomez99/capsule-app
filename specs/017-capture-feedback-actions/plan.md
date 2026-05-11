@@ -89,23 +89,24 @@ visible-content bounds, chip rows remain visibly full-width, and bubble drag use
 live window metrics after rotation. This preserves existing visuals and prepares
 the same touch contract the future `Already saved` state will use.
 
-### Phase 1 - Duplicate keys and migration
+### Phase 1 - Duplicate keys, migration, and typed result
 
 Add durable duplicate keys and DAO lookups. Use `primaryCanonicalUrlHash` for the
 first extracted URL and populated `textContentSha256` for exact non-URL text
-captures. Author Room migrations and indexes before wiring user-facing behavior.
+captures. Author Room migrations and indexes, then carry `Created` vs
+`AlreadySaved` across repository, Binder, orchestrator, and ViewModel layers.
 
-### Phase 2 - Typed seal result
+### Phase 2 - Feedback state and compact UI
 
-Replace the current `seal(): String` assumption at the repository boundary with
-a typed result that distinguishes `Created` from `AlreadySaved`. Update all
-callers atomically so overlay copy is truthful.
+Adapt the compact post-capture UI to present duplicate captures as `Already
+saved` instead of undoable new saves. Keep visible-content touch bounds for all
+compact states.
 
-### Phase 3 - Feedback actions
+### Phase 3 - Feedback actions and notes
 
 Add `Already saved` UI state with note, reclassify, and open-existing actions.
-Note persistence is modeled in [data-model.md](data-model.md) and lands with the
-same migration family as duplicate keys.
+Note persistence is modeled in [data-model.md](data-model.md) and lands in the
+feedback-action migration after the duplicate-key migration.
 
 ### Phase 4 - Verification and physical QA
 
@@ -114,8 +115,9 @@ tappable outside compact feedback pills in portrait and landscape.
 
 ## Risk And Rollback
 
-- **Highest risk**: AIDL/Binder signature changes. Mitigation: additive parcel
-  shape and compile all processes together.
+- **Highest risk**: AIDL/Binder result changes. Mitigation: additive parcel
+  shape, a legacy `seal()` wrapper during migration, and compile all processes
+  together.
 - **Schema risk**: duplicate key migration. Mitigation: forward-only migration,
   exported schema, migration tests.
 - **UX risk**: duplicate action copy implying a new save. Mitigation: separate

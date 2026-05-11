@@ -62,6 +62,9 @@ sealed class SealOutcome {
 
     /** Capture was blocked (e.g., scrubbed to empty, user permission denied). */
     data class Blocked(val reason: String) : SealOutcome()
+
+    /** Duplicate capture matched an existing visible envelope. */
+    data class AlreadySaved(val existingEnvelopeId: String, val matchedBy: String) : SealOutcome()
 }
 
 sealed class UndoOutcome {
@@ -298,6 +301,9 @@ class OverlayViewModel : ViewModel() {
             is SealOutcome.Blocked -> {
                 // Soft fail — nothing user-visible beyond keeping the sheet closed.
                 _postCaptureUi.value = PostCaptureUi.None
+            }
+            is SealOutcome.AlreadySaved -> {
+                _postCaptureUi.value = PostCaptureUi.AlreadyInDiary
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.capsule.app.data.ipc.IEnvelopeObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.SealResultParcel
 import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.model.ActivityState
@@ -121,6 +122,11 @@ class ScreenshotObserverTest {
             seals.add(draft to state)
             return "test-envelope-${seals.size}"
         }
+
+        override fun sealWithResult(
+            draft: IntentEnvelopeDraftParcel,
+            state: StateSnapshotParcel
+        ): SealResultParcel = SealResultParcel.created(seal(draft, state))
 
         // ---- Unused surface: every other method errors so mis-use is loud. ----
         override fun observeDay(isoDate: String, observer: IEnvelopeObserver) = error("unused")

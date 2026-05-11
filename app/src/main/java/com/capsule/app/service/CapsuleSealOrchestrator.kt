@@ -8,6 +8,7 @@ import com.capsule.app.capture.SensitivityScrubber
 import com.capsule.app.capture.StateSnapshotCollector
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.SealResultParcel
 import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.model.ContentType
 import com.capsule.app.data.model.Intent
@@ -91,9 +92,16 @@ class CapsuleSealOrchestrator(
                     source = IntentSource.PREDICTED_SILENT,
                     redactionCounts = scrub.redactionCountByType
                 )
-                val id = repo.sealSafe(draft, state) ?: return@withContext SealOutcome.Blocked("seal rpc failed")
-                Log.d(TAG, "ENVELOPE_SEALED | id=$id | intent=${intent.name} | source=PREDICTED_SILENT")
-                return@withContext SealOutcome.Silent(envelopeId = id, intent = intent)
+                val result = repo.sealResultSafe(draft, state)
+                    ?: return@withContext SealOutcome.Blocked("seal rpc failed")
+                if (result.status == SealResultParcel.STATUS_ALREADY_SAVED) {
+                    return@withContext SealOutcome.AlreadySaved(
+                        existingEnvelopeId = result.envelopeId,
+                        matchedBy = result.matchedBy.orEmpty()
+                    )
+                }
+                Log.d(TAG, "ENVELOPE_SEALED | id=${result.envelopeId} | intent=${intent.name} | source=PREDICTED_SILENT")
+                return@withContext SealOutcome.Silent(envelopeId = result.envelopeId, intent = intent)
             }
 
             // Chip row path — build draft with AMBIGUOUS placeholder. The
@@ -133,8 +141,15 @@ class CapsuleSealOrchestrator(
             source = source,
             redactionCounts = scrub.redactionCountByType
         )
-        val id = repo.sealSafe(draft, state)
+        val result = repo.sealResultSafe(draft, state)
             ?: return@withContext SealOutcome.Blocked("seal rpc failed")
+        if (result.status == SealResultParcel.STATUS_ALREADY_SAVED) {
+            return@withContext SealOutcome.AlreadySaved(
+                existingEnvelopeId = result.envelopeId,
+                matchedBy = result.matchedBy.orEmpty()
+            )
+        }
+        val id = result.envelopeId
         Log.d(TAG, "ENVELOPE_SEALED | id=$id | intent=${intent.name} | source=${source.name}")
         when (source) {
             IntentSource.USER_CHIP -> SealOutcome.UserChip(envelopeId = id, intent = intent)
@@ -168,12 +183,12 @@ class CapsuleSealOrchestrator(
         redactionCountByType = redactionCounts
     )
 
-    private fun IEnvelopeRepository.sealSafe(
+    private fun IEnvelopeRepository.sealResultSafe(
         draft: IntentEnvelopeDraftParcel,
         state: com.capsule.app.data.ipc.StateSnapshotParcel
-    ): String? = runCatching { seal(draft, state) }
+    ): SealResultParcel? = runCatching { sealWithResult(draft, state) }
         .getOrElse {
-            Log.e(TAG, "seal() rpc failed", it)
+            Log.e(TAG, "sealWithResult() rpc failed", it)
             null
         }
 

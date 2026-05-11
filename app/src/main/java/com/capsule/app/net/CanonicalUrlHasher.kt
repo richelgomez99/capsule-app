@@ -12,10 +12,11 @@ import java.util.Locale
  *
  * Canonicalization rules (see tasks.md T066a / spec.md Clarification Q2):
  * - scheme/host lowercased
+ * - leading `www.` stripped from hosts
  * - fragment stripped
  * - query params named `utm_*`, `fbclid`, `gclid` stripped
  * - remaining query params sorted lexicographically by name, preserving value
- * - trailing `/` on the path stripped (unless path is empty or `/`)
+ * - trailing `/` on the path stripped, including root `/`
  * - default ports (80/443) stripped
  *
  * The function is intentionally tolerant — malformed URLs still produce a stable
@@ -41,7 +42,10 @@ object CanonicalUrlHasher {
         }
 
         val scheme = uri.scheme?.lowercase(Locale.ROOT) ?: return trimmed.lowercase(Locale.ROOT)
-        val host = uri.host?.lowercase(Locale.ROOT) ?: return trimmed.lowercase(Locale.ROOT)
+        val host = uri.host
+            ?.lowercase(Locale.ROOT)
+            ?.removePrefix("www.")
+            ?: return trimmed.lowercase(Locale.ROOT)
 
         val port = uri.port
         val portPart = when {
@@ -54,7 +58,7 @@ object CanonicalUrlHasher {
         val rawPath = uri.rawPath.orEmpty()
         val path = when {
             rawPath.isEmpty() -> ""
-            rawPath == "/" -> "/"
+            rawPath == "/" -> ""
             rawPath.endsWith('/') -> rawPath.trimEnd('/')
             else -> rawPath
         }

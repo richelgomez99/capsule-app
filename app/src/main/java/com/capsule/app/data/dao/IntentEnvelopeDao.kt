@@ -21,6 +21,32 @@ interface IntentEnvelopeDao {
     @Query(
         """
         SELECT * FROM intent_envelope
+        WHERE primaryCanonicalUrlHash = :hash
+          AND deletedAt IS NULL
+          AND isDeleted = 0
+          AND isArchived = 0
+        ORDER BY createdAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findActiveByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
+
+    @Query(
+        """
+        SELECT * FROM intent_envelope
+        WHERE textContentSha256 = :hash
+          AND deletedAt IS NULL
+          AND isDeleted = 0
+          AND isArchived = 0
+        ORDER BY createdAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findActiveByTextContentSha256(hash: String): IntentEnvelopeEntity?
+
+    @Query(
+        """
+        SELECT * FROM intent_envelope
         WHERE day_local = :dayLocal
           AND deletedAt IS NULL
           AND isArchived = 0

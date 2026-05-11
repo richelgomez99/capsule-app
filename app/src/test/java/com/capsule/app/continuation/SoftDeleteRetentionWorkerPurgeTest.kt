@@ -43,6 +43,9 @@ class SoftDeleteRetentionWorkerPurgeTest {
         override fun observeDay(dayLocal: String): Flow<List<IntentEnvelopeEntity>> = emptyFlow()
         override fun observeDayWithResults(dayLocal: String): Flow<List<IntentEnvelopeWithResults>> = emptyFlow()
         override suspend fun getEnvelope(id: String): IntentEnvelopeEntity? = null
+        override suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity? = null
+        override suspend fun findActiveEnvelopeByTextContentSha256(hash: String): IntentEnvelopeEntity? = null
+        override suspend fun recordDuplicateCaptureAttempt(auditEntry: AuditLogEntryEntity) = error("unused")
         override suspend fun listSoftDeletedWithinDays(days: Int, nowMillis: Long): List<IntentEnvelopeEntity> = emptyList()
         override suspend fun countSoftDeletedWithinDays(days: Int, nowMillis: Long): Int = 0
         override suspend fun distinctDayLocalsWithContent(limit: Int, offset: Int): List<String> = emptyList()
