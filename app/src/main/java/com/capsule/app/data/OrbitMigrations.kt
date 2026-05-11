@@ -214,3 +214,15 @@ internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
         db.execSQL("ALTER TABLE intent_envelope ADD COLUMN derivedVia TEXT")
     }
 }
+
+/**
+ * v5 — capture the user-facing foreground app label when Usage Access can
+ * resolve one. `appCategory` remains the durable grouping/classification field;
+ * this nullable label is display-only and lets the Diary render "from YouTube"
+ * instead of the broader "from Video" bucket for new captures.
+ */
+internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE intent_envelope ADD COLUMN sourceAppLabel TEXT")
+    }
+}

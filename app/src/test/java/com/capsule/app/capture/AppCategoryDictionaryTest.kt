@@ -91,6 +91,16 @@ class AppCategoryDictionaryTest {
     }
 
     @Test
+    fun youtube_hasDisplayNameFallback() {
+        assertEquals("YouTube", AppCategoryDictionary.displayName("com.google.android.youtube"))
+    }
+
+    @Test
+    fun unknownPackage_hasNoDisplayNameFallback() {
+        assertEquals(null, AppCategoryDictionary.displayName("com.some.random.app"))
+    }
+
+    @Test
     fun netflix_isVideo() {
         assertEquals(AppCategory.VIDEO, AppCategoryDictionary.categorize("com.netflix.mediaclient"))
     }

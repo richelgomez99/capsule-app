@@ -334,7 +334,7 @@ private fun IntentPill(intent: Intent, onTap: () -> Unit) {
     }
 }
 
-private fun buildSubtitle(env: EnvelopeViewParcel): String {
+internal fun buildSubtitle(env: EnvelopeViewParcel): String {
     // T083/T084 (Phase 7 US5) — render the full state label as
     // `from {appCategory} · {activityState} · {localTime}`, with
     // graceful fallbacks when a signal is missing:
@@ -345,7 +345,7 @@ private fun buildSubtitle(env: EnvelopeViewParcel): String {
     //
     // Middle dot is a regular Unicode "·" which renders correctly in
     // both LTR and RTL (Compose flips the visual order automatically).
-    val appPart = "from " + env.appCategory.humanizeApp()
+    val appPart = "from " + env.sourceAppLabel.displayAppOrNull().orElse(env.appCategory.humanizeApp())
     val activityPart = env.activityState.humanizeActivityOrNull()
     val timePart = formatLocalTime(env.createdAtMillis)
 
@@ -359,6 +359,10 @@ private fun buildSubtitle(env: EnvelopeViewParcel): String {
         append(timePart)
     }
 }
+
+private fun String?.displayAppOrNull(): String? = this?.trim()?.takeIf { it.isNotBlank() }
+
+private fun String?.orElse(fallback: String): String = this ?: fallback
 
 /** T084 — humanized app category string; `UNKNOWN_SOURCE` → "an app". */
 private fun String.humanizeApp(): String {

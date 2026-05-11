@@ -614,12 +614,14 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 
 ### Deviations recorded
 
-1. **Supabase Kotlin SDK not yet wired** — `SupabaseAuthStateBinder` accepts a `() -> String?` lambda shim. Adding `gotrue-kt` and an `Application`-scoped `SupabaseClient` is a follow-up unblock; until then production calls return `Error(UNAUTHORIZED)` because `NoSessionAuthStateBinder` is the default. Suggested follow-up task ID: T014-019b or fold into next spec.
+1. **Resolved by T014-019b: Supabase Kotlin SDK wiring** — `SupabaseAuthStateBinder` now accepts a session-token lambda backed by the `:net` process Supabase client, with `EncryptedSessionManager` tests and pinned Supabase/Ktor versions. The earlier `NoSessionAuthStateBinder` production limitation no longer applies when `supabase.url` and `supabase.publishable.key` are populated.
 2. **No Hilt in repo** — task descriptions mentioning `@Binds` / `AuthModule.kt` were satisfied via the existing manual-DI pattern (constructor-injected defaults).
 3. **`LlmGatewayClient` lives at `com.capsule.app.net.LlmGatewayClient`**, not the `com.capsule.app.ai.gateway.LlmGatewayClient` path quoted in tasks.md. Used the actual location.
 4. **W1 spec drift fixed** during analyze pass — `requestId` added to `details_json` field listing in spec.md FR-014-013, US-3 Independent Test, and SC-014-005 (audit-row-contract.md and data-model.md were already correct).
 
-### What user must provide to unblock T014-020
+### Historical pre-deploy unblock list for T014-020
+
+Completed by the 2026-04-29 Phase I deployment recorded below.
 
 1. `vercel login` (or `VERCEL_TOKEN` env var) on this machine.
 2. New Vercel project (suggested name: `orbit-llm-gateway`) and team/scope decision.
@@ -628,7 +630,7 @@ Local implementation lands all 19 Android-and-server-code tasks. Deployment + li
 5. Apply migration `00000003_cost_per_user_daily.sql` to prod Supabase (`omohxxhsjrqpkwfxbkau`) before audit rows start landing.
 6. Decision on when Supabase Kotlin SDK lands in Android (deviation #1 unblocker).
 
-### Operational confirmation
+### Historical operational confirmation before Phase I deploy
 
 - `cloud-pivot` branch: 19 new commits since T014-001 (38 since spec/003 fork), local-only. Not pushed.
 - No deploys executed. No external API calls made (all Anthropic/OpenAI clients mocked in tests).

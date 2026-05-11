@@ -8,7 +8,8 @@ data class StateSnapshotParcel(
     val activityState: String,
     val tzId: String,
     val hourLocal: Int,
-    val dayOfWeekLocal: Int
+    val dayOfWeekLocal: Int,
+    val sourceAppLabel: String? = null
 ) : Parcelable {
 
     constructor(parcel: Parcel) : this(
@@ -16,7 +17,8 @@ data class StateSnapshotParcel(
         activityState = parcel.readString()!!,
         tzId = parcel.readString()!!,
         hourLocal = parcel.readInt(),
-        dayOfWeekLocal = parcel.readInt()
+        dayOfWeekLocal = parcel.readInt(),
+        sourceAppLabel = parcel.readString()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -25,6 +27,7 @@ data class StateSnapshotParcel(
         parcel.writeString(tzId)
         parcel.writeInt(hourLocal)
         parcel.writeInt(dayOfWeekLocal)
+        parcel.writeString(sourceAppLabel)
     }
 
     override fun describeContents(): Int = 0

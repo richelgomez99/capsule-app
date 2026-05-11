@@ -29,8 +29,9 @@ import java.net.URI
  *     [com.capsule.app.diary.BinderDiaryRepository]).
  *   - Calling [INetworkGateway.fetchPublicUrl] with a 10 s timeout
  *     (contract §4.1 step 3).
- *   - Running [NanoSummariser] against the returned readable HTML
- *     (contract §4.1 step 5c), degrading to `summaryModel="fallback"`.
+ *   - Running [NanoSummariser] over the production [LlmProviderRouter]
+ *     provider against the returned readable HTML (contract §4.1 step 5c),
+ *     degrading to `summaryModel="fallback"`.
  *   - Classifying `FetchResultParcel.errorKind` as retriable vs
  *     permanent (contract §4.1 step 4; §9 error taxonomy).
  *
@@ -139,10 +140,10 @@ class UrlHydrateWorker(
         @Volatile
         internal var gatewayBinder: suspend (Context) -> INetworkGateway? = ::bindGatewayDefault
 
-        /** Test seam for [NanoSummariser]. Default builds one over v1 Nano. */
+        /** Test seam for [NanoSummariser]. Default follows the production LLM router. */
         @Volatile
-        internal var summariserFactory: (Context) -> NanoSummariser = { context ->
-            NanoSummariser(LlmProviderRouter.createPreferLocal(context))
+        internal var summariserFactory: (Context, INetworkGateway) -> NanoSummariser = { context, gateway ->
+            NanoSummariser(LlmProviderRouter.create(context, gateway))
         }
 
         /**
@@ -224,7 +225,7 @@ class UrlHydrateWorker(
                 "UrlHydrate",
                 "fetch ok title=${fetch.title?.take(60)} host=${fetch.canonicalHost} htmlLen=${fetch.readableHtml?.length}"
             )
-            val summariser = summariserFactory(context)
+            val summariser = summariserFactory(context, gateway)
             val slug = fetch.readableHtml.orEmpty()
             val summary = summariser.summarise(fetch.title, slug)
             android.util.Log.i(

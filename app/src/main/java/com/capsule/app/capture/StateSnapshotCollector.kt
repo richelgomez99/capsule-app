@@ -3,6 +3,7 @@ package com.capsule.app.capture
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.PackageManager
 import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.model.ActivityState
 import com.capsule.app.data.model.AppCategory
@@ -14,10 +15,11 @@ import java.util.concurrent.atomic.AtomicReference
  * T037 — collects the three at-capture state signals required by
  * research.md §State Signal Collection:
  *
- * 1. **Foreground app category** — via [UsageStatsManager.queryEvents] for
- *    the last 15 seconds; the last `MOVE_TO_FOREGROUND` event's package name
- *    is resolved against [AppCategoryDictionary] and then **discarded**.
- *    Raw package names are never persisted.
+ * 1. **Foreground app source** — via [UsageStatsManager.queryEvents] for
+ *    the last 15 seconds; the last foreground event's package name, excluding
+ *    Orbit's own package, is resolved against [AppCategoryDictionary]. When
+ *    Android exposes an app label for that package, the user-facing label is
+ *    persisted so Diary can render "from YouTube" instead of "from Video".
  * 2. **Activity Recognition state** — this process holds the last observed
  *    state in a thread-safe [AtomicReference] updated by an
  *    `ActivityTransitionReceiver` (wired separately, not part of this class).
@@ -50,25 +52,31 @@ class StateSnapshotCollector(
         val zone = zoneProvider.zone()
         val local = Instant.ofEpochMilli(now).atZone(zone)
 
-        val category = packageResolver.resolveForegroundCategory(
+        val foregroundApp = packageResolver.resolveForegroundApp(
             windowStartMillis = now - FOREGROUND_LOOKBACK_MS,
             windowEndMillis = now
         )
         val activity = activityStateSource.current()
 
         return StateSnapshotParcel(
-            appCategory = category.name,
+            appCategory = foregroundApp.category.name,
             activityState = activity.name,
             tzId = zone.id,
             hourLocal = local.hour,
-            dayOfWeekLocal = local.dayOfWeek.value // 1 = Monday .. 7 = Sunday
+            dayOfWeekLocal = local.dayOfWeek.value, // 1 = Monday .. 7 = Sunday
+            sourceAppLabel = foregroundApp.appLabel
         )
     }
 
     /** Abstraction over [UsageStatsManager] so the collector is JVM-testable. */
     fun interface PackageResolver {
-        fun resolveForegroundCategory(windowStartMillis: Long, windowEndMillis: Long): AppCategory
+        fun resolveForegroundApp(windowStartMillis: Long, windowEndMillis: Long): ForegroundApp
     }
+
+    data class ForegroundApp(
+        val category: AppCategory,
+        val appLabel: String? = null
+    )
 
     /** Abstraction over the process-local Activity Recognition cache. */
     fun interface ActivityStateSource {
@@ -98,7 +106,13 @@ class StateSnapshotCollector(
             val usageStats = appContext.getSystemService(Context.USAGE_STATS_SERVICE)
                 as? UsageStatsManager
             val resolver = PackageResolver { start, end ->
-                resolveFromUsageStats(usageStats, start, end)
+                resolveFromUsageStats(
+                    usageStats = usageStats,
+                    windowStartMillis = start,
+                    windowEndMillis = end,
+                    ownPackageName = appContext.packageName,
+                    packageManager = appContext.packageManager
+                )
             }
             return StateSnapshotCollector(
                 packageResolver = resolver,
@@ -109,28 +123,54 @@ class StateSnapshotCollector(
         private fun resolveFromUsageStats(
             usageStats: UsageStatsManager?,
             windowStartMillis: Long,
-            windowEndMillis: Long
-        ): AppCategory {
-            if (usageStats == null) return AppCategory.UNKNOWN_SOURCE
+            windowEndMillis: Long,
+            ownPackageName: String,
+            packageManager: PackageManager
+        ): ForegroundApp {
+            if (usageStats == null) return ForegroundApp(AppCategory.UNKNOWN_SOURCE)
             val events = try {
                 usageStats.queryEvents(windowStartMillis, windowEndMillis)
             } catch (_: SecurityException) {
-                return AppCategory.UNKNOWN_SOURCE
+                return ForegroundApp(AppCategory.UNKNOWN_SOURCE)
             }
             var latestTs = Long.MIN_VALUE
             var latestPkg: String? = null
             val buf = UsageEvents.Event()
             while (events.hasNextEvent()) {
                 if (!events.getNextEvent(buf)) break
-                if (buf.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND &&
+                val packageName = buf.packageName
+                if (isForegroundEvent(buf.eventType) &&
+                    !packageName.isNullOrBlank() &&
+                    packageName != ownPackageName &&
                     buf.timeStamp > latestTs
                 ) {
                     latestTs = buf.timeStamp
-                    latestPkg = buf.packageName
+                    latestPkg = packageName
                 }
             }
-            return AppCategoryDictionary.categorize(latestPkg)
+            return latestPkg.toForegroundApp(packageManager)
         }
+
+        private fun String?.toForegroundApp(packageManager: PackageManager): ForegroundApp {
+            val packageName = this?.takeIf { it.isNotBlank() }
+                ?: return ForegroundApp(AppCategory.UNKNOWN_SOURCE)
+            return ForegroundApp(
+                category = AppCategoryDictionary.categorize(packageName),
+                appLabel = packageManager.resolveAppLabel(packageName)
+                    ?: AppCategoryDictionary.displayName(packageName)
+            )
+        }
+
+        @Suppress("DEPRECATION")
+        private fun PackageManager.resolveAppLabel(packageName: String): String? = runCatching {
+            val info = getApplicationInfo(packageName, 0)
+            getApplicationLabel(info).toString().trim().takeIf { it.isNotBlank() }
+        }.getOrNull()
+
+        @Suppress("DEPRECATION")
+        private fun isForegroundEvent(eventType: Int): Boolean =
+            eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
+                eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
     }
 }
 

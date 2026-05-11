@@ -107,7 +107,7 @@ class ScreenshotObserverTest {
     }
 
     private fun staticCollector(): StateSnapshotCollector = StateSnapshotCollector(
-        packageResolver = { _, _ -> AppCategory.OTHER },
+        packageResolver = { _, _ -> StateSnapshotCollector.ForegroundApp(AppCategory.OTHER) },
         activityStateSource = { ActivityState.STILL }
     )
 

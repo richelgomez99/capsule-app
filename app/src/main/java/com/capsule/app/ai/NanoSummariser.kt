@@ -1,5 +1,6 @@
 package com.capsule.app.ai
 
+import com.capsule.app.ai.model.LlmProvenance
 import com.capsule.app.ai.prompts.UrlSummaryPrompt
 
 /**
@@ -53,7 +54,13 @@ class NanoSummariser(
         // Defensive: if the model just echoes the prompt preamble, skip.
         if (text.startsWith("You are a neutral reader", ignoreCase = true)) return null
 
-        return Summary(text = text, model = modelLabel)
+        return Summary(text = text, model = raw.provenance.summaryModelLabel())
+    }
+
+    private fun LlmProvenance.summaryModelLabel(): String = when (this) {
+        LlmProvenance.LocalNano -> modelLabel
+        is LlmProvenance.OrbitManaged -> model
+        is LlmProvenance.Byok -> "$provider:$model"
     }
 
     companion object {

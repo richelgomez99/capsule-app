@@ -37,6 +37,11 @@
 
     <queries>
         <package android:name="androidx.test.services" />
+        <!-- Lets UsageStats-derived foreground packages resolve user-facing app labels. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

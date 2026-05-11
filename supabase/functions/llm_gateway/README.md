@@ -16,7 +16,7 @@ All six MUST be set in the Vercel project's **Production** AND **Preview**
 environments (and **Development** for `vercel dev`):
 
 | Var | Source | Purpose |
-|-----|--------|---------|
+| --- | --- | --- |
 | `OPENAI_API_KEY` | OpenAI dashboard | `embed` handler — direct OpenAI Embeddings call. |
 | `ANTHROPIC_API_KEY` | Vercel AI Gateway dashboard (gateway-routed key) | All five Anthropic-routed handlers via Vercel AI Gateway. |
 | `VERCEL_AI_GATEWAY_URL` | Vercel AI Gateway base URL (e.g. `https://api.anthropic.com`) | Anthropic SDK base URL override; lets us route through the gateway without hard-coding Anthropic's host. |
@@ -102,11 +102,13 @@ deploying.
 After a successful deploy:
 
 1. Capture the stable production URL (`https://<project>.vercel.app/llm`).
-2. Update each developer's `local.properties`:
-   ```
+1. Update each developer's `local.properties`:
+
+  ```properties
    cloud.gateway.url=https://<project>.vercel.app/llm
    ```
-3. Smoke-test the deployed URL with the curl examples in §3 (replace
+
+1. Smoke-test the deployed URL with the curl examples in §3 (replace
    `localhost:3000` with the production URL).
 
 ---
@@ -135,5 +137,5 @@ Cost observability surfaces via the read-only `cost_per_user_daily` view
 (Append a row per production deploy. T014-020 lands the first entry.)
 
 | Date (UTC) | Git SHA | Vercel URL | Notes |
-|-----------|---------|------------|-------|
-| (pending) | (pending) | (pending) | First production deploy — T014-020. |
+| --- | --- | --- | --- |
+| 2026-04-29 | `47ad371` | `https://orbit-llm-gateway.vercel.app/llm` | First production deploy for T014-020; live E2E verification recorded in spec 014 T014-021/T014-022 (`2e0938b`). |

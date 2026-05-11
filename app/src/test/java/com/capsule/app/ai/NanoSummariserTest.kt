@@ -131,4 +131,19 @@ class NanoSummariserTest {
         val result = NanoSummariser(provider, modelLabel = "nano-v1.1-experimental").summarise("t", "body")
         assertEquals("nano-v1.1-experimental", result!!.model)
     }
+
+    @Test
+    fun `cloud provenance model label is preserved`() = runTest {
+        val provider = FakeProvider {
+            SummaryResult(
+                text = "sentence one. sentence two.",
+                generationLocale = "en",
+                provenance = LlmProvenance.OrbitManaged("anthropic/claude-sonnet-4-6")
+            )
+        }
+
+        val result = NanoSummariser(provider).summarise("t", "body")
+
+        assertEquals("anthropic/claude-sonnet-4-6", result!!.model)
+    }
 }

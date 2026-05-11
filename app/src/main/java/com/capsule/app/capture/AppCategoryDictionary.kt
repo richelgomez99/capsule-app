@@ -19,6 +19,20 @@ import com.capsule.app.data.model.AppCategory
  */
 object AppCategoryDictionary {
 
+    private val displayNames = mapOf(
+        "com.google.android.youtube" to "YouTube",
+        "com.google.android.apps.youtube.music" to "YouTube Music",
+        "com.google.android.apps.youtube.kids" to "YouTube Kids",
+        "com.netflix.mediaclient" to "Netflix",
+        "com.spotify.music" to "Spotify",
+        "com.android.chrome" to "Chrome",
+        "com.sec.android.app.sbrowser" to "Samsung Internet",
+        "com.google.android.gm" to "Gmail",
+        "com.instagram.android" to "Instagram",
+        "com.zhiliaoapp.musically" to "TikTok",
+        "com.google.android.apps.messaging" to "Messages"
+    )
+
     private val work_email = setOf(
         "com.google.android.gm",
         "com.microsoft.office.outlook",
@@ -167,4 +181,6 @@ object AppCategoryDictionary {
             else -> AppCategory.OTHER
         }
     }
+
+    fun displayName(packageName: String?): String? = displayNames[packageName]
 }

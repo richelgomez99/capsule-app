@@ -5,6 +5,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -44,6 +45,15 @@ class NetworkGatewayContractTest {
     private fun laxGateway(): NetworkGatewayImpl = NetworkGatewayImpl(
         client = SafeOkHttpClient.build(),
         validator = UrlValidator(requireHttps = false),
+    )
+
+    private fun youtubeGateway(): NetworkGatewayImpl = NetworkGatewayImpl(
+        client = SafeOkHttpClient.build(),
+        validator = UrlValidator(requireHttps = true),
+        providerMetadataResolver = ProviderMetadataResolver(
+            client = SafeOkHttpClient.build(),
+            youtubeOEmbedEndpoint = server.url("/oembed").toString(),
+        ),
     )
 
     @Test fun invalidUrl_returnsInvalidUrl() {
@@ -114,6 +124,58 @@ class NetworkGatewayContractTest {
         assertNull(r.errorKind)
         assertNotNull("expected non-null readableHtml", r.readableHtml)
         assertNotNull("expected non-null title", r.title)
+    }
+
+    @Test fun youtubeUrls_useOEmbedMetadataInsteadOfGenericHtmlFetch() {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json; charset=utf-8")
+                .setBody(
+                    """
+                    {
+                      "title": "How Orbit Captures YouTube Links",
+                      "author_name": "Orbit Lab",
+                      "provider_name": "YouTube"
+                    }
+                    """.trimIndent(),
+                ),
+        )
+
+        val originalUrl = "https://youtu.be/abc123?si=share-token"
+        val r = youtubeGateway().fetchPublicUrl(originalUrl, 15_000)
+
+        assertTrue("expected ok=true, got $r", r.ok)
+        assertEquals(originalUrl, r.finalUrl)
+        assertEquals("How Orbit Captures YouTube Links", r.title)
+        assertEquals("youtu.be", r.canonicalHost)
+        assertTrue(r.readableHtml.orEmpty().contains("YouTube video by Orbit Lab."))
+        assertNull(r.errorKind)
+
+        val request = server.takeRequest()
+        assertEquals("/oembed", request.requestUrl?.encodedPath)
+        assertEquals("application/json", request.getHeader("Accept"))
+        assertEquals(originalUrl, request.requestUrl?.queryParameter("url"))
+        assertEquals("json", request.requestUrl?.queryParameter("format"))
+    }
+
+    @Test fun youtubeRecognition_acceptsCommonLinkFormats() {
+        val accepted = listOf(
+            "https://www.youtube.com/watch?v=abc123",
+            "https://m.youtube.com/watch?v=abc123",
+            "https://music.youtube.com/watch?v=abc123",
+            "https://youtube.com/shorts/abc123",
+            "https://www.youtube.com/embed/abc123",
+            "https://www.youtube.com/live/abc123",
+            "https://youtu.be/abc123",
+            "https://www.youtube-nocookie.com/embed/abc123",
+        )
+
+        accepted.forEach { url ->
+            assertTrue("expected YouTube recognition for $url", ProviderMetadataResolver.isYouTubeUrl(url))
+        }
+        assertFalse(ProviderMetadataResolver.isYouTubeUrl("https://notyoutube.com/watch?v=abc123"))
+        assertFalse(ProviderMetadataResolver.isYouTubeUrl("https://youtube.com.evil.test/watch?v=abc123"))
     }
 
     @Test fun serverError_returnsHttpError_andCoolsDown() {

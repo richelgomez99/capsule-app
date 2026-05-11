@@ -40,7 +40,9 @@ data class EnvelopeViewParcel(
     /** T091a — when soft-deleted; null on live envelopes. */
     val deletedAtMillis: Long? = null,
     /** T064 (003 US2) — derived to-do JSON: `{items:[…], derivedFromProposalId}`. Null for non-todo envelopes. */
-    val todoMetaJson: String? = null
+    val todoMetaJson: String? = null,
+    /** User-facing foreground app label captured from Usage Access, e.g. "YouTube". */
+    val sourceAppLabel: String? = null
 ) : Parcelable {
 
     constructor(parcel: Parcel) : this(
@@ -64,7 +66,8 @@ data class EnvelopeViewParcel(
         intentHistoryJson = parcel.readString() ?: "[]",
         canonicalUrl = parcel.readString(),
         deletedAtMillis = parcel.readLong().takeIf { it != 0L },
-        todoMetaJson = parcel.readString()
+        todoMetaJson = parcel.readString(),
+        sourceAppLabel = parcel.readString()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -89,6 +92,7 @@ data class EnvelopeViewParcel(
         parcel.writeString(canonicalUrl)
         parcel.writeLong(deletedAtMillis ?: 0L)
         parcel.writeString(todoMetaJson)
+        parcel.writeString(sourceAppLabel)
     }
 
     override fun describeContents(): Int = 0

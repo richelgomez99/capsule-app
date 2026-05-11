@@ -1,5 +1,6 @@
 package com.capsule.app.overlay
 
+import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.model.Intent
 
 /**
@@ -33,7 +34,8 @@ data class CapturedContent(
     val text: String,
     val sourcePackage: String?,
     val timestamp: Long,
-    val isSensitive: Boolean
+    val isSensitive: Boolean,
+    val stateSnapshotAtCapture: StateSnapshotParcel? = null
 )
 
 data class DismissTargetMetrics(

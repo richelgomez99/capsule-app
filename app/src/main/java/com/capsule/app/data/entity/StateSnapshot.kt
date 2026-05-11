@@ -9,5 +9,6 @@ data class StateSnapshot(
     val activityState: ActivityState,
     val tzId: String,
     val hourLocal: Int,
-    val dayOfWeekLocal: Int
+    val dayOfWeekLocal: Int,
+    val sourceAppLabel: String? = null
 )
