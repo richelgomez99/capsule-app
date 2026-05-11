@@ -141,6 +141,12 @@ interface EnvelopeStorageBackend {
 
     suspend fun getEnvelope(id: String): IntentEnvelopeEntity?
 
+    suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
+
+    suspend fun findActiveEnvelopeByTextContentSha256(hash: String): IntentEnvelopeEntity?
+
+    suspend fun recordDuplicateCaptureAttempt(auditEntry: AuditLogEntryEntity)
+
     suspend fun listSoftDeletedWithinDays(days: Int, nowMillis: Long): List<IntentEnvelopeEntity>
 
     suspend fun countSoftDeletedWithinDays(days: Int, nowMillis: Long): Int

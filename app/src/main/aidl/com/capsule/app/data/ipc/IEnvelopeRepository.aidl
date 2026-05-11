@@ -3,6 +3,7 @@ package com.capsule.app.data.ipc;
 
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel;
 import com.capsule.app.data.ipc.StateSnapshotParcel;
+import com.capsule.app.data.ipc.SealResultParcel;
 import com.capsule.app.data.ipc.EnvelopeViewParcel;
 import com.capsule.app.data.ipc.DayPageParcel;
 import com.capsule.app.data.ipc.IEnvelopeObserver;
@@ -16,6 +17,11 @@ interface IEnvelopeRepository {
 
     // ---- Seal path (called by :capture) ----
     String seal(
+        in IntentEnvelopeDraftParcel draft,
+        in StateSnapshotParcel state
+    );
+
+    SealResultParcel sealWithResult(
         in IntentEnvelopeDraftParcel draft,
         in StateSnapshotParcel state
     );

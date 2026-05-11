@@ -37,8 +37,8 @@ multi-URL set matching for a future spec.
 Existing nullable `TEXT` column.
 
 - Populate for exact non-URL text captures.
-- May also be populated for URL captures for forensics, but URL duplicate
-  matching should prefer `primaryCanonicalUrlHash`.
+- Do not populate for URL captures in v1; URL duplicate matching uses
+  `primaryCanonicalUrlHash`.
 
 ### SealResult
 
@@ -61,13 +61,14 @@ Add an audit action distinct from `ENVELOPE_CREATED`, for example
 
 - `existingEnvelopeId`
 - `matchedBy`
-- optional hash prefix or redacted hash marker if needed for debugging
 
 Do not log raw captured content or full URLs in audit metadata.
 
 ### EnvelopeNoteEntity
 
-New Room entity for notes attached to existing captures.
+New Room entity for notes attached to existing captures. This is deferred to the
+feedback-action migration; the duplicate-key migration does not create this
+table.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -92,10 +93,14 @@ envelope without changing the duplicate capture contract.
 
 ## Migration Notes
 
-- Add `primaryCanonicalUrlHash` with a forward-only Room migration.
-- Add `envelope_note` with a forward-only Room migration.
-- Backfill `textContentSha256` for existing rows where feasible.
-- Backfill `primaryCanonicalUrlHash` for existing text rows with detectable URLs
-  if the migration can safely reuse the existing URL extraction/canonicalization
-  logic outside Android framework dependencies; otherwise document no backfill
-  and let new captures populate it going forward.
+- Duplicate-key migration: add `primaryCanonicalUrlHash` with a forward-only Room
+  migration and index.
+- Feedback-action migration: add `envelope_note` with a forward-only Room
+  migration.
+- No v6 backfill: `textContentSha256` and `primaryCanonicalUrlHash` are populated
+  only for new captures. Existing rows remain visible and editable; they simply
+  do not participate in exact duplicate matching until recaptured under the new
+  write path. This avoids running URL extraction/canonicalization or hashing raw
+  historic content in a schema migration.
+- Product acceptance for v1 duplicate matching is therefore scoped to
+  post-migration captures. A future safe backfill can widen that scope if needed.

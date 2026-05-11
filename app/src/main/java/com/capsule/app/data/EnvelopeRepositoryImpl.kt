@@ -12,6 +12,7 @@ import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.ipc.IEnvelopeObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.SealResultParcel
 import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.model.ActivityState
 import com.capsule.app.data.model.AppCategory
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -106,7 +108,13 @@ class EnvelopeRepositoryImpl(
 
     // ---- Seal path ----
 
-    override fun seal(draft: IntentEnvelopeDraftParcel, state: StateSnapshotParcel): String {
+    override fun seal(draft: IntentEnvelopeDraftParcel, state: StateSnapshotParcel): String =
+        sealWithResult(draft, state).envelopeId
+
+    override fun sealWithResult(
+        draft: IntentEnvelopeDraftParcel,
+        state: StateSnapshotParcel
+    ): SealResultParcel {
         val now = clock()
         val id = UUID.randomUUID().toString()
         val dayLocal = computeDayLocal(now, state.tzId)
@@ -118,6 +126,39 @@ class EnvelopeRepositoryImpl(
             if (contentType == ContentType.TEXT)
                 ContinuationEngine.extractUrls(draft.textContent.orEmpty())
             else emptyList()
+        val primaryCanonicalUrlHash = urls.firstOrNull()?.let(CanonicalUrlHasher::hash)
+        val exactTextHash = if (contentType == ContentType.TEXT && primaryCanonicalUrlHash == null) {
+            draft.textContent?.takeIf { it.isNotBlank() }?.let(::sha256)
+        } else {
+            null
+        }
+
+        val duplicate = runBlocking {
+            primaryCanonicalUrlHash?.let { hash ->
+                backend.findActiveEnvelopeByPrimaryCanonicalUrlHash(hash)?.let {
+                    it to SealResultParcel.MATCHED_BY_CANONICAL_URL
+                }
+            } ?: exactTextHash?.let { hash ->
+                backend.findActiveEnvelopeByTextContentSha256(hash)?.let {
+                    it to SealResultParcel.MATCHED_BY_EXACT_TEXT
+                }
+            }
+        }
+
+        if (duplicate != null) {
+            val (existing, matchedBy) = duplicate
+            val audit = auditWriter.build(
+                action = AuditAction.DUPLICATE_CAPTURE_ATTEMPT,
+                description = "Duplicate capture matched existing envelope",
+                envelopeId = existing.id,
+                extraJson = JSONObject()
+                    .put("existingEnvelopeId", existing.id)
+                    .put("matchedBy", matchedBy)
+                    .toString()
+            )
+            runBlocking { backend.recordDuplicateCaptureAttempt(audit) }
+            return SealResultParcel.alreadySaved(existing.id, matchedBy)
+        }
 
         val dedupeHits = mutableMapOf<String, String>() // url → existing result id
         val urlsToHydrate = mutableListOf<String>()
@@ -138,7 +179,7 @@ class EnvelopeRepositoryImpl(
             contentType = contentType,
             textContent = draft.textContent,
             imageUri = draft.imageUri,
-            textContentSha256 = null,
+            textContentSha256 = exactTextHash,
             intent = Intent.valueOf(draft.intent),
             intentConfidence = draft.intentConfidence,
             intentSource = IntentSource.valueOf(draft.intentSource),
@@ -157,7 +198,8 @@ class EnvelopeRepositoryImpl(
             ),
             createdAt = now,
             dayLocal = dayLocal,
-            sharedContinuationResultId = sharedResultId
+            sharedContinuationResultId = sharedResultId,
+            primaryCanonicalUrlHash = primaryCanonicalUrlHash
         )
 
         val audit = auditWriter.build(
@@ -262,7 +304,7 @@ class EnvelopeRepositoryImpl(
         }
 
         undoWindow[id] = now + undoWindowMillis
-        return id
+        return SealResultParcel.created(id)
     }
 
     // ---- Read path ----
@@ -878,6 +920,12 @@ class EnvelopeRepositoryImpl(
         val obj = JSONObject()
         for ((k, v) in counts) obj.put(k, v)
         return obj.toString()
+    }
+
+    private fun sha256(text: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString(separator = "") { byte -> "%02x".format(byte) }
     }
 
     private fun appendHistory(

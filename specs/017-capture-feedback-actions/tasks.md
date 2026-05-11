@@ -43,22 +43,19 @@ analysis gate after Phase 1 schema details are finalized.
 
 ## Phase 1 - Duplicate keys and repository contract
 
-- [ ] **T017-101** Add envelope-level URL duplicate key support. Preferred shape:
+- [x] **T017-101** Add envelope-level URL duplicate key support. Preferred shape:
   `primaryCanonicalUrlHash` on `IntentEnvelopeEntity` with Room migration and an
   index for non-deleted/non-archived lookup. For multi-URL captures, use the first
   URL returned by `ContinuationEngine.extractUrls(...)` as the v1 primary key.
-- [ ] **T017-102** Populate `textContentSha256` for exact non-URL text captures.
-- [ ] **T017-103** Add DAO queries for duplicate URL and exact-text matches,
+- [x] **T017-102** Populate `textContentSha256` for exact non-URL text captures.
+- [x] **T017-103** Add DAO queries for duplicate URL and exact-text matches,
   excluding deleted and archived envelopes for v1.
-- [ ] **T017-104** Replace `seal(): String` boundary with a typed seal result
+- [x] **T017-104** Replace `seal(): String` boundary with a typed seal result
   across repository, AIDL/Binder, orchestrator, and ViewModel layers.
-- [ ] **T017-105** Add audit action/event for duplicate capture attempts.
-- [ ] **T017-106** Preserve existing URL hydration result reuse: duplicate logic
+- [x] **T017-105** Add audit action/event for duplicate capture attempts.
+- [x] **T017-106** Preserve existing URL hydration result reuse: duplicate logic
   must not remove `sharedContinuationResultId` behavior or continuation-result
   canonical-hash cache hits.
-- [ ] **T017-107** Add `envelope_note` persistence per [data-model.md](data-model.md)
-  and route `Already saved` note action to the existing envelope.
-
 ## Phase 2 - Overlay feedback actions
 
 - [ ] **T017-201** Add `SealOutcome.AlreadySaved(existingEnvelopeId, matchedBy)`
@@ -71,27 +68,41 @@ analysis gate after Phase 1 schema details are finalized.
 - [ ] **T017-204** Wire reclassify to update the existing envelope's intent
   history rather than creating a new envelope.
 - [ ] **T017-205** Specify and implement note persistence if notes are not
-  already modeled. Do not add an ad-hoc note field without a data-model update.
+  already implemented. Use the `EnvelopeNoteEntity` shape in
+  [data-model.md](data-model.md); do not add an ad-hoc note field outside spec
+  017.
+- [ ] **T017-206** Add `envelope_note` persistence in the feedback-action
+  migration and route `Already saved` note action to the existing envelope.
 
 ## Phase 3 - Tests and physical QA
 
-- [ ] **T017-301** Repository test: same canonical URL twice returns
+- [x] **T017-301** Repository test: same canonical URL twice returns
   `AlreadySaved`, creates no second visible envelope, writes exactly one
   duplicate audit row with `existingEnvelopeId` + `matchedBy`, and does not log
   raw content or full URLs.
-- [ ] **T017-302** Repository test: same exact non-URL text twice returns
-  `AlreadySaved`.
+- [x] **T017-302** Repository test: same exact non-URL text twice returns
+  `AlreadySaved`, creates no second visible envelope, writes exactly one
+  duplicate audit row with `existingEnvelopeId` + `matchedBy=EXACT_TEXT`, and
+  does not log raw text or full URLs.
 - [ ] **T017-303** UI/orchestrator test: `AlreadySaved` state exposes note,
   reclassify, and open actions; reclassify appends intent history on the existing
-  envelope and creates no second envelope.
+  envelope and creates no second envelope. Note tests must cover create/edit of
+  the latest note on the existing envelope and confirm no ad-hoc note field is
+  introduced. Open-existing tests must tap the action and assert navigation targets
+  `existingEnvelopeId` without creating a new envelope.
 - [ ] **T017-304** Physical QA on S24 and Tab S9: duplicate URL, duplicate text,
   adjacent icon tap outside pill, portrait and landscape.
-- [ ] **T017-305** Verification gate: `:app:compileDebugKotlin`,
+- [x] **T017-305** Verification gate: `:app:compileDebugKotlin`,
   `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`.
-- [ ] **T017-306** Regression test: existing URL hydration dedupe contract still
+- [x] **T017-306** Regression test: existing URL hydration dedupe contract still
   reuses continuation results after envelope-level duplicate handling is added.
-- [ ] **T017-307** Repository tests: deleted duplicate candidates do not block;
+- [x] **T017-307** Repository tests: deleted duplicate candidates do not block;
   archived duplicate candidates do not block in v1.
+- [ ] **T017-308** Verify duplicate lookup performance/query shape: URL and text
+  duplicate checks must use indexed lookup columns and avoid raw full-text scans;
+  seed at least 1,000 visible envelopes plus archived/deleted controls in a Room
+  fixture, run at least 100 repeated URL and text lookups, and keep p95 under
+  50 ms or explicitly document any measured exception.
 
 ## Landing Map
 

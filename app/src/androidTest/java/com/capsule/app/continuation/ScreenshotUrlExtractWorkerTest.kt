@@ -13,6 +13,7 @@ import com.capsule.app.ai.OcrEngine
 import com.capsule.app.data.ipc.IEnvelopeObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.SealResultParcel
 import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import kotlinx.coroutines.test.runTest
@@ -147,6 +148,10 @@ class ScreenshotUrlExtractWorkerTest {
 
         // ---- Unused surface ----
         override fun seal(draft: IntentEnvelopeDraftParcel, state: StateSnapshotParcel): String = error("unused")
+        override fun sealWithResult(
+            draft: IntentEnvelopeDraftParcel,
+            state: StateSnapshotParcel
+        ): SealResultParcel = error("unused")
         override fun observeDay(isoDate: String, observer: IEnvelopeObserver) = error("unused")
         override fun stopObserving(observer: IEnvelopeObserver) = error("unused")
         override fun getEnvelope(envelopeId: String): EnvelopeViewParcel = error("unused")

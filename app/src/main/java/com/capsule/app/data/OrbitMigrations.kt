@@ -226,3 +226,17 @@ internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
         db.execSQL("ALTER TABLE intent_envelope ADD COLUMN sourceAppLabel TEXT")
     }
 }
+
+/**
+ * v6 — spec 017 envelope-level duplicate key for URL captures. This is
+ * additive; old rows keep NULL and new captures populate the key at seal time.
+ */
+internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE intent_envelope ADD COLUMN primaryCanonicalUrlHash TEXT")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_intent_envelope_primaryCanonicalUrlHash " +
+                "ON intent_envelope(primaryCanonicalUrlHash)"
+        )
+    }
+}

@@ -5,10 +5,20 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.capsule.app.audit.AuditLogWriter
+import com.capsule.app.data.entity.ContinuationEntity
 import com.capsule.app.data.entity.ContinuationResultEntity
+import com.capsule.app.data.entity.IntentEnvelopeEntity
+import com.capsule.app.data.entity.StateSnapshot
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.SealResultParcel
 import com.capsule.app.data.ipc.StateSnapshotParcel
+import com.capsule.app.data.model.AppCategory
 import com.capsule.app.data.model.AuditAction
+import com.capsule.app.data.model.ContentType
+import com.capsule.app.data.model.ContinuationStatus
+import com.capsule.app.data.model.ContinuationType
+import com.capsule.app.data.model.Intent
+import com.capsule.app.data.model.IntentSource
 import com.capsule.app.data.security.KeystoreKeyProvider
 import com.capsule.app.net.CanonicalUrlHasher
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -100,41 +111,75 @@ class UrlHashDedupeContractTest {
     }
 
     @Test
+    fun pendingUrlDuplicate_returnsAlreadySaved_beforeHydrationCompletes() = runTest {
+        val first = repository.sealWithResult(draft("https://example.com/pending"), state())
+        clock.advance(1_000L)
+
+        val second = repository.sealWithResult(draft("https://www.example.com/pending/"), state())
+
+        assertEquals(SealResultParcel.STATUS_CREATED, first.status)
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, second.status)
+        assertEquals(SealResultParcel.MATCHED_BY_CANONICAL_URL, second.matchedBy)
+        assertEquals(first.envelopeId, second.envelopeId)
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+        assertEquals(1, db.continuationDao().getByEnvelopeId(first.envelopeId).size)
+    }
+
+    @Test
     fun scenarioB_trackingParamDiffers_hitsCache() = runTest {
         val rawA = "https://example.com/a?utm_source=twitter"
         val rawB = "https://example.com/a?utm_source=email"
-        val seededResultId = seedResult(rawA)
+        val seeded = seedResult(rawA)
 
-        val idB = repository.seal(draft(rawB), state())
+        val result = repository.sealWithResult(draft(rawB), state())
 
-        // No new PENDING row — dedupe hit short-circuits.
-        assertEquals(0, db.continuationDao().getByEnvelopeId(idB).size)
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, result.status)
+        assertEquals(SealResultParcel.MATCHED_BY_CANONICAL_URL, result.matchedBy)
+        assertEquals(seeded.envelopeId, result.envelopeId)
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+        val duplicateRows = db.auditLogDao()
+            .entriesForEnvelope(seeded.envelopeId)
+            .filter { it.action == AuditAction.DUPLICATE_CAPTURE_ATTEMPT }
+        assertEquals(1, duplicateRows.size)
+    }
+
+    @Test
+    fun legacyHydrationCache_withoutEnvelopeDuplicate_reusesContinuationResult() = runTest {
+        val rawA = "https://example.com/legacy?utm_source=twitter"
+        val rawB = "https://example.com/legacy?utm_source=email"
+        val seeded = seedLegacyResultWithoutDuplicateKey(rawA)
+
+        val result = repository.sealWithResult(draft(rawB), state())
+
+        assertEquals(SealResultParcel.STATUS_CREATED, result.status)
+        assertNotEquals(seeded.envelopeId, result.envelopeId)
         assertEquals(
-            seededResultId,
-            db.intentEnvelopeDao().getById(idB)!!.sharedContinuationResultId
+            seeded.resultId,
+            db.intentEnvelopeDao().getById(result.envelopeId)!!.sharedContinuationResultId
         )
+        assertEquals(0, db.continuationDao().getByEnvelopeId(result.envelopeId).size)
         val dedupeRows = db.auditLogDao()
-            .entriesForEnvelope(idB)
+            .entriesForEnvelope(result.envelopeId)
             .filter { it.action == AuditAction.URL_DEDUPE_HIT }
         assertEquals(1, dedupeRows.size)
     }
 
     @Test
     fun scenarioC_wwwStrip_hitsCache() = runTest {
-        seedResult("https://example.com/a")
-        val id = repository.seal(draft("https://www.example.com/a"), state())
+        val seeded = seedResult("https://example.com/a")
+        val result = repository.sealWithResult(draft("https://www.example.com/a"), state())
 
-        assertEquals(0, db.continuationDao().getByEnvelopeId(id).size)
-        assertNotNull(db.intentEnvelopeDao().getById(id)!!.sharedContinuationResultId)
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, result.status)
+        assertEquals(seeded.envelopeId, result.envelopeId)
     }
 
     @Test
     fun scenarioD_rootTrailingSlash_hitsCache() = runTest {
-        seedResult("https://example.com")
-        val id = repository.seal(draft("https://example.com/"), state())
+        val seeded = seedResult("https://example.com")
+        val result = repository.sealWithResult(draft("https://example.com/"), state())
 
-        assertEquals(0, db.continuationDao().getByEnvelopeId(id).size)
-        assertNotNull(db.intentEnvelopeDao().getById(id)!!.sharedContinuationResultId)
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, result.status)
+        assertEquals(seeded.envelopeId, result.envelopeId)
     }
 
     @Test
@@ -147,9 +192,48 @@ class UrlHashDedupeContractTest {
         assertNull(db.intentEnvelopeDao().getById(id)!!.sharedContinuationResultId)
     }
 
+    @Test
+    fun exactNonUrlTextDuplicate_returnsAlreadySaved_noSecondEnvelope() = runTest {
+        val first = repository.sealWithResult(draft("same exact note"), state())
+        clock.advance(1_000L)
+        val second = repository.sealWithResult(draft("same exact note"), state())
+
+        assertEquals(SealResultParcel.STATUS_CREATED, first.status)
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, second.status)
+        assertEquals(SealResultParcel.MATCHED_BY_EXACT_TEXT, second.matchedBy)
+        assertEquals(first.envelopeId, second.envelopeId)
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+        assertNotNull(db.intentEnvelopeDao().getById(first.envelopeId)!!.textContentSha256)
+        val duplicateRows = db.auditLogDao()
+            .entriesForEnvelope(first.envelopeId)
+            .filter { it.action == AuditAction.DUPLICATE_CAPTURE_ATTEMPT }
+        assertEquals(1, duplicateRows.size)
+        assertTrue(duplicateRows.single().extraJson?.contains("same exact note") != true)
+    }
+
+    @Test
+    fun duplicateLookup_ignoresArchivedAndSoftDeletedEnvelopes() = runTest {
+        val archived = repository.sealWithResult(draft("https://example.com/archived"), state())
+        repository.archive(archived.envelopeId)
+        clock.advance(1_000L)
+
+        val afterArchive = repository.sealWithResult(draft("https://example.com/archived"), state())
+
+        val deleted = repository.sealWithResult(draft("https://example.com/deleted"), state())
+        repository.delete(deleted.envelopeId)
+        clock.advance(1_000L)
+
+        val afterDelete = repository.sealWithResult(draft("https://example.com/deleted"), state())
+
+        assertEquals(SealResultParcel.STATUS_CREATED, afterArchive.status)
+        assertEquals(SealResultParcel.STATUS_CREATED, afterDelete.status)
+        assertNotEquals(archived.envelopeId, afterArchive.envelopeId)
+        assertNotEquals(deleted.envelopeId, afterDelete.envelopeId)
+    }
+
     // ---- Helpers ----
 
-    private suspend fun seedResult(rawUrl: String): String {
+    private suspend fun seedResult(rawUrl: String): SeededUrlResult {
         // To insert a ContinuationResultEntity we need a parent envelope +
         // continuation row (FK constraints). Seed via a seal(), then insert
         // a result keyed by the canonical hash.
@@ -172,8 +256,70 @@ class UrlHashDedupeContractTest {
             )
         )
         clock.advance(1_000L)
-        return resultId
+        return SeededUrlResult(envelopeId = seedEnvelopeId, resultId = resultId)
     }
+
+    private suspend fun seedLegacyResultWithoutDuplicateKey(rawUrl: String): SeededUrlResult {
+        val envelopeId = UUID.randomUUID().toString()
+        val continuationId = UUID.randomUUID().toString()
+        val resultId = UUID.randomUUID().toString()
+        db.intentEnvelopeDao().insert(
+            IntentEnvelopeEntity(
+                id = envelopeId,
+                contentType = ContentType.TEXT,
+                textContent = rawUrl,
+                imageUri = null,
+                textContentSha256 = null,
+                intent = Intent.AMBIGUOUS,
+                intentConfidence = null,
+                intentSource = IntentSource.FALLBACK,
+                intentHistoryJson = "[]",
+                state = StateSnapshot(
+                    appCategory = AppCategory.OTHER,
+                    activityState = com.capsule.app.data.model.ActivityState.STILL,
+                    tzId = "UTC",
+                    hourLocal = 10,
+                    dayOfWeekLocal = 2
+                ),
+                createdAt = clock.now,
+                dayLocal = "2023-11-14",
+                primaryCanonicalUrlHash = null
+            )
+        )
+        db.continuationDao().insert(
+            ContinuationEntity(
+                id = continuationId,
+                envelopeId = envelopeId,
+                type = ContinuationType.URL_HYDRATE,
+                status = ContinuationStatus.SUCCEEDED,
+                inputUrl = rawUrl,
+                scheduledAt = clock.now,
+                startedAt = clock.now,
+                completedAt = clock.now,
+                attemptCount = 1,
+                failureReason = null
+            )
+        )
+        db.continuationResultDao().insert(
+            ContinuationResultEntity(
+                id = resultId,
+                continuationId = continuationId,
+                envelopeId = envelopeId,
+                producedAt = clock.now,
+                title = "Legacy seed title",
+                domain = "example.com",
+                canonicalUrl = rawUrl,
+                canonicalUrlHash = CanonicalUrlHasher.hash(rawUrl),
+                excerpt = null,
+                summary = "Legacy seed summary.",
+                summaryModel = "nano-v1"
+            )
+        )
+        clock.advance(1_000L)
+        return SeededUrlResult(envelopeId = envelopeId, resultId = resultId)
+    }
+
+    private data class SeededUrlResult(val envelopeId: String, val resultId: String)
 
     private fun draft(url: String): IntentEnvelopeDraftParcel =
         IntentEnvelopeDraftParcel(

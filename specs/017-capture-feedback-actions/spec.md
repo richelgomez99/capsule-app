@@ -67,8 +67,11 @@ than creating a new envelope.
   URL key, not only continuation-result reuse. Pending and hydrated captures must
   both be detectable. For v1, when a capture contains multiple URLs, the primary
   duplicate key is the first URL returned by `ContinuationEngine.extractUrls(...)`.
+  The v1 guarantee applies to captures sealed after the duplicate-key migration;
+  historical rows without duplicate keys remain visible but are not backfilled.
 - **FR-017-003**: Exact non-URL text duplicate detection MUST populate and query
-  `textContentSha256` for non-deleted, non-archived envelopes.
+  `textContentSha256` for non-deleted, non-archived envelopes sealed after the
+  duplicate-key migration.
 - **FR-017-004**: The overlay/Binder contract MUST carry the typed seal result
   across process boundaries without stringly encoding.
 - **FR-017-005**: `Already saved` feedback MUST offer note, reclassify, and open
