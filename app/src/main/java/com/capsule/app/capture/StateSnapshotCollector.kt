@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicReference
  * research.md §State Signal Collection:
  *
  * 1. **Foreground app category** — via [UsageStatsManager.queryEvents] for
- *    the last 15 seconds; the last `MOVE_TO_FOREGROUND` event's package name
- *    is resolved against [AppCategoryDictionary] and then **discarded**.
+ *    the last 15 seconds; the last foreground event's package name, excluding
+ *    Orbit's own package, is resolved against [AppCategoryDictionary] and then **discarded**.
  *    Raw package names are never persisted.
  * 2. **Activity Recognition state** — this process holds the last observed
  *    state in a thread-safe [AtomicReference] updated by an
@@ -98,7 +98,12 @@ class StateSnapshotCollector(
             val usageStats = appContext.getSystemService(Context.USAGE_STATS_SERVICE)
                 as? UsageStatsManager
             val resolver = PackageResolver { start, end ->
-                resolveFromUsageStats(usageStats, start, end)
+                resolveFromUsageStats(
+                    usageStats = usageStats,
+                    windowStartMillis = start,
+                    windowEndMillis = end,
+                    ownPackageName = appContext.packageName
+                )
             }
             return StateSnapshotCollector(
                 packageResolver = resolver,
@@ -109,7 +114,8 @@ class StateSnapshotCollector(
         private fun resolveFromUsageStats(
             usageStats: UsageStatsManager?,
             windowStartMillis: Long,
-            windowEndMillis: Long
+            windowEndMillis: Long,
+            ownPackageName: String
         ): AppCategory {
             if (usageStats == null) return AppCategory.UNKNOWN_SOURCE
             val events = try {
@@ -122,15 +128,23 @@ class StateSnapshotCollector(
             val buf = UsageEvents.Event()
             while (events.hasNextEvent()) {
                 if (!events.getNextEvent(buf)) break
-                if (buf.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND &&
+                val packageName = buf.packageName
+                if (isForegroundEvent(buf.eventType) &&
+                    !packageName.isNullOrBlank() &&
+                    packageName != ownPackageName &&
                     buf.timeStamp > latestTs
                 ) {
                     latestTs = buf.timeStamp
-                    latestPkg = buf.packageName
+                    latestPkg = packageName
                 }
             }
             return AppCategoryDictionary.categorize(latestPkg)
         }
+
+        @Suppress("DEPRECATION")
+        private fun isForegroundEvent(eventType: Int): Boolean =
+            eventType == UsageEvents.Event.ACTIVITY_RESUMED ||
+                eventType == UsageEvents.Event.MOVE_TO_FOREGROUND
     }
 }
 

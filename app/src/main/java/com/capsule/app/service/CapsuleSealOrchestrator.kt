@@ -8,6 +8,7 @@ import com.capsule.app.capture.SensitivityScrubber
 import com.capsule.app.capture.StateSnapshotCollector
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.IntentEnvelopeDraftParcel
+import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.data.model.ContentType
 import com.capsule.app.data.model.Intent
 import com.capsule.app.data.model.IntentSource
@@ -61,7 +62,7 @@ class CapsuleSealOrchestrator(
             }
 
             // (2) State snapshot (package resolver, timezone, hour, day).
-            val state = runCatching { stateCollector.snapshot() }.getOrElse {
+            val state = runCatching { stateFor(content) }.getOrElse {
                 Log.w(TAG, "StateSnapshotCollector failed; degrading", it)
                 return@withContext SealOutcome.Blocked("state snapshot failed")
             }
@@ -117,7 +118,7 @@ class CapsuleSealOrchestrator(
             return@withContext SealOutcome.Blocked("scrubbed to empty")
         }
 
-        val state = runCatching { stateCollector.snapshot() }.getOrElse {
+        val state = runCatching { stateFor(content) }.getOrElse {
             Log.w(TAG, "StateSnapshotCollector failed; degrading", it)
             return@withContext SealOutcome.Blocked("state snapshot failed")
         }
@@ -185,9 +186,16 @@ class CapsuleSealOrchestrator(
             false
         }
 
+    private fun stateFor(content: CapturedContent): StateSnapshotParcel =
+        content.stateSnapshotForSeal { stateCollector.snapshot() }
+
     companion object {
         private const val TAG = "CapsuleSealOrch"
         private const val PREVIEW_CAP = 80
         const val DEFAULT_CONFIDENCE_THRESHOLD: Float = 0.70f
     }
 }
+
+internal fun CapturedContent.stateSnapshotForSeal(
+    fallback: () -> StateSnapshotParcel
+): StateSnapshotParcel = stateSnapshotAtCapture ?: fallback()

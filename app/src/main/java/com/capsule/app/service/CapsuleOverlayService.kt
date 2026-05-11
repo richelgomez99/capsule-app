@@ -53,6 +53,7 @@ import com.capsule.app.overlay.ExpansionState
 import com.capsule.app.overlay.OverlayViewModel
 import com.capsule.app.overlay.PostCaptureOverlay
 import com.capsule.app.overlay.PostCaptureUi
+import com.capsule.app.capture.StateSnapshotCollector
 import com.capsule.app.capture.ScreenshotObserver
 import com.capsule.app.data.ipc.IEnvelopeRepository
 import com.capsule.app.data.ipc.EnvelopeRepositoryService
@@ -88,6 +89,9 @@ class CapsuleOverlayService : LifecycleService() {
     private var viewModel: OverlayViewModel? = null
     private var dismissTargetView: ComposeView? = null
     private var postCaptureView: ComposeView? = null
+    private val tapStateCollector: StateSnapshotCollector by lazy {
+        StateSnapshotCollector.create(applicationContext)
+    }
 
     // T042: bound `:ml` EnvelopeRepositoryService.
     @Volatile private var envelopeRepo: IEnvelopeRepository? = null
@@ -294,11 +298,16 @@ class CapsuleOverlayService : LifecycleService() {
         }
 
         vm.onRequestClipboardRead = {
+            val stateSnapshotAtTap = runCatching { tapStateCollector.snapshot() }
+                .getOrElse { error ->
+                    Log.w(TAG, "Tap-time state snapshot failed; sealing will fall back", error)
+                    null
+                }
             // T042: ensure :ml is bound before the clipboard read resolves so
             // the seal path has a live binder by the time orchestrator runs.
             ensureRepoBound()
             cancelIdleUnbind()
-            stateMachine.requestClipboardRead()
+            stateMachine.requestClipboardRead(stateSnapshotAtTap)
         }
 
         // T038/T042: install production orchestrator backed by the bound repo.

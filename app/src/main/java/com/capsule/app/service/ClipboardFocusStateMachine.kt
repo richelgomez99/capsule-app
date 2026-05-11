@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.WindowManager
+import com.capsule.app.data.ipc.StateSnapshotParcel
 import com.capsule.app.overlay.CapturedContent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,7 @@ class ClipboardFocusStateMachine(
 
     private var onResult: ((CapturedContent?) -> Unit)? = null
     private var onStateChanged: ((ClipboardFocusState) -> Unit)? = null
+    private var pendingStateSnapshotAtCapture: StateSnapshotParcel? = null
 
     private val timeoutRunnable = Runnable {
         Log.w(TAG, "Timeout hit — force-restoring flags from state ${_state.value}")
@@ -88,7 +90,7 @@ class ClipboardFocusStateMachine(
         }
     }
 
-    fun requestClipboardRead() {
+    fun requestClipboardRead(stateSnapshotAtCapture: StateSnapshotParcel? = null) {
         if (_state.value != ClipboardFocusState.IDLE) {
             Log.w(TAG, "Rejected — current state: ${_state.value}. Forcing reset.")
             // Defensive: if something left us stuck, recover instead of no-op.
@@ -96,6 +98,7 @@ class ClipboardFocusStateMachine(
             if (_state.value != ClipboardFocusState.IDLE) return
         }
 
+        pendingStateSnapshotAtCapture = stateSnapshotAtCapture
         Log.d(TAG, "requestClipboardRead — starting focus hack")
 
         // Transition: IDLE → REQUESTING_FOCUS
@@ -162,7 +165,8 @@ class ClipboardFocusStateMachine(
                             text = text,
                             sourcePackage = null,
                             timestamp = System.currentTimeMillis(),
-                            isSensitive = isSensitive
+                            isSensitive = isSensitive,
+                            stateSnapshotAtCapture = pendingStateSnapshotAtCapture
                         )
                     }
                 }
@@ -195,6 +199,7 @@ class ClipboardFocusStateMachine(
     }
 
     private fun deliverResult(content: CapturedContent?) {
+        pendingStateSnapshotAtCapture = null
         onResult?.invoke(content)
     }
 }
