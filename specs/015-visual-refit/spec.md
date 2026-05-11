@@ -1,0 +1,313 @@
+# Feature Specification: Visual Refit (Quiet Almanac)
+
+**Feature Branch**: `015-visual-refit`
+**Created**: 2026-04-29
+**Status**: Implementation in progress — Phase 0 landed; Phase 1+ worktree split pending
+**Input**: Off-platform design exploration "Quiet Almanac" (deep navy ground,
+cream type, amber accent, Cormorant Garamond serif italic for emphasis,
+JetBrains Mono captions). Bundle checked into
+`design/visual-refit-2026-04-29/`.
+
+## Summary
+
+Adopt a new visual language across the Android Compose codebase as a presentation-only
+refit. The refit is feature-flagged (`RuntimeFlags.useNewVisualLanguage`, default
+OFF), shipped behind 5 phases with a Claude review gate after every commit, and
+**builds on** the Phase 11 Block 7 primitives (`AgentVoiceMark`,
+`ClusterActionRow`, `CapsulePalette`) — it does not replace them.
+
+No data model changes. No ViewModel signature changes. Every refit composable
+calls the same upstream methods its predecessor calls.
+
+## Locked Decisions (Non-Negotiable)
+
+These were resolved before spec authoring. Do not relitigate during implementation.
+
+- **LD-001 — Single brand accent: amber (#e8b06a).** A new `BrandAccent` token
+  consolidates with `AgentVoiceMark`'s existing `--ink-accent-cluster`
+  (#3D4A6B / #8FA3CC). The ✦ glyph keeps its symbolic role; only its color
+  changes. Spec 010 D4 receives an amendment entry recording this consolidation.
+- **LD-002 — Intent set is `[want it, reference, read later, for someone, interesting]`.**
+  Preserve the product labels `Want it` and `Interesting`; add `Read later` as
+  the fifth pickable intent. Drop "in orbit" (vague) and "archive" (not a
+  save-time intent). The "for someone" intent enables a contact-picker layer.
+  *Schema migration to enforce this at the data layer is a SEPARATE concern —
+  see Dependencies below.*
+- **LD-003 — No "sealed at save" wording.** Public framing is
+  "reclassify adds a layer, latest visible." `intentHistoryJson` remains
+  append-only at the data layer; only user-facing copy changes.
+- **LD-004 — Local-AI hardware phrasing is**
+  "for local-model-capable phones (Pixel 8 Pro+, Galaxy S24+, capable hardware)".
+  Not "Pixel 8 and up."
+- **LD-005 — Bubble overlay refit (Phase 5) deferred to post-Demo Day (May 22, 2026).**
+  The bubble in the working tree is the demo bubble; do not do a visual refit
+  before Demo Day. Geometry/accessibility bug fixes may land in the capture
+  hardening bucket when they preserve the existing demo visual treatment.
+- **LD-006 — Source glyphs are provider-first, origin-preserving.** When the
+  captured content contains a strong provider URL (for example YouTube), that
+  provider wins the primary glyph even if the foreground app was Brave,
+  Messages, or another browser/share surface. The origin remains available for
+  secondary copy such as `YouTube via Brave`.
+
+## User Scenarios & Testing
+
+This refit is presentation-only. There are no new user-facing capabilities; the
+"users" of this feature are the team's design + engineering review loop and,
+eventually, alpha testers behind the runtime flag.
+
+### User Story 1 — Engineering can ship the refit incrementally without breaking alpha (Priority: P1)
+
+A developer toggles `RuntimeFlags.useNewVisualLanguage` true on a debug build
+and sees the new visual language across Diary, Cluster detail, Settings, and
+Capture sheet. Toggling false returns to the existing visual language. No
+crash, no missing strings, no broken navigation, no data corruption.
+
+**Why this priority**: Without the flag gate, the refit either (a) has to land
+all-at-once or (b) commits visible churn to alpha users mid-flight. The flag
+makes Phase 0–4 landable independently.
+
+**Independent Test**: Build debug APK on `015-visual-refit` after Phase 0
+completes. Flip the flag at runtime; observe Phase 0 changes are token-only
+and invisible (no screens touched yet). After each subsequent phase, the
+corresponding screen visibly switches.
+
+**Acceptance Scenarios**:
+
+1. **Given** flag is OFF, **When** user opens Diary, **Then** the existing
+   visual language renders and `:app:lintDebug` is clean.
+2. **Given** flag is ON after Phase 1, **When** user opens a cluster card,
+   **Then** the new `ClusterSuggestionCard` and `ClusterDetailScreen` render
+   on the new tokens; ViewModel calls are unchanged.
+3. **Given** flag is ON, **When** user reclassifies an envelope's intent,
+   **Then** the UI shows "latest visible" framing (LD-003); the
+   `intentHistoryJson` write is byte-identical to the flag-OFF path.
+
+---
+
+### User Story 2 — Designer/Claude can review each commit against the design bundle (Priority: P1)
+
+After every commit on `015-visual-refit`, Claude (separate session) reviews
+the diff against `design/visual-refit-2026-04-29/` reference JSX and either
+approves or blocks the next commit.
+
+**Why this priority**: This is the explicit gating mechanism the user
+requested. Without it, the refit drifts.
+
+**Independent Test**: Each Phase 0 commit ships independently; the next commit
+does not start until Claude posts an approve.
+
+**Acceptance Scenarios**:
+
+1. **Given** Phase 0 commit 1 (tokens) lands, **When** Claude reviews,
+   **Then** spec.md / commit body explicitly call out which JSX file the
+   tokens map from, and the lint/compile gates are recorded in the commit body.
+2. **Given** Claude blocks a commit, **When** the developer iterates,
+   **Then** they amend or follow up with a fix commit on the same branch
+   before proceeding.
+
+---
+
+### User Story 3 — Alpha tester sees a coherent refit when the flag flips on (Priority: P2)
+
+When the team is satisfied the refit is complete (post-Phase 4), the flag
+default flips to `true` (or alpha-only build wires `useNewVisualLanguage = true`)
+and the four refitted surfaces (Diary, Cluster, Settings, Capture sheet)
+render cohesively.
+
+**Why this priority**: The actual user-visible payoff. Lower priority than
+P1 stories because it gates on Phase 4 completion.
+
+**Independent Test**: Manual screenshot sweep of the four screens with
+flag = true vs the design bundle reference renders.
+
+**Acceptance Scenarios**:
+
+1. **Given** all phases complete, **When** flag flips on, **Then** Diary,
+   Cluster detail, Settings, and Capture sheet render in the new language
+   and the bubble overlay still renders in the existing visual language
+   (LD-005).
+
+---
+
+### Edge Cases
+
+- **Flag flips mid-session**: existing screen instances may need recomposition;
+  acceptable to require Activity restart for the boundary case in v1.
+- **Font load failure**: `Cormorant Garamond` / `JetBrains Mono` fail to load
+  → fall back to system serif / monospace; UI remains legible.
+- **Dynamic color (Material You)**: refit uses fixed `BrandAccent`, not
+  Material You. This is intentional — Quiet Almanac is a fixed palette.
+- **Accessibility**: text contrast on `bgDeep` (#080b14) with `cream` (#f3ead8)
+  must hit WCAG AA at body size; serif italic accent at WCAG AA min for body.
+- **Existing screens during partial rollout**: when only Phase 1 has landed,
+  flag-ON Diary still renders existing diary; only Cluster screens use new
+  tokens. UX checks this is acceptable per phase.
+
+## Requirements
+
+### Functional Requirements
+
+- **FR-015-001**: System MUST add a `RuntimeFlags.useNewVisualLanguage: Boolean`
+  flag, default `false`, in `app/src/main/java/com/capsule/app/RuntimeFlags.kt`.
+  All refit composables MUST read this flag (or accept it as a parameter from
+  a flag-aware host) before adopting new tokens.
+- **FR-015-002**: System MUST add a `BrandAccent` token (`#e8b06a`),
+  `BrandAccentDim` (16% alpha amber), and `BrandAccentInk` (`#1a1206`) to
+  `app/src/main/java/com/capsule/app/ui/tokens/Colors.kt` as part of
+  `CapsulePalette.Tokens`. (Per LD-001.)
+- **FR-015-003**: System MUST consolidate `AgentVoiceMark`'s rendering color
+  from `inkAccentCluster` to `brandAccent`. The lint detector
+  `NoAgentVoiceMarkOutsideAgentSurfaces` and its test MUST be updated to
+  reflect the consolidated color (test expectations only — detector logic
+  unchanged). (Per LD-001.)
+- **FR-015-004**: System MUST append a D4 amendment entry to
+  `specs/010-visual-polish-pass/spec.md` (NOTE: tasks.md does not exist for
+  spec 010 — see Dependencies for the contradiction surface) recording the
+  consolidation: `inkAccentCluster` retired, `brandAccent` adopted.
+- **FR-015-005**: System MUST add `app/src/main/java/com/capsule/app/ui/tokens/Type.kt`
+  exposing typography stacks: display (`Cormorant Garamond`), body (`Inter`),
+  caption (`JetBrains Mono`). Fonts MUST be wired via `app/src/main/res/font/`.
+- **FR-015-006**: System MUST add the following Compose primitives to
+  `app/src/main/java/com/capsule/app/ui/primitives/`:
+  - `OrbitMark` — `Canvas` + `Path`, no font dependency. Mechanism mirrors
+    `AgentVoiceMark`. Renders self-dot + tilted ellipse + accent dot.
+  - `OrbitWordmark` — `OrbitMark` + serif "Orbit." text.
+  - `MonoLabel` — uppercase tracked mono caption.
+  - `IntentChip` — pill chip consuming the LD-002 5-intent palette.
+  - `SourceGlyph` — round chip per app source (Twitter, Safari, Notes, …).
+- **FR-015-007**: Refitted composables MUST NOT change the upstream method
+  signatures or call paths into ViewModels. Every refit is a presentation-only
+  swap.
+- **FR-015-008**: Refit MUST NOT introduce migrations against the
+  `IntentEnvelope` schema. The "drop in orbit / archive, add for someone"
+  schema migration is referred out (see Dependencies).
+- **FR-015-009**: Refit MUST NOT introduce the Slate / philosophy page or
+  launch video into the Android app. Both belong on `orbitassistant.com` /
+  press kit material.
+- **FR-015-010**: Capture sheet refit (Phase 4) MUST NOT use "sealed at save"
+  wording. Public framing is "reclassify adds a layer, latest visible."
+  (Per LD-003.)
+- **FR-015-011**: Settings danger-row copy MUST scope honestly: distinguish
+  what Orbit controls (local data, on-device caches) vs what depends on
+  third-party LLM-provider SLAs. (Per spec.md context for LD-004.)
+- **FR-015-012**: Bubble overlay (`com.capsule.app.bubble.*`) MUST NOT be
+  modified by this spec before Demo Day (2026-05-22). (Per LD-005.)
+- **FR-015-013**: A Claude-review gate MUST be enforced after every commit
+  on `015-visual-refit` before the next commit lands. The gate is not
+  automated; it is a manual checkpoint enumerated in `tasks.md` Phase 0.
+- **FR-015-014**: Source glyph selection MUST be shared across Diary and Capture
+  sheet. Provider URL detection MUST cover `youtube.com`, subdomains such as
+  `m.youtube.com`, `youtu.be`, and `youtube-nocookie.com`; the same captured
+  YouTube URL MUST render the same YouTube glyph regardless of foreground app.
+- **FR-015-015**: Settings refit MUST include nested settings routes, not only
+  the top-level Settings screen. User-facing product copy in settings routes
+  MUST say `Orbit`; legacy `Capsule` copy is allowed only in package/process or
+  developer-facing technical names.
+- **FR-015-016**: Post-capture visual states (`ChipRow`, silent-save pill,
+  undo pill, already-saved/confirmation pill) MUST have touch bounds that match
+  their visible affordance. Full-width overlay hitboxes are allowed only for the
+  chip row when the row visibly spans the screen.
+
+### Key Entities
+
+This feature has no new data entities. It exclusively touches the presentation
+layer.
+
+## Success Criteria
+
+### Measurable Outcomes
+
+- **SC-001**: `:app:compileDebugKotlin` is clean after every commit on
+  `015-visual-refit`.
+- **SC-002**: `:app:lintDebug` shows no new warnings beyond the pre-existing
+  `MissingClass` for `ActionsSettingsActivity`.
+- **SC-003**: `:build-logic:lint:test` is green (8/8) after Phase 0 commit 3
+  consolidates `AgentVoiceMark` to brand accent. The
+  `NoAgentVoiceMarkOutsideAgentSurfaces` allow-list is unchanged.
+- **SC-004**: All existing instrumented tests for Diary, Cluster, Settings,
+  and Capture sheet remain green with `useNewVisualLanguage = false`.
+- **SC-005**: With `useNewVisualLanguage = true`, the four refitted screens
+  match the design-bundle reference renders within tolerance documented in
+  `research.md`. (Diff measured by hand-reviewed screenshot for v1.)
+- **SC-006**: Zero changes to `IntentEnvelope` schema files / migrations on
+  this branch.
+- **SC-007**: Zero changes under `app/src/main/java/com/capsule/app/bubble/`
+  on this branch.
+- **SC-008**: Every commit on `015-visual-refit` records, in its commit body,
+  the Claude review approval (or marker that approval was received).
+- **SC-009**: On S24 and Tab S9 physical QA, two YouTube captures from different
+  origins render with one consistent primary YouTube glyph in Diary and Capture
+  sheet.
+- **SC-010**: While the undo pill is visible, tapping an adjacent launcher/app
+  icon outside the visible pill opens that app; only the visible pill intercepts
+  touch.
+
+## Assumptions
+
+- Cormorant Garamond and JetBrains Mono are licensed for redistribution in the
+  Android APK (SIL OFL / Apache 2.0). Inter is already broadly used and
+  similarly licensed.
+- Material You / dynamic color is intentionally NOT adopted for refit surfaces;
+  Quiet Almanac is a fixed palette.
+- The flag default flip from `false` to `true` is a separate, post-Phase-4
+  decision — not part of this spec.
+- Demo Day is 2026-05-22; phases land before that date for screens NOT named
+  "bubble".
+- The phase-11-block-7 primitives (`AgentVoiceMark`, `ClusterActionRow`,
+  `CapsulePalette`) survive into the new language. Phase 11 Block 8
+  (`ClusterSuggestionCard`) consumes them per the existing spec 002 plan.
+
+## Dependencies
+
+- **DEP-001 (RESOLVED 2026-04-29 — referred out to spec 016)** —
+  IntentEnvelope schema migration to adopt the LD-002 intent set ("drop
+  in-orbit + archive, add for-someone") is authored as its own spec:
+  **`016-intent-set-migration`**. It is a data-layer migration (Room
+  schema version bump, `IntentEnvelope` enum change, migration SQL with
+  `intentHistoryJson` rewrite for existing rows) with its own rollback
+  story, contracts, and risk profile. It cross-cuts capture flow, diary
+  mini-intent display, Salesforce `Alpha_User__c`, design canvas
+  reference docs, founder kit personas, and `product-dna.md`. Spec 016
+  may be drafted in parallel; it does **not** gate spec 015 Phases 0–3.
+  It **must** merge before spec 015 Phase 4 (capture sheet) lands.
+- **DEP-002 (RESOLVED 2026-04-29)** — User confirmed the D4 amendment
+  target is `specs/010-visual-polish-pass/spec.md` (immediately after
+  the existing D4 entry, currently at line 171). Spec 010 never had a
+  `tasks.md` — `spec.md` was always the only file. The amendment
+  wording is locked; see [tasks.md](tasks.md) T015-018 for the exact
+  block to insert.
+- **DEP-003 (RESOLVED 2026-04-29 — gated)** — Phase 11 Block 7 (PR #4)
+  must be merged into `main` before Phase 0 commit 1 can start, because
+  Phase 0 commit 1 extends `Colors.kt` (introduced in PR #4) and Phase 0
+  commit 3 modifies `AgentVoiceMark.kt` (also PR #4). Required merge
+  order: **PR #3 → PR #4 → rebase `015-visual-refit` onto fresh main →
+  user green-lights Phase 0 commit 1**. Non-negotiable.
+
+## Out of Scope (Explicit)
+
+- Bubble overlay refit (deferred per LD-005 to post-Demo Day).
+- Duplicate capture detection and `Already saved` product behavior; this lands
+  in spec 017 (`017-capture-feedback-actions`) because it changes repository,
+  IPC, and user action semantics.
+- Slate / philosophy page in app (belongs to `orbitassistant.com`).
+- Launch video in app (press kit / website).
+- IntentEnvelope schema migration (DEP-001).
+- Material You / dynamic color adoption.
+- Any change under `app/src/main/java/com/capsule/app/bubble/`.
+- Any schema migration for duplicate keys, notes, or contact refs.
+- Cloud LLM gateway changes (spec 014).
+- Cluster engine / detector behavior (spec 002 territory).
+
+## Constitutional Notes
+
+- **Principle III (Intent Before Artifact)**: User-facing wording becomes
+  "reclassify adds a layer, latest visible" (LD-003). The data layer's
+  append-only `intentHistoryJson` semantics are unchanged. Per spec 002
+  data-model, a reclassify still appends an audit entry; the refit only
+  renames how that semantics is described to the user.
+- **Principle X (Sovereign Cloud Storage)** and **Principle IX
+  (User-Sovereign Cloud LLM)**: Settings danger-row wording (FR-015-011)
+  must not promise behavior that depends on third-party SLAs Orbit cannot
+  enforce. "Forget everything" copy explicitly bounds Orbit's commitment to
+  Orbit-controlled storage and on-device caches.
+- All other 14 principles are untouched by this presentation-only refit.
