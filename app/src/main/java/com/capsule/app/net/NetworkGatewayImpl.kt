@@ -52,6 +52,7 @@ class NetworkGatewayImpl(
     private val myUidProvider: () -> Int = { Process.myUid() },
     private val auditSink: AuditSink? = null,
     private val disabled: () -> Boolean = { false },
+    private val providerMetadataResolver: ProviderMetadataResolver = ProviderMetadataResolver(client, clock),
     gatewayClient: LlmGatewayClient? = null,
 ) {
 
@@ -141,6 +142,11 @@ class NetworkGatewayImpl(
 
         // Domain cooldown check (§6)
         val host = initialUri.host.lowercase()
+
+        providerMetadataResolver.resolve(initialUri.toString())?.let { providerResult ->
+            return finish(host, providerResult)
+        }
+
         synchronized(cooldownLock) {
             val until = hostCooldown[host]
             if (until != null) {

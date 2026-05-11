@@ -44,7 +44,10 @@ object SafeOkHttpClient {
                     .removeHeader("Referer")
                     .removeHeader("Cookie")
                     .header("User-Agent", USER_AGENT)
-                    .header("Accept", "text/html,application/xhtml+xml")
+                    .header(
+                        "Accept",
+                        chain.request().header("Accept") ?: "text/html,application/xhtml+xml",
+                    )
                     .header("Accept-Language", "en")
                     .build()
                 chain.proceed(stripped)
