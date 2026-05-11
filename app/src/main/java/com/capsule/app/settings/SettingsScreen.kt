@@ -43,6 +43,7 @@ fun SettingsScreen(
     paused: Boolean,
     onPauseChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenCaptureSetup: (() -> Unit)? = null,
     trashCount: Int = 0,
     onOpenTrash: (() -> Unit)? = null,
     onOpenAuditLog: (() -> Unit)? = null,
@@ -74,6 +75,17 @@ fun SettingsScreen(
                 onPauseChange(next)
             }
         )
+
+        if (onOpenCaptureSetup != null) {
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(4.dp))
+            SettingsNavRow(
+                title = "Bubble overlay",
+                description = "Turn on the floating capture bubble and manage overlay permissions.",
+                onClick = onOpenCaptureSetup
+            )
+        }
 
         if (onOpenTrash != null) {
             Spacer(Modifier.height(8.dp))

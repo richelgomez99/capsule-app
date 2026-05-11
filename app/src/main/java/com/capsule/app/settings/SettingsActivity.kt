@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.capsule.app.audit.AuditLogActivity
 import com.capsule.app.continuation.ContinuationEngine
+import com.capsule.app.ui.MainActivity
 import com.capsule.app.ui.theme.CapsuleTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,6 +59,9 @@ class SettingsActivity : ComponentActivity() {
                             paused = next
                             prefs.continuationsPaused = next
                             if (next) engine.cancelAll("user_paused")
+                        },
+                        onOpenCaptureSetup = {
+                            startActivity(Intent(this, MainActivity::class.java))
                         },
                         trashCount = count.value,
                         onOpenTrash = {
