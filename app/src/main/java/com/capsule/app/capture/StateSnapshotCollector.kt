@@ -157,6 +157,7 @@ class StateSnapshotCollector(
             return ForegroundApp(
                 category = AppCategoryDictionary.categorize(packageName),
                 appLabel = packageManager.resolveAppLabel(packageName)
+                    ?: AppCategoryDictionary.displayName(packageName)
             )
         }
 
