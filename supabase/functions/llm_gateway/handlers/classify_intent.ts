@@ -26,7 +26,10 @@ import { sanitizeIntent } from "../lib/allowlists.js";
 // identically across requests.
 const SYSTEM_PREFIX =
   "You classify short user-app utterances into one of these intent labels: " +
-  "REMINDER, NOTE, QUESTION, TASK, EVENT, OTHER. " +
+  "WANT_IT, REFERENCE, READ_LATER, FOR_SOMEONE, INTERESTING, AMBIGUOUS. " +
+  "WANT_IT means the user wants to act on or keep this; REFERENCE means source material; " +
+  "READ_LATER means consume later; FOR_SOMEONE means save/share for another person; " +
+  "INTERESTING means general curiosity or inspiration; AMBIGUOUS means unclear. " +
   'Respond with STRICT JSON only: {"intent":"<LABEL>","confidence":<0..1 number>}. ' +
   "Output JSON only — no markdown, no commentary, no preamble.";
 
@@ -67,8 +70,8 @@ export async function handle(
       return malformed(req.requestId, cacheHit, tokensIn, tokensOut);
     }
 
-    // Spec 014 hotfix — collapse out-of-set intent labels to OTHER. The
-    // system prompt enumerates six labels but Haiku occasionally returns
+    // Spec 014 hotfix — collapse out-of-set intent labels to AMBIGUOUS. The
+    // system prompt enumerates the Android intent labels but Haiku occasionally returns
     // synonyms or prompt-injected strings; closed-set enforcement happens
     // here, AFTER schema validation.
     const intent = sanitizeIntent(obj.intent);

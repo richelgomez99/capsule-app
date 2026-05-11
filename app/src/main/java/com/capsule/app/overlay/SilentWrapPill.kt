@@ -171,6 +171,7 @@ fun SilentWrapPill(
 internal fun Intent.label(): String = when (this) {
     Intent.WANT_IT -> "Want it"
     Intent.REFERENCE -> "Reference"
+    Intent.READ_LATER -> "Read later"
     Intent.FOR_SOMEONE -> "For someone"
     Intent.INTERESTING -> "Interesting"
     Intent.AMBIGUOUS -> "Ambiguous"

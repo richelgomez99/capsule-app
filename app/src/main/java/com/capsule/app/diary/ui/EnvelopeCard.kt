@@ -386,6 +386,7 @@ private fun String.toIntentOrAmbiguous(): Intent =
 private fun Intent.displayLabel(): String = when (this) {
     Intent.WANT_IT -> "Want it"
     Intent.REFERENCE -> "Reference"
+    Intent.READ_LATER -> "Read later"
     Intent.FOR_SOMEONE -> "For someone"
     Intent.INTERESTING -> "Interesting"
     Intent.AMBIGUOUS -> "Unassigned"
