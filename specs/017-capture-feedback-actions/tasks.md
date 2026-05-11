@@ -58,20 +58,20 @@ analysis gate after Phase 1 schema details are finalized.
   canonical-hash cache hits.
 ## Phase 2 - Overlay feedback actions
 
-- [ ] **T017-201** Add `SealOutcome.AlreadySaved(existingEnvelopeId, matchedBy)`
+- [x] **T017-201** Add `SealOutcome.AlreadySaved(existingEnvelopeId, matchedBy)`
   and migrate/adapt the existing `PostCaptureUi.AlreadyInDiary` naming so there
   is one duplicate-feedback state, not two competing concepts.
-- [ ] **T017-202** Implement compact `Already saved` feedback with actions:
+- [x] **T017-202** Implement compact `Already saved` feedback with actions:
   add note, reclassify intent, open existing capture.
-- [ ] **T017-203** Ensure compact feedback windows use visible-content touch
+- [x] **T017-203** Ensure compact feedback windows use visible-content touch
   bounds only; adjacent launcher/app icons must remain tappable.
-- [ ] **T017-204** Wire reclassify to update the existing envelope's intent
+- [x] **T017-204** Wire reclassify to update the existing envelope's intent
   history rather than creating a new envelope.
-- [ ] **T017-205** Specify and implement note persistence if notes are not
+- [x] **T017-205** Specify and implement note persistence if notes are not
   already implemented. Use the `EnvelopeNoteEntity` shape in
   [data-model.md](data-model.md); do not add an ad-hoc note field outside spec
   017.
-- [ ] **T017-206** Add `envelope_note` persistence in the feedback-action
+- [x] **T017-206** Add `envelope_note` persistence in the feedback-action
   migration and route `Already saved` note action to the existing envelope.
 
 ## Phase 3 - Tests and physical QA
@@ -84,7 +84,7 @@ analysis gate after Phase 1 schema details are finalized.
   `AlreadySaved`, creates no second visible envelope, writes exactly one
   duplicate audit row with `existingEnvelopeId` + `matchedBy=EXACT_TEXT`, and
   does not log raw text or full URLs.
-- [ ] **T017-303** UI/orchestrator test: `AlreadySaved` state exposes note,
+- [x] **T017-303** UI/orchestrator test: `AlreadySaved` state exposes note,
   reclassify, and open actions; reclassify appends intent history on the existing
   envelope and creates no second envelope. Note tests must cover create/edit of
   the latest note on the existing envelope and confirm no ad-hoc note field is
@@ -98,7 +98,7 @@ analysis gate after Phase 1 schema details are finalized.
   reuses continuation results after envelope-level duplicate handling is added.
 - [x] **T017-307** Repository tests: deleted duplicate candidates do not block;
   archived duplicate candidates do not block in v1.
-- [ ] **T017-308** Verify duplicate lookup performance/query shape: URL and text
+- [x] **T017-308** Verify duplicate lookup performance/query shape: URL and text
   duplicate checks must use indexed lookup columns and avoid raw full-text scans;
   seed at least 1,000 visible envelopes plus archived/deleted controls in a Room
   fixture, run at least 100 repeated URL and text lookups, and keep p95 under

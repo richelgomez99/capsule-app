@@ -66,6 +66,12 @@ sealed class PostCaptureUi {
         val startedAtMillis: Long
     ) : PostCaptureUi()
 
+    data class ReclassifyChipRow(
+        val existingEnvelopeId: String,
+        val previewText: String,
+        val startedAtMillis: Long
+    ) : PostCaptureUi()
+
     data class SilentWrapPill(
         val intent: Intent,
         val envelopeId: String,
@@ -82,5 +88,11 @@ sealed class PostCaptureUi {
     data object RemovedConfirmation : PostCaptureUi()
 
     data object AlreadyInDiary : PostCaptureUi()
+
+    data class AlreadySaved(
+        val existingEnvelopeId: String,
+        val matchedBy: String,
+        val startedAtMillis: Long
+    ) : PostCaptureUi()
 }
 

@@ -173,6 +173,25 @@ class EnvelopeRepositoryReassignContractTest : RepositoryContractTestBase() {
     }
 }
 
+/** Spec 017 — latest envelope note create/edit contract. */
+@RunWith(AndroidJUnit4::class)
+class EnvelopeRepositoryNoteContractTest : RepositoryContractTestBase() {
+
+    @Test
+    fun createOrUpdateLatestNote_createsThenEditsLatestNote() = runTest {
+        val id = repository.seal(draftText("note parent"), stateUtc())
+
+        assertTrue(repository.createOrUpdateLatestNote(id, "first note"))
+        assertEquals("first note", repository.getLatestNote(id))
+
+        clock.advance(60_000L)
+        assertTrue(repository.createOrUpdateLatestNote(id, "updated note"))
+
+        assertEquals("updated note", repository.getLatestNote(id))
+        assertEquals(1, db.envelopeNoteDao().countForEnvelope(id))
+    }
+}
+
 /** T033c — soft-delete + restore lifecycle. */
 @RunWith(AndroidJUnit4::class)
 class EnvelopeRepositorySoftDeleteContractTest : RepositoryContractTestBase() {

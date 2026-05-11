@@ -27,7 +27,7 @@ fun PostCaptureOverlay(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.postCaptureUi.collectAsState()
-    val layoutModifier = if (state is PostCaptureUi.ChipRow) {
+    val layoutModifier = if (state is PostCaptureUi.ChipRow || state is PostCaptureUi.ReclassifyChipRow) {
         modifier.fillMaxWidth()
     } else {
         modifier.wrapContentSize()
@@ -53,6 +53,18 @@ fun PostCaptureOverlay(
                     onTimeout = viewModel::onChipRowTimeout
                 )
             }
+            is PostCaptureUi.ReclassifyChipRow -> SwipeToDismissBox(
+                onDismiss = viewModel::onDuplicateReclassifyTimeout
+            ) {
+                ChipRow(
+                    previewText = ui.previewText,
+                    onChipTap = { intent ->
+                        viewModel.onDuplicateReclassifyChipTapped(ui.existingEnvelopeId, intent)
+                    },
+                    onTimeout = viewModel::onDuplicateReclassifyTimeout,
+                    countdownMillis = OverlayMotion.UNDO_WINDOW_MS
+                )
+            }
             is PostCaptureUi.SilentWrapPill -> SwipeToDismissBox(
                 onDismiss = viewModel::onSilentWrapPillExpired
             ) {
@@ -76,6 +88,13 @@ fun PostCaptureOverlay(
             )
             is PostCaptureUi.AlreadyInDiary -> AlreadyInDiaryPill(
                 onExpire = viewModel::onConfirmationExpired
+            )
+            is PostCaptureUi.AlreadySaved -> AlreadySavedPill(
+                matchedBy = ui.matchedBy,
+                onAddNote = { viewModel.onAlreadySavedAddNote(ui.existingEnvelopeId) },
+                onReclassify = { viewModel.onAlreadySavedReclassify(ui.existingEnvelopeId) },
+                onOpen = { viewModel.onAlreadySavedOpen(ui.existingEnvelopeId) },
+                onExpire = viewModel::onAlreadySavedExpired
             )
         }
     }

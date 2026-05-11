@@ -21,8 +21,12 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -201,6 +205,78 @@ fun AlreadyInDiaryPill(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.inverseOnSurface
             )
+        }
+    }
+}
+
+/**
+ * Duplicate-capture feedback: no undo affordance because no new envelope was
+ * created. Actions operate on the existing envelope.
+ */
+@Composable
+fun AlreadySavedPill(
+    matchedBy: String,
+    onAddNote: () -> Unit,
+    onReclassify: () -> Unit,
+    onOpen: () -> Unit,
+    onExpire: () -> Unit,
+    modifier: Modifier = Modifier,
+    visibleMillis: Long = OverlayMotion.UNDO_WINDOW_MS
+) {
+    LaunchedEffect(Unit) {
+        delay(visibleMillis)
+        onExpire()
+    }
+    AnimatedVisibility(
+        visible = true,
+        enter = scaleIn(OverlayMotion.enterTween(), initialScale = 0.8f) + fadeIn(OverlayMotion.enterTween()),
+        exit = fadeOut(OverlayMotion.exitTween()),
+        modifier = modifier
+    ) {
+        Surface(
+            modifier = Modifier
+                .padding(6.dp)
+                .sizeIn(minHeight = 48.dp)
+                .semantics { contentDescription = "Already saved, matched by $matchedBy" },
+            tonalElevation = 4.dp,
+            shadowElevation = 8.dp,
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 14.dp, top = 4.dp, end = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "Already saved",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = onAddNote) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.StickyNote2,
+                        contentDescription = "Add note",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onReclassify) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Reclassify",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = onOpen) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = "Open existing capture",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

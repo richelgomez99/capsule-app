@@ -44,6 +44,9 @@ interface SealOrchestrator {
 
     /** Best-effort undo within the 10s window. */
     suspend fun undo(envelopeId: String): UndoOutcome
+
+    /** Reclassify an already-saved existing envelope without creating a new one. */
+    suspend fun reclassifyExisting(envelopeId: String, intent: Intent): Boolean
 }
 
 /** Result of a single capture-and-seal orchestration. */
@@ -107,6 +110,12 @@ class OverlayViewModel : ViewModel() {
 
     /** Callback set by service when the user dismisses the overlay via drag target. */
     var onDismissRequested: (() -> Unit)? = null
+
+    /** Callback set by service to open an existing envelope from duplicate feedback. */
+    var onOpenExistingEnvelope: ((String) -> Unit)? = null
+
+    /** Callback set by service to open the existing envelope in note-entry context. */
+    var onAddNoteToExistingEnvelope: ((String) -> Unit)? = null
 
     /** IPC seam; service installs a real impl on bind, null when not bound. */
     var sealOrchestrator: SealOrchestrator? = null
@@ -303,7 +312,11 @@ class OverlayViewModel : ViewModel() {
                 _postCaptureUi.value = PostCaptureUi.None
             }
             is SealOutcome.AlreadySaved -> {
-                _postCaptureUi.value = PostCaptureUi.AlreadyInDiary
+                _postCaptureUi.value = PostCaptureUi.AlreadySaved(
+                    existingEnvelopeId = outcome.existingEnvelopeId,
+                    matchedBy = outcome.matchedBy,
+                    startedAtMillis = System.currentTimeMillis()
+                )
             }
         }
     }
@@ -389,6 +402,60 @@ class OverlayViewModel : ViewModel() {
     /** The undo pill finished its 10s window without being tapped. */
     fun onUndoPillExpired() {
         _postCaptureUi.value = PostCaptureUi.None
+    }
+
+    fun onAlreadySavedExpired() {
+        if (_postCaptureUi.value is PostCaptureUi.AlreadySaved) {
+            _postCaptureUi.value = PostCaptureUi.None
+        }
+    }
+
+    fun onAlreadySavedOpen(envelopeId: String) {
+        _postCaptureUi.value = PostCaptureUi.None
+        onOpenExistingEnvelope?.invoke(envelopeId)
+    }
+
+    fun onAlreadySavedAddNote(envelopeId: String) {
+        _postCaptureUi.value = PostCaptureUi.None
+        onAddNoteToExistingEnvelope?.invoke(envelopeId)
+    }
+
+    fun onAlreadySavedReclassify(envelopeId: String) {
+        _postCaptureUi.value = PostCaptureUi.ReclassifyChipRow(
+            existingEnvelopeId = envelopeId,
+            previewText = "Update intent",
+            startedAtMillis = System.currentTimeMillis()
+        )
+    }
+
+    fun onDuplicateReclassifyChipTapped(envelopeId: String, intent: Intent) {
+        postCaptureJob?.cancel()
+        postCaptureJob = viewModelScope.launch {
+            val orchestrator = sealOrchestrator ?: run {
+                _postCaptureUi.value = PostCaptureUi.None
+                return@launch
+            }
+            val ok = runCatching { orchestrator.reclassifyExisting(envelopeId, intent) }
+                .getOrElse {
+                    Log.e(TAG, "duplicate reclassify failed", it)
+                    false
+                }
+            _postCaptureUi.value = if (ok) {
+                PostCaptureUi.AlreadySaved(
+                    existingEnvelopeId = envelopeId,
+                    matchedBy = "RECLASSIFIED",
+                    startedAtMillis = System.currentTimeMillis()
+                )
+            } else {
+                PostCaptureUi.AlreadyInDiary
+            }
+        }
+    }
+
+    fun onDuplicateReclassifyTimeout() {
+        if (_postCaptureUi.value is PostCaptureUi.ReclassifyChipRow) {
+            _postCaptureUi.value = PostCaptureUi.None
+        }
     }
 
     /** The "Removed" / "Already in Diary" confirmation finished. */

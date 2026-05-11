@@ -34,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -91,7 +93,8 @@ import java.util.Locale
 fun EnvelopeDetailScreen(
     viewModel: EnvelopeDetailViewModel,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startNote: Boolean = false
 ) {
     val state by viewModel.state.collectAsState()
     val finished by viewModel.finished.collectAsState()
@@ -106,6 +109,18 @@ fun EnvelopeDetailScreen(
 
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var noteDialogOpen by remember { mutableStateOf(false) }
+    var noteDraft by remember { mutableStateOf("") }
+    var consumedStartNote by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state, startNote) {
+        val ready = state as? EnvelopeDetailUiState.Ready
+        if (startNote && !consumedStartNote && ready != null) {
+            noteDraft = ready.latestNote.orEmpty()
+            noteDialogOpen = true
+            consumedStartNote = true
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -194,10 +209,15 @@ fun EnvelopeDetailScreen(
                 is EnvelopeDetailUiState.Error -> ErrorBox(s.message)
                 is EnvelopeDetailUiState.Ready -> ReadyContent(
                     envelope = s.envelope,
+                    latestNote = s.latestNote,
                     intentHistory = s.intentHistory,
                     auditTrail = s.auditTrail,
                     onReassign = { picked -> viewModel.onReassignIntent(picked.name) },
-                    onRetry = { viewModel.onRetryHydration() }
+                    onRetry = { viewModel.onRetryHydration() },
+                    onEditNote = {
+                        noteDraft = s.latestNote.orEmpty()
+                        noteDialogOpen = true
+                    }
                 )
             }
         }
@@ -221,6 +241,34 @@ fun EnvelopeDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (noteDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { noteDialogOpen = false },
+            title = { Text("Capture note") },
+            text = {
+                OutlinedTextField(
+                    value = noteDraft,
+                    onValueChange = { noteDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Note") },
+                    minLines = 3
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = noteDraft.isNotBlank(),
+                    onClick = {
+                        noteDialogOpen = false
+                        viewModel.onSaveNote(noteDraft)
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteDialogOpen = false }) { Text("Cancel") }
             }
         )
     }
@@ -258,10 +306,12 @@ private fun ErrorBox(message: String) {
 @Composable
 private fun ReadyContent(
     envelope: EnvelopeViewParcel,
+    latestNote: String?,
     intentHistory: List<IntentHistoryRow>,
     auditTrail: List<AuditEntryParcel>,
     onReassign: (Intent) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onEditNote: () -> Unit
 ) {
     val context = LocalContext.current
     LazyColumn(
@@ -284,6 +334,10 @@ private fun ReadyContent(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        item(key = "note") {
+            NoteBlock(note = latestNote, onEdit = onEditNote)
         }
 
         // 4. IMAGE thumbnail.
@@ -396,6 +450,35 @@ private fun ReadyContent(
         }
 
         item(key = "footer-spacer") { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun NoteBlock(note: String?, onEdit: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onEdit),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = if (note.isNullOrBlank()) "Add note" else "Note",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+            if (!note.isNullOrBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
     }
 }
 

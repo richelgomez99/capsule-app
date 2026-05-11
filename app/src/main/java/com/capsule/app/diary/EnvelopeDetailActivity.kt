@@ -35,6 +35,7 @@ class EnvelopeDetailActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val envelopeId = intent.getStringExtra(EXTRA_ENVELOPE_ID)
+        val startNote = intent.getBooleanExtra(EXTRA_START_NOTE, false)
         if (envelopeId.isNullOrBlank()) {
             finish()
             return
@@ -64,7 +65,8 @@ class EnvelopeDetailActivity : ComponentActivity() {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     EnvelopeDetailScreen(
                         viewModel = viewModel,
-                        onBack = { finish() }
+                        onBack = { finish() },
+                        startNote = startNote
                     )
                 }
             }
@@ -84,15 +86,18 @@ class EnvelopeDetailActivity : ComponentActivity() {
     companion object {
         const val EXTRA_ENVELOPE_ID = "com.capsule.app.extra.ENVELOPE_ID"
         const val EXTRA_DAY_LOCAL = "com.capsule.app.extra.DAY_LOCAL"
+        const val EXTRA_START_NOTE = "com.capsule.app.extra.START_NOTE"
 
         /** Convenience builder used by [com.capsule.app.diary.ui.EnvelopeCard]. */
         fun newIntent(
             context: android.content.Context,
             envelopeId: String,
-            dayLocal: String?
+            dayLocal: String?,
+            startNote: Boolean = false
         ): Intent = Intent(context, EnvelopeDetailActivity::class.java).apply {
             putExtra(EXTRA_ENVELOPE_ID, envelopeId)
             if (dayLocal != null) putExtra(EXTRA_DAY_LOCAL, dayLocal)
+            if (startNote) putExtra(EXTRA_START_NOTE, true)
         }
     }
 }

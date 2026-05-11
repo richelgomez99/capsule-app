@@ -15,6 +15,7 @@ sealed interface EnvelopeDetailUiState {
     data class Error(val message: String) : EnvelopeDetailUiState
     data class Ready(
         val envelope: EnvelopeViewParcel,
+        val latestNote: String?,
         val intentHistory: List<IntentHistoryRow>,
         val auditTrail: List<AuditEntryParcel>
     ) : EnvelopeDetailUiState

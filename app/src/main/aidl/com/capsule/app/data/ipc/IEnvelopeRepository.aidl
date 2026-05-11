@@ -33,6 +33,8 @@ interface IEnvelopeRepository {
 
     // ---- Mutate path (called by :ui) ----
     void reassignIntent(String envelopeId, String newIntentName, String reasonOpt);
+    String getLatestNote(String envelopeId);
+    boolean createOrUpdateLatestNote(String envelopeId, String text);
     void archive(String envelopeId);
     void delete(String envelopeId);
     boolean undo(String envelopeId);

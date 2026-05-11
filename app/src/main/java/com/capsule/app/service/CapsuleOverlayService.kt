@@ -44,6 +44,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.capsule.app.audit.AuditLogWriter
 import com.capsule.app.data.OrbitDatabase
 import com.capsule.app.data.model.AuditAction
+import com.capsule.app.diary.EnvelopeDetailActivity
 import com.capsule.app.overlay.BubbleUI
 import com.capsule.app.overlay.CaptureSheetUI
 import com.capsule.app.overlay.DismissTargetMetrics
@@ -331,6 +332,14 @@ class CapsuleOverlayService : LifecycleService() {
         vm.onDismissRequested = {
             prefs.edit().putBoolean("service_enabled", false).apply()
             stopSelf()
+        }
+
+        vm.onOpenExistingEnvelope = { envelopeId ->
+            openExistingEnvelope(envelopeId, startNote = false)
+        }
+
+        vm.onAddNoteToExistingEnvelope = { envelopeId ->
+            openExistingEnvelope(envelopeId, startNote = true)
         }
 
         lifecycleScope.launch {
@@ -669,8 +678,20 @@ class CapsuleOverlayService : LifecycleService() {
 
     private fun postCaptureOverlayWidth(ui: PostCaptureUi): Int? = when (ui) {
         is PostCaptureUi.ChipRow -> WindowManager.LayoutParams.MATCH_PARENT
+        is PostCaptureUi.ReclassifyChipRow -> WindowManager.LayoutParams.MATCH_PARENT
         is PostCaptureUi.None -> null
         else -> WindowManager.LayoutParams.WRAP_CONTENT
+    }
+
+    private fun openExistingEnvelope(envelopeId: String, startNote: Boolean) {
+        val intent = EnvelopeDetailActivity.newIntent(
+            context = applicationContext,
+            envelopeId = envelopeId,
+            dayLocal = null,
+            startNote = startNote
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(intent) }
+            .onFailure { Log.e(TAG, "Failed to open existing envelope $envelopeId", it) }
     }
 
     private fun currentScreenBounds(): ScreenBounds {
