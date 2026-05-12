@@ -216,6 +216,14 @@ app-icon dots. Navigation/data contracts unchanged.
     glyph mapping; follow-up `2faa5ba` fixed both. Review for `2faa5ba`
     completed 2026-05-12 with no blockers. T015-206 connected/manual gap
     remains open.
+- [x] **T015-208** [P2] Refit the clicked capture detail route
+  (`EnvelopeDetailScreen`) behind `useNewVisualLanguage`, including source
+  header, intent reassignment, enriched link area, original text, intent
+  history, audit trail, archive/delete/open/copy/share actions, and loading/
+  error states.
+  - 2026-05-12 validation: `:app:compileDebugKotlin`,
+    `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`,
+    `:app:lintDebug`.
 
 **Phase 2 Checkpoint**: diary refitted, tests green.
 
@@ -340,11 +348,11 @@ UI; LD-003 wording purged.
 
 ---
 
-## Phase 5 — Bubble overlay refit — DEFERRED until after 2026-05-22
+## Phase 5 — Bubble overlay refit
 
-**Goal**: track the work so it is not lost, while preserving LD-005 before
-Demo Day. Geometry/accessibility fixes that keep the current visual treatment
-belong to the capture hardening bucket; the tasks below are visual refit work.
+**Goal**: refit the primary floating capture affordance to the Orbit mark
+language before Demo Day, while preserving tap/drag reliability and overlay
+touch bounds.
 
 - [ ] **T015-501** [P5] Refit the draggable bubble to the Orbit mark language
   from `design/visual-refit-2026-04-29/project/orbit-screen-bubble.jsx`.

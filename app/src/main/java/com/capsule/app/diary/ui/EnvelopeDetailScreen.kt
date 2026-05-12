@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,11 +53,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.capsule.app.data.ipc.AuditEntryParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
@@ -64,7 +70,15 @@ import com.capsule.app.data.model.toIntentOrAmbiguous
 import com.capsule.app.diary.EnvelopeDetailUiState
 import com.capsule.app.diary.EnvelopeDetailViewModel
 import com.capsule.app.diary.IntentHistoryRow
+import com.capsule.app.settings.QuietRule
+import com.capsule.app.settings.QuietSettingsColors
 import com.capsule.app.ui.IntentChipPicker
+import com.capsule.app.ui.primitives.MonoLabel
+import com.capsule.app.ui.primitives.SourceGlyph
+import com.capsule.app.ui.primitives.SourceGlyphKind
+import com.capsule.app.ui.primitives.SourceIdentityResolver
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -120,6 +134,23 @@ fun EnvelopeDetailScreen(
             noteDialogOpen = true
             consumedStartNote = true
         }
+    }
+
+    if (LocalRuntimeFlags.current.useNewVisualLanguage) {
+        QuietEnvelopeDetailScreen(
+            state = state,
+            menuOpen = menuOpen,
+            confirmDelete = confirmDelete,
+            onMenuOpenChange = { menuOpen = it },
+            onConfirmDeleteChange = { confirmDelete = it },
+            onBack = onBack,
+            onArchive = viewModel::onArchive,
+            onDelete = viewModel::onDelete,
+            onReassign = { picked -> viewModel.onReassignIntent(picked.name) },
+            onRetry = viewModel::onRetryHydration,
+            modifier = modifier,
+        )
+        return
     }
 
     Scaffold(
@@ -273,6 +304,483 @@ fun EnvelopeDetailScreen(
         )
     }
 }
+
+@Composable
+private fun QuietEnvelopeDetailScreen(
+    state: EnvelopeDetailUiState,
+    menuOpen: Boolean,
+    confirmDelete: Boolean,
+    onMenuOpenChange: (Boolean) -> Unit,
+    onConfirmDeleteChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
+    onReassign: (Intent) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(QuietSettingsColors.BgDeep),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "‹",
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .clickable(onClick = onBack)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                color = QuietSettingsColors.Cream,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 28.sp,
+                    lineHeight = 28.sp,
+                    letterSpacing = 0.sp,
+                ),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                MonoLabel(text = "CAPTURE", color = QuietSettingsColors.CreamDim, size = 9.sp)
+                Text(
+                    text = (state as? EnvelopeDetailUiState.Ready)?.envelope?.title?.takeIf { it.isNotBlank() }
+                        ?: "Saved detail",
+                    color = QuietSettingsColors.Cream,
+                    maxLines = 1,
+                    style = TextStyle(
+                        fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp,
+                    ),
+                )
+            }
+
+            val ready = state as? EnvelopeDetailUiState.Ready
+            Box {
+                IconButton(onClick = { onMenuOpenChange(true) }) {
+                    Icon(
+                        Icons.Filled.MoreVert,
+                        contentDescription = "More",
+                        tint = QuietSettingsColors.Cream,
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = { onMenuOpenChange(false) },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Archive") },
+                        onClick = {
+                            onMenuOpenChange(false)
+                            onArchive()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            onMenuOpenChange(false)
+                            onConfirmDeleteChange(true)
+                        },
+                    )
+                    val url = ready?.envelope?.canonicalUrl ?: firstUrlIn(ready?.envelope?.textContent)
+                    if (!url.isNullOrBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("Open original URL") },
+                            onClick = {
+                                onMenuOpenChange(false)
+                                openUrl(context, url)
+                            },
+                        )
+                    }
+                    val text = ready?.envelope?.textContent
+                    if (!text.isNullOrBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("Copy text") },
+                            onClick = {
+                                onMenuOpenChange(false)
+                                copyText(context, text)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Share") },
+                            onClick = {
+                                onMenuOpenChange(false)
+                                shareText(context, text)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        QuietRule()
+
+        when (state) {
+            is EnvelopeDetailUiState.Loading -> QuietLoadingBox()
+            is EnvelopeDetailUiState.Error -> QuietErrorBox(state.message)
+            is EnvelopeDetailUiState.Ready -> QuietReadyContent(
+                envelope = state.envelope,
+                intentHistory = state.intentHistory,
+                auditTrail = state.auditTrail,
+                onReassign = onReassign,
+                onRetry = onRetry,
+            )
+        }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { onConfirmDeleteChange(false) },
+            title = { Text("Delete this capture?") },
+            text = {
+                Text(
+                    "It moves to the trash and is permanently removed after 30 days. " +
+                        "You can restore it from Settings → Trash until then."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onConfirmDeleteChange(false)
+                    onDelete()
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { onConfirmDeleteChange(false) }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun QuietLoadingBox() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = QuietSettingsColors.Accent)
+    }
+}
+
+@Composable
+private fun QuietErrorBox(message: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(24.dp),
+        ) {
+            Text(
+                text = "Couldn't load this capture",
+                color = QuietSettingsColors.Red,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = 0.sp,
+                ),
+            )
+            Text(
+                text = message,
+                color = QuietSettingsColors.CreamDim,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    letterSpacing = 0.sp,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuietReadyContent(
+    envelope: EnvelopeViewParcel,
+    intentHistory: List<IntentHistoryRow>,
+    auditTrail: List<AuditEntryParcel>,
+    onReassign: (Intent) -> Unit,
+    onRetry: () -> Unit,
+) {
+    val context = LocalContext.current
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(key = "source") { QuietSourceHeader(envelope) }
+        item(key = "intent") {
+            QuietDetailSection(label = "Intent") {
+                IntentChipPicker(
+                    currentIntent = envelope.intent.toIntentOrAmbiguous(),
+                    onPick = { onReassign(it) },
+                )
+            }
+        }
+
+        if (envelope.contentType == "IMAGE" && !envelope.imageUri.isNullOrBlank()) {
+            item(key = "image") {
+                AsyncImage(
+                    model = envelope.imageUri,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        }
+
+        val title = envelope.title
+        val summary = envelope.summary
+        if (!title.isNullOrBlank() || !summary.isNullOrBlank()) {
+            item(key = "enrichment") {
+                QuietDetailSection(label = "Enriched") {
+                    title?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = it,
+                            color = QuietSettingsColors.Cream,
+                            style = TextStyle(
+                                fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                                fontSize = 23.sp,
+                                lineHeight = 29.sp,
+                                fontWeight = FontWeight.Normal,
+                                letterSpacing = 0.sp,
+                            ),
+                        )
+                    }
+                    summary?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = it,
+                            color = QuietSettingsColors.CreamDim,
+                            style = quietBodyStyle(),
+                        )
+                    }
+                }
+            }
+        }
+
+        val domain = envelope.domain
+        if (!domain.isNullOrBlank()) {
+            item(key = "domain") {
+                QuietDomainRow(domain = domain, onTap = {
+                    val url = envelope.canonicalUrl ?: firstUrlIn(envelope.textContent)
+                    if (!url.isNullOrBlank()) openUrl(context, url)
+                })
+            }
+        }
+
+        if (title.isNullOrBlank() && summary.isNullOrBlank() && domain.isNullOrBlank()
+            && containsUrl(envelope.textContent)
+        ) {
+            item(key = "retry") {
+                Text(
+                    text = "Link not enriched yet · Tap to retry",
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .clickable { onRetry() }
+                        .background(QuietSettingsColors.AccentDim)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    color = QuietSettingsColors.Accent,
+                    style = TextStyle(
+                        fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.sp,
+                    ),
+                )
+            }
+        }
+
+        envelope.textContent?.takeIf { it.isNotBlank() }?.let { text ->
+            item(key = "text") {
+                QuietDetailSection(label = "Captured text") {
+                    SelectionContainer {
+                        Text(
+                            text = text,
+                            color = QuietSettingsColors.Cream,
+                            style = TextStyle(
+                                fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                                fontSize = 18.sp,
+                                lineHeight = 25.sp,
+                                fontStyle = FontStyle.Italic,
+                                letterSpacing = 0.sp,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
+        if (intentHistory.isNotEmpty()) {
+            item(key = "history-label") { MonoLabel(text = "INTENT HISTORY", color = QuietSettingsColors.CreamDim, size = 9.sp) }
+            items(intentHistory, key = { "h-${it.atMillis}-${it.intent}" }) { row -> QuietIntentHistoryRow(row) }
+        }
+
+        if (auditTrail.isNotEmpty()) {
+            item(key = "audit-label") { MonoLabel(text = "AUDIT TRAIL", color = QuietSettingsColors.CreamDim, size = 9.sp) }
+            items(auditTrail, key = { "a-${it.id}" }) { entry -> QuietAuditTrailRow(entry) }
+        }
+
+        item(key = "footer-spacer") { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun QuietSourceHeader(envelope: EnvelopeViewParcel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(QuietSettingsColors.Rule)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SourceGlyph(kind = envelope.toDetailSourceGlyphKind(), size = 28.dp)
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = buildDetailSubtitle(envelope),
+                color = QuietSettingsColors.Cream,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                ),
+            )
+            MonoLabel(text = envelope.intent.humanize().uppercase(Locale.ROOT), color = QuietSettingsColors.CreamFaint, size = 8.5.sp)
+        }
+    }
+}
+
+@Composable
+private fun QuietDetailSection(
+    label: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        MonoLabel(text = label.uppercase(Locale.ROOT), color = QuietSettingsColors.CreamDim, size = 9.sp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(QuietSettingsColors.Rule)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content,
+        )
+    }
+}
+
+private fun EnvelopeViewParcel.toDetailSourceGlyphKind(): SourceGlyphKind =
+    SourceIdentityResolver.glyphKind(
+        textContent = textContent,
+        canonicalUrl = canonicalUrl,
+        sourceAppLabel = sourceAppLabel,
+        appCategory = appCategory,
+    )
+
+@Composable
+private fun QuietDomainRow(domain: String, onTap: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(QuietSettingsColors.AccentDim)
+            .clickable(onClick = onTap)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(QuietSettingsColors.Accent),
+        )
+        Text(
+            text = domain,
+            color = QuietSettingsColors.Accent,
+            style = TextStyle(
+                fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.sp,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun QuietIntentHistoryRow(row: IntentHistoryRow) {
+    QuietTimelineRow(
+        title = row.intent.toIntentOrAmbiguous().displayLabel(),
+        meta = "${row.source.humanize()} · ${formatAbsolute(row.atMillis)}",
+        tone = QuietSettingsColors.Cream,
+    )
+}
+
+@Composable
+private fun QuietAuditTrailRow(entry: AuditEntryParcel) {
+    QuietTimelineRow(
+        title = entry.action.humanize(),
+        meta = formatAbsolute(entry.atMillis),
+        body = entry.description,
+        tone = QuietSettingsColors.Accent,
+    )
+}
+
+@Composable
+private fun QuietTimelineRow(
+    title: String,
+    meta: String,
+    body: String? = null,
+    tone: Color,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(QuietSettingsColors.Rule)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = title,
+                color = tone,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                ),
+            )
+            Text(text = "·", color = QuietSettingsColors.CreamFaint)
+            MonoLabel(text = meta, color = QuietSettingsColors.CreamDim, size = 8.sp)
+        }
+        body?.let {
+            Text(text = it, color = QuietSettingsColors.CreamDim, style = quietBodyStyle())
+        }
+    }
+}
+
+private fun quietBodyStyle() = TextStyle(
+    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+    fontSize = 13.sp,
+    lineHeight = 19.sp,
+    letterSpacing = 0.sp,
+)
 
 @Composable
 private fun LoadingBox() {
