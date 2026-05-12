@@ -21,7 +21,7 @@ object BatteryOptimizationGuide {
             manufacturer.contains("samsung") -> BatteryGuideInfo(
                 manufacturer = "Samsung",
                 instructions = "Settings → Battery → Background usage limits → Never sleeping apps → Add Orbit",
-                settingsAction = "com.samsung.android.sm.ACTION_BATTERY_USAGE_LIST"
+                settingsAction = null
             )
             manufacturer.contains("xiaomi") || manufacturer.contains("redmi") -> BatteryGuideInfo(
                 manufacturer = "Xiaomi",

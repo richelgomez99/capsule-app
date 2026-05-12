@@ -1,5 +1,6 @@
 package com.capsule.app.audit
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,10 +39,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.capsule.app.data.ipc.AuditEntryParcel
+import com.capsule.app.settings.QuietRowDescription
+import com.capsule.app.settings.QuietRowTitle
+import com.capsule.app.settings.QuietRule
+import com.capsule.app.settings.QuietSettingsColors
+import com.capsule.app.ui.primitives.MonoLabel
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -63,6 +75,16 @@ fun AuditLogScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
+
+    if (LocalRuntimeFlags.current.useNewVisualLanguage) {
+        QuietAuditLogScreen(
+            state = state,
+            onBack = onBack,
+            onSelectDay = viewModel::selectDay,
+            modifier = modifier,
+        )
+        return
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -104,6 +126,237 @@ fun AuditLogScreen(
                     is AuditLogUiState.Ready -> ReadyBody(s)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuietAuditLogScreen(
+    state: AuditLogUiState,
+    onBack: () -> Unit,
+    onSelectDay: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(QuietSettingsColors.BgDeep),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, end = 24.dp, top = 14.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = "‹",
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .clickable(onClick = onBack)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                color = QuietSettingsColors.Cream,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 28.sp,
+                    lineHeight = 28.sp,
+                ),
+            )
+            Text(
+                text = "What Orbit did today",
+                color = QuietSettingsColors.Cream,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        }
+        QuietRule()
+
+        val selected = (state as? AuditLogUiState.Ready)?.selectedDay ?: LocalDate.now()
+        QuietDayPickerRow(selected = selected, onSelect = onSelectDay)
+        QuietRule()
+
+        when (state) {
+            is AuditLogUiState.Loading -> QuietCenteredProgress()
+            is AuditLogUiState.Error -> QuietErrorBlock(state.message)
+            is AuditLogUiState.Ready -> QuietReadyBody(state)
+        }
+    }
+}
+
+@Composable
+private fun QuietDayPickerRow(
+    selected: LocalDate,
+    onSelect: (LocalDate) -> Unit,
+) {
+    val today = LocalDate.now()
+    val options = listOf(
+        "Today" to today,
+        "Yesterday" to today.minusDays(1),
+        "7 days ago" to today.minusDays(7),
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        options.forEach { (label, date) ->
+            val active = selected == date
+            Text(
+                text = label,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(if (active) QuietSettingsColors.AccentDim else QuietSettingsColors.Rule)
+                    .clickable { onSelect(date) }
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                color = if (active) QuietSettingsColors.Accent else QuietSettingsColors.CreamDim,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuietReadyBody(state: AuditLogUiState.Ready) {
+    if (state.entries.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(24.dp),
+            ) {
+                Text(
+                    "Nothing happened",
+                    color = QuietSettingsColors.Cream,
+                    style = TextStyle(
+                        fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                        fontSize = 22.sp,
+                        lineHeight = 28.sp,
+                        fontStyle = FontStyle.Italic,
+                    ),
+                )
+                QuietRowDescription("No audit entries for ${state.selectedDay}.")
+            }
+        }
+        return
+    }
+
+    LazyColumn(
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item(key = "summary") { QuietSummaryBlock(state.groupCounts) }
+        items(state.entries, key = { it.id }) { entry -> QuietAuditRow(entry) }
+        item(key = "footer") { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun QuietSummaryBlock(counts: Map<String, Int>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(QuietSettingsColors.AccentDim)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MonoLabel(text = "Summary", color = QuietSettingsColors.CreamDim, size = 9.sp)
+        if (counts.isEmpty()) {
+            QuietRowDescription("No actions recorded.")
+        } else {
+            counts.entries.sortedByDescending { it.value }.forEach { (action, count) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    QuietRowTitle(prettyAction(action))
+                    Spacer(Modifier.width(12.dp))
+                    MonoLabel(text = count.toString(), color = QuietSettingsColors.Accent, size = 9.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuietAuditRow(entry: AuditEntryParcel) {
+    var expanded by remember(entry.id) { mutableStateOf(false) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(QuietSettingsColors.Rule)
+            .clickable { expanded = !expanded }
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            QuietRowTitle(prettyAction(entry.action))
+            Spacer(Modifier.weight(1f))
+            MonoLabel(text = shortTime(entry.atMillis), color = QuietSettingsColors.CreamDim, size = 8.5.sp)
+        }
+        QuietRowDescription(entry.description)
+        if (expanded) {
+            MonoLabel(text = "id=${entry.id}", color = QuietSettingsColors.CreamFaint, size = 8.sp)
+            entry.envelopeId?.let {
+                MonoLabel(text = "envelope=$it", color = QuietSettingsColors.CreamFaint, size = 8.sp)
+            }
+            entry.extraJson?.takeIf { it.isNotBlank() }?.let { json ->
+                Text(
+                    text = json,
+                    color = QuietSettingsColors.CreamDim,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuietCenteredProgress() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = QuietSettingsColors.Accent)
+    }
+}
+
+@Composable
+private fun QuietErrorBlock(message: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(24.dp),
+        ) {
+            Text(
+                "Couldn't load audit log",
+                color = QuietSettingsColors.Red,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
+                    fontStyle = FontStyle.Italic,
+                ),
+            )
+            QuietRowDescription(message)
         }
     }
 }
