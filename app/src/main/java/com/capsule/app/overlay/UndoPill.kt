@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,9 +46,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.capsule.app.data.model.Intent
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 import kotlinx.coroutines.delay
 
 /**
@@ -73,6 +78,12 @@ fun UndoPill(
     windowMillis: Long = OverlayMotion.UNDO_WINDOW_MS
 ) {
     val haptics = LocalHapticFeedback.current
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val quietColors = QuietOverlayColors
+    val surfaceColor = if (useNewVisualLanguage) quietColors.DeepNavy else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+    val contentColor = if (useNewVisualLanguage) quietColors.Cream else MaterialTheme.colorScheme.onSurface
+    val accentColor = if (useNewVisualLanguage) quietColors.Accent else MaterialTheme.colorScheme.primary
+    val trackColor = if (useNewVisualLanguage) quietColors.Rule else MaterialTheme.colorScheme.surfaceVariant
 
     var target by remember { mutableFloatStateOf(0f) }
     val progress by animateFloatAsState(
@@ -108,7 +119,8 @@ fun UndoPill(
             tonalElevation = 4.dp,
             shadowElevation = 8.dp,
             shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+            color = surfaceColor,
+            border = if (useNewVisualLanguage) BorderStroke(1.dp, quietColors.RuleHi) else null,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -117,21 +129,26 @@ fun UndoPill(
             ) {
                 CountdownRing(
                     progress = progress,
-                    ringColor = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    ringColor = accentColor,
+                    trackColor = trackColor
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Undo,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = accentColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
                 Text(
                     text = "Undo",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = if (useNewVisualLanguage) TextStyle(
+                        fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.sp,
+                    ) else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = contentColor
                 )
             }
         }
@@ -147,6 +164,8 @@ fun RemovedConfirmationPill(
     modifier: Modifier = Modifier,
     visibleMillis: Long = OverlayMotion.REMOVED_CONFIRMATION_MS
 ) {
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val quietColors = QuietOverlayColors
     LaunchedEffect(Unit) {
         delay(visibleMillis)
         onExpire()
@@ -161,14 +180,20 @@ fun RemovedConfirmationPill(
             modifier = Modifier.padding(6.dp),
             tonalElevation = 4.dp,
             shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.inverseSurface
+            color = if (useNewVisualLanguage) quietColors.DeepNavy else MaterialTheme.colorScheme.inverseSurface,
+            border = if (useNewVisualLanguage) BorderStroke(1.dp, quietColors.RuleHi) else null,
         ) {
             Text(
                 text = "Removed",
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.inverseOnSurface,
-                fontWeight = FontWeight.Medium
+                style = if (useNewVisualLanguage) TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                ) else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                color = if (useNewVisualLanguage) quietColors.Cream else MaterialTheme.colorScheme.inverseOnSurface,
             )
         }
     }
@@ -183,6 +208,8 @@ fun AlreadyInDiaryPill(
     modifier: Modifier = Modifier,
     visibleMillis: Long = 1_600L
 ) {
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val quietColors = QuietOverlayColors
     LaunchedEffect(Unit) {
         delay(visibleMillis)
         onExpire()
@@ -197,13 +224,20 @@ fun AlreadyInDiaryPill(
             modifier = Modifier.padding(6.dp),
             tonalElevation = 4.dp,
             shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.inverseSurface
+            color = if (useNewVisualLanguage) quietColors.DeepNavy else MaterialTheme.colorScheme.inverseSurface,
+            border = if (useNewVisualLanguage) BorderStroke(1.dp, quietColors.RuleHi) else null,
         ) {
             Text(
                 text = "Already in your Diary",
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.inverseOnSurface
+                style = if (useNewVisualLanguage) TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.sp,
+                ) else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                color = if (useNewVisualLanguage) quietColors.Cream else MaterialTheme.colorScheme.inverseOnSurface
             )
         }
     }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,8 +47,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.capsule.app.data.model.Intent
+import com.capsule.app.ui.primitives.IntentChipKind
+import com.capsule.app.ui.primitives.IntentChip as QuietIntentChip
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 import kotlinx.coroutines.delay
 
 /**
@@ -71,7 +77,34 @@ fun ChipRow(
     modifier: Modifier = Modifier,
     countdownMillis: Long = OverlayMotion.CHIP_COUNTDOWN_MS
 ) {
-    val haptics = LocalHapticFeedback.current
+    if (LocalRuntimeFlags.current.useNewVisualLanguage) {
+        QuietChipRow(
+            previewText = previewText,
+            onChipTap = onChipTap,
+            onTimeout = onTimeout,
+            modifier = modifier,
+            countdownMillis = countdownMillis,
+        )
+        return
+    }
+
+    LegacyChipRow(
+        previewText = previewText,
+        onChipTap = onChipTap,
+        onTimeout = onTimeout,
+        modifier = modifier,
+        countdownMillis = countdownMillis,
+    )
+}
+
+@Composable
+private fun LegacyChipRow(
+    previewText: String,
+    onChipTap: (Intent) -> Unit,
+    onTimeout: () -> Unit,
+    modifier: Modifier = Modifier,
+    countdownMillis: Long = OverlayMotion.CHIP_COUNTDOWN_MS
+) {
 
     // Countdown progress: 1.0 → 0.0 over `countdownMillis`.
     var elapsed by remember { mutableFloatStateOf(0f) }
@@ -181,6 +214,106 @@ fun ChipRow(
             Spacer(Modifier.height(10.dp))
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QuietChipRow(
+    previewText: String,
+    onChipTap: (Intent) -> Unit,
+    onTimeout: () -> Unit,
+    modifier: Modifier = Modifier,
+    countdownMillis: Long = OverlayMotion.CHIP_COUNTDOWN_MS
+) {
+    val colors = QuietOverlayColors
+
+    var elapsed by remember { mutableFloatStateOf(0f) }
+    val progress by animateFloatAsState(
+        targetValue = elapsed,
+        animationSpec = tween(durationMillis = countdownMillis.toInt(), easing = LinearEasing),
+        label = "quietChipRowCountdown"
+    )
+
+    LaunchedEffect(Unit) {
+        elapsed = 1f
+        delay(countdownMillis - 500L)
+        delay(500L)
+        onTimeout()
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        shadowElevation = 14.dp,
+        shape = RoundedCornerShape(24.dp),
+        color = colors.DeepNavy,
+        contentColor = colors.Cream,
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.RuleHi),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(colors.Rule)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(fraction = 1f - progress.coerceIn(0f, 1f))
+                        .height(2.dp)
+                        .background(colors.Accent)
+                )
+            }
+
+            Text(
+                text = previewText.take(96),
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = 0.sp,
+                ),
+                color = colors.Cream,
+                maxLines = 2,
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                QuietIntentButton(Intent.WANT_IT, IntentChipKind.wantIt, onChipTap)
+                QuietIntentButton(Intent.REFERENCE, IntentChipKind.reference, onChipTap)
+                QuietIntentButton(Intent.READ_LATER, IntentChipKind.readLater, onChipTap)
+                QuietIntentButton(Intent.FOR_SOMEONE, IntentChipKind.forSomeone, onChipTap)
+                QuietIntentButton(Intent.INTERESTING, IntentChipKind.interesting, onChipTap)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuietIntentButton(
+    intent: Intent,
+    kind: IntentChipKind,
+    onChipTap: (Intent) -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    QuietIntentChip(
+        intent = kind,
+        onClick = {
+            haptics.performHapticFeedback(
+                androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress
+            )
+            onChipTap(intent)
+        },
+    )
 }
 
 @Composable
