@@ -17,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +53,7 @@ fun SourceGlyph(
     kind: SourceGlyphKind,
     modifier: Modifier = Modifier,
     size: Dp = 22.dp,
+    contentDescription: String? = "Source: ${kind.name}",
 ) {
     val palette = CapsulePalette.current(dark = isSystemInDarkTheme())
     val fill = kind.fill(palette)
@@ -65,6 +68,13 @@ fun SourceGlyph(
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .size(size)
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else {
+                    Modifier
+                }
+            )
             .clip(CircleShape)
             .then(backgroundModifier),
         contentAlignment = Alignment.Center,
