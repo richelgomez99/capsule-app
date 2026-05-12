@@ -58,6 +58,7 @@ import coil.compose.AsyncImage
 import com.capsule.app.data.ipc.AuditEntryParcel
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.model.Intent
+import com.capsule.app.data.model.toIntentOrAmbiguous
 import com.capsule.app.diary.EnvelopeDetailUiState
 import com.capsule.app.diary.EnvelopeDetailViewModel
 import com.capsule.app.diary.IntentHistoryRow
@@ -484,9 +485,6 @@ private fun AuditRowView(entry: AuditEntryParcel) {
 }
 
 // ---- helpers ----
-
-private fun String.toIntentOrAmbiguous(): Intent =
-    runCatching { Intent.valueOf(this) }.getOrElse { Intent.AMBIGUOUS }
 
 private fun Intent.displayLabel(): String = when (this) {
     Intent.WANT_IT -> "Want it"

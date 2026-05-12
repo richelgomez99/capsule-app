@@ -18,6 +18,7 @@ vi.mock("@anthropic-ai/sdk", () => {
 
 // Reset client memo between tests so env changes (none here) take effect.
 import { _resetClientForTest } from "../lib/anthropic.js";
+import { INTENT_VALUES, sanitizeIntent } from "../lib/allowlists.js";
 
 beforeEach(() => {
   mockCreate.mockReset();
@@ -312,6 +313,20 @@ describe("scan_sensitivity handler — Haiku, prompt-cached", () => {
 // ─── Spec 014 hotfix — closed-set allowlist enforcement ────────────────
 
 describe("classify_intent allowlist (hotfix)", () => {
+  it("passes through every Android intent label", () => {
+    expect(Array.from(INTENT_VALUES)).toEqual([
+      "WANT_IT",
+      "REFERENCE",
+      "READ_LATER",
+      "FOR_SOMEONE",
+      "INTERESTING",
+      "AMBIGUOUS",
+    ]);
+    for (const intent of INTENT_VALUES) {
+      expect(sanitizeIntent(intent)).toBe(intent);
+    }
+  });
+
   it("out-of-set intent collapses to AMBIGUOUS", async () => {
     mockCreate.mockResolvedValueOnce({
       content: [{ type: "text", text: '{"intent":"DELETE_ALL","confidence":0.99}' }],

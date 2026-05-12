@@ -54,7 +54,9 @@ No existing `intent` value is rewritten by spec 016. In particular:
 
 Because there is no label rename, spec 016 does not append `intentHistoryJson` migration layers for intent labels.
 
-## ContactRef Shape
+## ContactRef Shape (Deferred Follow-Up)
+
+Spec 016 does not add these fields in the current implementation slice. The shape below is preserved as follow-up design context only; it must be implemented in a future schema slice that targets the next migration after the then-current Room schema version.
 
 `ContactRef` is a value object, not a Room entity:
 
@@ -72,7 +74,7 @@ enum class ContactRefSource {
 }
 ```
 
-Persisted columns on `intent_envelope` when schema work lands:
+Future persisted columns on `intent_envelope` when schema work lands:
 
 | Column | Type | Notes |
 |---|---|---|
@@ -97,4 +99,4 @@ Tests for this spec should assert:
 2. `READ_LATER` serializes/deserializes through the same string paths as other intents.
 3. App label resolvers and chip palettes cover all six enum values.
 4. Cloud classifier allowlists accept the six Android labels and reject anything else to `AMBIGUOUS`.
-5. Contact-ref columns, if added, are nullable, back-fill `NULL`, and enforce both CHECK constraints.
+5. No ContactRef schema changes are present in this slice; future ContactRef tests must prove nullable back-fill and both CHECK constraints.

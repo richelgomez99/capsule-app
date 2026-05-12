@@ -30,11 +30,11 @@ import com.capsule.app.ui.tokens.CapsuleType
 
 @Immutable
 enum class IntentChipKind(val label: String) {
-    remindMe("Remind me"),
-    inspiration("Inspiration"),
+    wantIt("Want it"),
     reference("Reference"),
     readLater("Read later"),
     forSomeone("For someone"),
+    interesting("Interesting"),
 }
 
 @Composable
@@ -84,11 +84,11 @@ fun IntentChip(
 }
 
 private fun IntentChipKind.color(palette: CapsulePalette.Tokens): Color = when (this) {
-    IntentChipKind.remindMe -> palette.brandAccent
-    IntentChipKind.inspiration -> Color(0xFFC8A4DC)
+    IntentChipKind.wantIt -> palette.brandAccent
     IntentChipKind.reference -> Color(0xFFA4C8A4)
     IntentChipKind.readLater -> Color(0xFFDCC384)
     IntentChipKind.forSomeone -> Color(0xFF84B8D6)
+    IntentChipKind.interesting -> Color(0xFFC8A4DC)
 }
 
 @Preview(name = "intents - light")

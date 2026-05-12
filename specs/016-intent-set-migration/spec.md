@@ -3,8 +3,8 @@
 **Feature Branch**: `016-intent-set-migration`  
 **Created**: 2026-04-29  
 **Amended**: 2026-05-11  
-**Status**: Draft, amended for product-label preservation  
-**Input**: Preserve the shipped product labels `Want it`, `Reference`, `For someone`, and `Interesting`; add `Read later`; retain `AMBIGUOUS` as a defensive sentinel; align the cloud classifier with Android enum names; keep future `ContactRef` schema work scoped and explicit.
+**Status**: Implementation ready for product-label preservation; ContactRef schema deferred  
+**Input**: Preserve the shipped product labels `Want it`, `Reference`, `For someone`, and `Interesting`; add `Read later`; retain `AMBIGUOUS` as a defensive sentinel; align the cloud classifier with Android enum names; defer future `ContactRef` schema work to its own migration slice.
 
 ## Clarifications
 
@@ -18,7 +18,7 @@
 ### Session 2026-04-29
 
 - Q: Should `ContactRef` be three nullable columns on `intent_envelope` or a separate join table? -> A: Three nullable `TEXT` columns on `intent_envelope`: `contactRefId`, `contactRefName`, `contactRefSource`. `contactRefSource` uses `{manual, device_contacts, phone_history}`. `contactRefId` holds Android `ContactsContract.Contacts.LOOKUP_KEY` when source is `device_contacts` or `phone_history`; it is null when source is `manual`.
-- Q: Does spec 016 add contact-picker UI? -> A: No. This spec may add forward-compatible schema only; the picker and follow-up flows are deferred.
+- Q: Does this implementation slice add contact-picker UI or ContactRef schema? -> A: No. ContactRef remains a follow-up schema slice. When it lands, it must target the then-current Room version's next migration and must not reuse an already-consumed earlier migration.
 
 ## User Scenarios & Testing
 
@@ -38,7 +38,7 @@ When a user captures something and Orbit needs an explicit intent, the chip row 
 
 An alpha user upgrades from the existing build. Existing rows with `WANT_IT`, `REFERENCE`, `FOR_SOMEONE`, `INTERESTING`, and `AMBIGUOUS` keep those stored values. The migration must not recategorize or rename prior captures.
 
-**Independent Test**: Run the migration over a fixture with one row per current intent and assert row count and `intent` values are unchanged. Any new `ContactRef` columns back-fill `NULL`.
+**Independent Test**: Upgrade over a fixture with one row per current intent and assert row count and `intent` values are unchanged. Spec 016 does not rewrite existing values or add an intent-history layer.
 
 **Acceptance Scenarios**:
 
@@ -52,19 +52,23 @@ The cloud LLM gateway returns labels that Android can parse directly: `WANT_IT`,
 
 **Independent Test**: Supabase function tests assert accepted labels pass through, rejected labels become `AMBIGUOUS`, and the prompt enumerates the Android enum names.
 
-### User Story 4 - ContactRef Columns Are Ready But Dormant (Priority: P3)
+**Acceptance Scenarios**:
 
-The database can add nullable `ContactRef` columns for a future `FOR_SOMEONE` flow. No UI writes them yet. Existing rows must back-fill `NULL`.
+1. **Given** the cloud model returns any of the six Android labels, **When** the classifier sanitizes the response, **Then** the same label crosses the gateway boundary.
+2. **Given** the cloud model returns an out-of-set label, **When** the classifier sanitizes the response, **Then** Android receives `AMBIGUOUS`.
 
-**Independent Test**: Inspect the post-migration schema, assert the three columns and both CHECK constraints exist, and verify invalid `contactRefSource` / `contactRefId` combinations fail.
+### Deferred Follow-Up - ContactRef Columns
+
+The database can add nullable `ContactRef` columns for a future `FOR_SOMEONE` flow, but that schema work is not part of this implementation slice. No UI writes ContactRef data in spec 016. The future migration must be additive and target the next Room migration after the current schema version at that time.
+
+**Independent Test for the future slice**: Inspect the post-migration schema, assert the three columns and both CHECK constraints exist, and verify invalid `contactRefSource` / `contactRefId` combinations fail.
 
 ## Edge Cases
 
 - **Unknown intent string**: Parsing continues to defensive-fallback to `AMBIGUOUS`.
 - **Legacy rename text in older docs**: Treat as superseded by this amendment. Do not implement `REMIND_ME` or `INSPIRATION` without a new explicit product decision.
 - **`READ_LATER` in old databases**: No existing row should contain it. It is introduced for new captures only.
-- **ContactRef absent**: All `contactRef*` fields may be null; readers must treat that as no contact attached.
-- **Manual contact with id**: Invalid. A non-null `contactRefId` is allowed only for `device_contacts` or `phone_history`.
+- **ContactRef absent**: Expected for this slice; no ContactRef columns or value types are added.
 
 ## Requirements
 
@@ -76,15 +80,15 @@ The database can add nullable `ContactRef` columns for a future `FOR_SOMEONE` fl
 - **FR-016-004**: Every app-side intent label resolver MUST cover all six enum values and preserve the display strings `Want it`, `Reference`, `Read later`, `For someone`, `Interesting`.
 - **FR-016-005**: `AMBIGUOUS` MUST remain parseable and storable as a defensive sentinel, but MUST NOT appear in user-pickable chip palettes.
 - **FR-016-006**: The Supabase `llm_gateway` classifier prompt and allowlist MUST use the Android labels from FR-016-001 and collapse any out-of-set label to `AMBIGUOUS`.
-- **FR-016-007**: If contact-ref schema lands in this spec, `MIGRATION_3_4` MUST add nullable `TEXT` columns `contactRefId`, `contactRefName`, and `contactRefSource`, with CHECK constraints for source vocabulary and id-source coupling.
-- **FR-016-008**: Contact-ref migration tests MUST verify existing rows keep their intent values and back-fill all `contactRef*` columns to `NULL`.
+- **FR-016-007**: This implementation slice MUST NOT add ContactRef columns, value types, Room migrations, or exported schema changes. A future ContactRef slice MUST target the next migration after the then-current Room schema version.
+- **FR-016-008**: Existing rows MUST keep their intent values after spec 016; no intent-history layer may be appended solely because `READ_LATER` was added.
 - **FR-016-009**: `toIntentOrAmbiguous()` and any string parsing wrappers MUST continue to return `AMBIGUOUS` for unknown strings.
 - **FR-016-010**: No spec 016 task may introduce `REMIND_ME`, `INSPIRATION`, or `intent-set rename` migration behavior.
 
 ### Key Entities
 
 - **`Intent` enum**: Five user-pickable product labels plus `AMBIGUOUS` sentinel.
-- **`ContactRef`**: Future value object with `id: String?`, `name: String`, and `source: ContactRefSource`; persisted as nullable columns when schema work lands.
+- **`ContactRef`**: Deferred future value object with `id: String?`, `name: String`, and `source: ContactRefSource`; not persisted by this spec 016 implementation slice.
 - **Cloud classifier intent label**: A closed-set string matching the Android enum names.
 
 ## Success Criteria
@@ -93,7 +97,7 @@ The database can add nullable `ContactRef` columns for a future `FOR_SOMEONE` fl
 - **SC-016-002**: The capture chip row and Diary picker show the five approved labels in order.
 - **SC-016-003**: `READ_LATER` is accepted across Android label resolvers and the Supabase classifier allowlist.
 - **SC-016-004**: Unknown model labels are sanitized to `AMBIGUOUS`.
-- **SC-016-005**: Contact-ref schema work, if included, is additive and preserves every existing row.
+- **SC-016-005**: No ContactRef schema changes ship in this slice; the branch only changes the intent label set and classifier alignment.
 - **SC-016-006**: Android compile, unit tests, Android test-source compile, lint, and Supabase function tests pass for the touched surfaces.
 
 ## Out Of Scope
@@ -101,7 +105,7 @@ The database can add nullable `ContactRef` columns for a future `FOR_SOMEONE` fl
 - Renaming `WANT_IT` to `REMIND_ME`.
 - Renaming `INTERESTING` to `INSPIRATION`.
 - Recategorizing old rows into `READ_LATER`.
-- Contact-picker UI, multi-recipient UI, and Text Maya follow-up actions.
+- ContactRef schema, contact-picker UI, multi-recipient UI, and Text Maya follow-up actions.
 - Visual styling for chips beyond adding the `READ_LATER` option; spec 015 owns the visual refit.
 
 ## Assumptions & Cross-References
