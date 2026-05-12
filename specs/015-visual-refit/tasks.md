@@ -211,7 +211,11 @@ app-icon dots. Navigation/data contracts unchanged.
     connected run on Tab S9 still fails before assertions with the repo's
     existing Compose harness error: `No compose hierarchies found in the app`.
     Manual flag-ON screenshot remains pending.
-- [ ] **T015-207** [P2] **REVIEW GATE** per commit.
+- [x] **T015-207** [P2] **REVIEW GATE** per commit.
+  - Review for `11e8881` blocked on source-glyph a11y + duplicated cluster
+    glyph mapping; follow-up `2faa5ba` fixed both. Review for `2faa5ba`
+    completed 2026-05-12 with no blockers. T015-206 connected/manual gap
+    remains open.
 
 **Phase 2 Checkpoint**: diary refitted, tests green.
 
@@ -222,21 +226,26 @@ app-icon dots. Navigation/data contracts unchanged.
 **Goal**: editorial section pattern, amber toggle pill, "Forget everything"
 danger row with refined wording.
 
-- [ ] **T015-301** [P3] Refit `SettingsScreen` section pattern per
+- [x] **T015-301** [P3] Refit `SettingsScreen` section pattern per
   `design/visual-refit-2026-04-29/project/orbit-screen-settings.jsx`.
   Editorial `MonoLabel` headers, hairline rules, serif section titles
   where the JSX uses serif.
-- [ ] **T015-302** [P3] Replace toggle row chrome with amber toggle pill.
+- [x] **T015-302** [P3] Replace toggle row chrome with amber toggle pill.
   Preserve toggle ViewModel calls verbatim.
-- [ ] **T015-303** [P3] Refit "Forget everything" danger row. Copy MUST
+- [x] **T015-303** [P3] Refit "Forget everything" danger row. Copy MUST
   satisfy FR-015-011 — distinguish what Orbit controls (local data,
   on-device caches) vs third-party LLM-provider SLAs. Use LD-004 hardware
   phrasing where local-AI is mentioned ("for local-model-capable phones
   (Pixel 8 Pro+, Galaxy S24+, capable hardware)"). NOT "Pixel 8 and up."
-- [ ] **T015-304** [P3] Constitutional copy review against Principles IX
+- [x] **T015-304** [P3] Constitutional copy review against Principles IX
   and X recorded in commit body.
 - [ ] **T015-305** [P3] Verify settings instrumented tests green on
   flag-OFF.
+  - Automated gates run 2026-05-12: `:app:compileDebugKotlin`,
+    `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`. Added flag-OFF
+    and flag-ON callback/copy coverage in `SettingsScreenTest`. Connected
+    execution remains pending with the same Compose harness limitation noted
+    under T015-206.
 - [ ] **T015-306** [P3] Audit nested settings routes and setup/settings
   surfaces for legacy `Capsule` copy. Replace user-facing product copy with
   `Orbit`; leave package names, process names, and developer-only identifiers

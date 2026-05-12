@@ -1,0 +1,74 @@
+package com.capsule.app.settings
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.theme.RuntimeFlagValues
+import org.junit.Rule
+import org.junit.Test
+
+class SettingsScreenTest {
+
+    @get:Rule
+    val composeRule = createComposeRule()
+
+    @Test
+    fun flagOffPauseToggle_preservesCallback() {
+        var lastPauseValue: Boolean? = null
+
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalRuntimeFlags provides RuntimeFlagValues(useNewVisualLanguage = false),
+                ) {
+                    SettingsScreen(
+                        paused = false,
+                        onPauseChange = { lastPauseValue = it },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Settings").assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsScreenTestTags.PAUSE_TOGGLE).performClick()
+        composeRule.waitForIdle()
+
+        assert(lastPauseValue == true) { "Flag-off pause toggle must call onPauseChange(true)" }
+    }
+
+    @Test
+    fun quietFlagPauseToggle_preservesCallbackAndCopyContract() {
+        var lastPauseValue: Boolean? = null
+
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalRuntimeFlags provides RuntimeFlagValues(useNewVisualLanguage = true),
+                ) {
+                    SettingsScreen(
+                        paused = false,
+                        onPauseChange = { lastPauseValue = it },
+                        onOpenCaptureSetup = {},
+                        trashCount = 2,
+                        onOpenTrash = {},
+                        onOpenAuditLog = {},
+                        onExportData = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("// PRINCIPLE I · DEFAULT PRIVACY").assertIsDisplayed()
+        composeRule.onNodeWithText("WHERE YOUR CAPTURES THINK").assertIsDisplayed()
+        composeRule.onNodeWithText("Forget everything from before").assertIsDisplayed()
+        composeRule.onNodeWithTag(SettingsScreenTestTags.PAUSE_TOGGLE).performClick()
+        composeRule.waitForIdle()
+
+        assert(lastPauseValue == true) { "Quiet pause toggle must call onPauseChange(true)" }
+    }
+}
