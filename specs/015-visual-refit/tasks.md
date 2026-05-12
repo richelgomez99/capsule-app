@@ -171,8 +171,10 @@ scratch on the new tokens. Coordinates with spec 002 Phase 11 Block 8.
     `:app:testDebugUnitTest --tests 'com.capsule.app.diary.ui.ClusterSuggestionCardTest'`,
     `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`. Manual flag-ON
     screenshot remains pending for the PR body.
-- [ ] **T015-105** [P1] **REVIEW GATE** per commit landed in Phase 1.
+- [x] **T015-105** [P1] **REVIEW GATE** per commit landed in Phase 1.
   Phase 1 may span multiple commits; each gated.
+  - Review for `ed24b46` completed 2026-05-12: no blockers. Deferred note:
+    category-to-glyph mapping centralization belongs to Phase 2 T015-204.
 
 **Phase 1 Checkpoint**: cluster surfaces refitted. Ready for Phase 2.
 
@@ -184,23 +186,31 @@ scratch on the new tokens. Coordinates with spec 002 Phase 11 Block 8.
 adopt hairline + mono date pattern. Source glyphs replace existing
 app-icon dots. Navigation/data contracts unchanged.
 
-- [ ] **T015-201** [P2] Refit `DiaryScreen` header — `OrbitWordmark` +
+- [x] **T015-201** [P2] Refit `DiaryScreen` header — `OrbitWordmark` +
   `MonoLabel` date. Read `useNewVisualLanguage` to gate.
-- [ ] **T015-202** [P2] Refit day-group section pattern — hairline rule
+- [x] **T015-202** [P2] Refit day-group section pattern — hairline rule
   (`Rule`) + `MonoLabel` date stamp. Match
   `design/visual-refit-2026-04-29/project/orbit-screen-diary.jsx::DiaryDay`.
-- [ ] **T015-203** [P2] Replace existing app-icon dots in diary rows with
+- [x] **T015-203** [P2] Replace existing app-icon dots in diary rows with
   `SourceGlyph` consumption. Preserve content-descriptions and test tags.
-- [ ] **T015-204** [P2] Add shared `SourceIdentityResolver` under
+- [x] **T015-204** [P2] Add shared `SourceIdentityResolver` under
   `app/src/main/java/com/capsule/app/ui/primitives/` and consume it from
   `DiaryScreen` so provider URL identity wins over foreground origin for
   primary glyphs. Cover YouTube host variants: `youtube.com`, subdomains,
   `youtu.be`, and `youtube-nocookie.com`.
-- [ ] **T015-205** [P2] Add unit coverage proving a YouTube URL copied from
+- [x] **T015-205** [P2] Add unit coverage proving a YouTube URL copied from
   Brave/Messages still renders `SourceGlyphKind.youtube`, while non-YouTube
   browser captures render the browser glyph.
 - [ ] **T015-206** [P2] Verify existing instrumented diary tests green on
   flag-OFF. Add flag-ON manual screenshot or screenshot test.
+  - Automated gates run 2026-05-12: `:app:compileDebugKotlin`,
+    `:app:testDebugUnitTest --tests 'com.capsule.app.ui.primitives.SourceIdentityResolverTest'`,
+    `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`.
+  - Added flag-OFF/flag-ON coverage in `DiaryScreenWithClusterTest`, including
+    provider-first YouTube glyph rendering from a Brave-copied link. Focused
+    connected run on Tab S9 still fails before assertions with the repo's
+    existing Compose harness error: `No compose hierarchies found in the app`.
+    Manual flag-ON screenshot remains pending.
 - [ ] **T015-207** [P2] **REVIEW GATE** per commit.
 
 **Phase 2 Checkpoint**: diary refitted, tests green.

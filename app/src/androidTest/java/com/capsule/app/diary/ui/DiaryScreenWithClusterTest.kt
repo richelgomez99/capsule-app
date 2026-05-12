@@ -1,10 +1,14 @@
 package com.capsule.app.diary.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import com.capsule.app.action.ipc.ActionExecuteRequestParcel
 import com.capsule.app.action.ipc.ActionExecuteResultParcel
 import com.capsule.app.ai.EmbeddingResult
@@ -24,9 +28,12 @@ import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.model.ClusterState
 import com.capsule.app.diary.DayHeaderGenerator
 import com.capsule.app.diary.DayUiState
+import com.capsule.app.diary.DiaryThread
 import com.capsule.app.diary.DiaryRepository
 import com.capsule.app.diary.DiaryViewModel
 import com.capsule.app.diary.ThreadGrouper
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.theme.RuntimeFlagValues
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -136,9 +143,50 @@ class DiaryScreenWithClusterTest {
         composeRule.onNodeWithTag(DiaryScreenTestTags.DAY_HEADER).assertIsDisplayed()
     }
 
+    @Test
+    fun flagOff_keepsLegacyDiaryRows() {
+        renderDayContent(
+            state = readyState(
+                isoDate = "2026-04-30",
+                clusters = emptyList(),
+                threads = listOf(diaryThread(envelope(sourceAppLabel = null))),
+            ),
+            useNewVisualLanguage = false,
+        )
+
+        composeRule.onNodeWithText("Browser").assertIsDisplayed()
+        composeRule.onNodeWithText("Reference").assertIsDisplayed()
+    }
+
+    @Test
+    fun flagOn_rendersQuietDiaryRowsWithProviderFirstGlyph() {
+        renderDayContent(
+            state = readyState(
+                isoDate = "2026-04-30",
+                clusters = emptyList(),
+                threads = listOf(
+                    diaryThread(
+                        envelope(
+                            sourceAppLabel = "Brave",
+                            textContent = "watch this www.youtube.com/watch?v=abc123",
+                        )
+                    )
+                ),
+            ),
+            useNewVisualLanguage = true,
+        )
+
+        composeRule.onAllNodesWithText("Browser").assertCountEquals(0)
+        composeRule.onNodeWithText("reference").assertIsDisplayed()
+        composeRule.onNodeWithText("▶").assertIsDisplayed()
+    }
+
     // ------------------------------------------------------------------
 
-    private fun renderDayContent(state: DayUiState.Ready) {
+    private fun renderDayContent(
+        state: DayUiState.Ready,
+        useNewVisualLanguage: Boolean = false,
+    ) {
         val viewModel = DiaryViewModel(
             repository = FakeDiaryRepository,
             threadGrouper = ThreadGrouper(),
@@ -147,15 +195,21 @@ class DiaryScreenWithClusterTest {
         )
         composeRule.setContent {
             MaterialTheme {
-                DayContentView(
-                    state = state,
-                    viewModel = viewModel,
-                    onReassign = { _, _ -> },
-                    onRetry = { },
-                    onDelete = { },
-                    onOpenDetail = { },
-                    onProposalTap = { },
-                )
+                CompositionLocalProvider(
+                    LocalRuntimeFlags provides RuntimeFlagValues(
+                        useNewVisualLanguage = useNewVisualLanguage,
+                    ),
+                ) {
+                    DayContentView(
+                        state = state,
+                        viewModel = viewModel,
+                        onReassign = { _, _ -> },
+                        onRetry = { },
+                        onDelete = { },
+                        onOpenDetail = { },
+                        onProposalTap = { },
+                    )
+                }
             }
         }
     }
@@ -163,12 +217,44 @@ class DiaryScreenWithClusterTest {
     private fun readyState(
         isoDate: String,
         clusters: List<ClusterCardModel>,
+        threads: List<DiaryThread> = emptyList(),
     ): DayUiState.Ready = DayUiState.Ready(
         isoDate = isoDate,
         header = "Quiet day in the workshop.",
         generationLocale = "en",
-        threads = emptyList(),
+        threads = threads,
         clusters = clusters,
+    )
+
+    private fun diaryThread(envelope: EnvelopeViewParcel): DiaryThread = DiaryThread(
+        id = "thread-${envelope.id}",
+        appCategory = envelope.appCategory,
+        startedAtMillis = envelope.createdAtMillis,
+        envelopes = listOf(envelope),
+    )
+
+    private fun envelope(
+        sourceAppLabel: String?,
+        textContent: String = "https://example.com/article",
+    ): EnvelopeViewParcel = EnvelopeViewParcel(
+        id = "env-1",
+        contentType = "TEXT",
+        textContent = textContent,
+        imageUri = null,
+        intent = "REFERENCE",
+        intentSource = "AUTO_LOCAL",
+        createdAtMillis = 1_745_164_800_000L,
+        dayLocal = "2026-04-30",
+        isArchived = false,
+        title = "A saved reference",
+        domain = "example.com",
+        excerpt = null,
+        summary = null,
+        appCategory = "BROWSER",
+        activityState = "UNKNOWN",
+        hourLocal = 12,
+        dayOfWeekLocal = 4,
+        sourceAppLabel = sourceAppLabel,
     )
 
     /**
