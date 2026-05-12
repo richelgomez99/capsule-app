@@ -1,9 +1,13 @@
 package com.capsule.app.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,8 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.capsule.app.R
+import com.capsule.app.ui.primitives.MonoLabel
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 
 /**
  * T079 / 003 US4 — Settings → Actions screen. One row per registered
@@ -39,6 +49,17 @@ fun ActionsSettingsUI(
     onClearRememberedTodoTarget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (LocalRuntimeFlags.current.useNewVisualLanguage) {
+        QuietActionsSettingsUI(
+            rows = rows,
+            rememberedTodoPackage = rememberedTodoPackage,
+            onToggleSkill = onToggleSkill,
+            onClearRememberedTodoTarget = onClearRememberedTodoTarget,
+            modifier = modifier,
+        )
+        return
+    }
+
     Column(modifier = modifier.fillMaxWidth().testTag(ROOT_TEST_TAG)) {
         Text(
             text = stringResource(R.string.actions_settings_title),
@@ -89,6 +110,109 @@ fun ActionsSettingsUI(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun QuietActionsSettingsUI(
+    rows: List<SkillSettingsRow>,
+    rememberedTodoPackage: String?,
+    onToggleSkill: (skillId: String, enabled: Boolean) -> Unit,
+    onClearRememberedTodoTarget: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(QuietSettingsColors.BgDeep)
+            .testTag(ROOT_TEST_TAG),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
+            MonoLabel(
+                text = "// Orbit actions",
+                color = QuietSettingsColors.CreamDim,
+                size = 9.5.sp,
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.actions_settings_title),
+                color = QuietSettingsColors.Cream,
+                style = TextStyle(
+                    fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+                    fontSize = 24.sp,
+                    lineHeight = 30.sp,
+                    fontWeight = FontWeight.Normal,
+                ),
+            )
+        }
+
+        if (rememberedTodoPackage != null) {
+            QuietSettingSection(label = "Remembered route") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                        .testTag(REMEMBERED_TARGET_TEST_TAG),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        QuietRowTitle(stringResource(R.string.share_target_remembered_package))
+                        Spacer(Modifier.height(3.dp))
+                        QuietRowDescription(rememberedTodoPackage)
+                    }
+                    TextButton(
+                        onClick = onClearRememberedTodoTarget,
+                        modifier = Modifier.testTag(REMEMBERED_TARGET_CLEAR_TEST_TAG),
+                    ) {
+                        Text("Forget", color = QuietSettingsColors.Accent)
+                    }
+                }
+                QuietRule()
+            }
+        }
+
+        QuietSettingSection(label = "Skills") {
+            if (rows.isEmpty()) {
+                QuietRowDescription(
+                    text = stringResource(R.string.actions_settings_no_skills),
+                )
+                Spacer(Modifier.height(16.dp))
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(rows, key = { it.skillId }) { row ->
+                        QuietSkillRow(row = row, onToggleSkill = onToggleSkill)
+                        QuietRule()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuietSkillRow(
+    row: SkillSettingsRow,
+    onToggleSkill: (String, Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(skillRowTestTag(row.skillId))
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            QuietRowTitle(row.displayName)
+            Spacer(Modifier.height(3.dp))
+            QuietRowDescription(ActionsSettingsFormat.formatStats(row))
+        }
+        Switch(
+            checked = row.enabled,
+            onCheckedChange = { onToggleSkill(row.skillId, it) },
+            modifier = Modifier.testTag(skillToggleTestTag(row.skillId)),
+        )
     }
 }
 
