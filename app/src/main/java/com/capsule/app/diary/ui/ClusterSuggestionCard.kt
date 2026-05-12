@@ -47,11 +47,11 @@ import com.capsule.app.ui.primitives.MonoLabel
 import com.capsule.app.ui.primitives.OrbitMark
 import com.capsule.app.ui.primitives.SourceGlyph
 import com.capsule.app.ui.primitives.SourceGlyphKind
+import com.capsule.app.ui.primitives.SourceIdentityResolver
 import com.capsule.app.ui.theme.LocalRuntimeFlags
 import com.capsule.app.ui.theme.RuntimeFlagValues
 import com.capsule.app.ui.tokens.CapsulePalette
 import com.capsule.app.ui.tokens.CapsuleType
-import java.util.Locale
 
 /**
  * **ClusterSuggestionCard** — Phase 11 Block 8 / T145.
@@ -800,18 +800,12 @@ private fun QuietSourceRow(
     }
 }
 
-private fun String.toSourceGlyphKind(): SourceGlyphKind = when (lowercase(Locale.ROOT)) {
-    "browser", "chrome", "web" -> SourceGlyphKind.chrome
-    "video", "youtube" -> SourceGlyphKind.youtube
-    "messaging", "sms", "messages" -> SourceGlyphKind.sms
-    "social", "instagram" -> SourceGlyphKind.instagram
-    "reading", "article", "news" -> SourceGlyphKind.nyt
-    "email", "work_email", "gmail" -> SourceGlyphKind.gmail
-    "files", "file" -> SourceGlyphKind.files
-    "photos", "photo" -> SourceGlyphKind.photos
-    "share" -> SourceGlyphKind.share
-    else -> SourceGlyphKind.url
-}
+private fun String.toSourceGlyphKind(): SourceGlyphKind = SourceIdentityResolver.glyphKind(
+    textContent = null,
+    canonicalUrl = null,
+    sourceAppLabel = this,
+    appCategory = this,
+)
 
 /**
  * Single-letter monogram fallback for a source category — the

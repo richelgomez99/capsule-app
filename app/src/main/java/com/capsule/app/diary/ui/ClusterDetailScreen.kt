@@ -39,6 +39,7 @@ import com.capsule.app.ui.primitives.ClusterActionRow
 import com.capsule.app.ui.primitives.MonoLabel
 import com.capsule.app.ui.primitives.SourceGlyph
 import com.capsule.app.ui.primitives.SourceGlyphKind
+import com.capsule.app.ui.primitives.SourceIdentityResolver
 import com.capsule.app.ui.tokens.CapsulePalette
 import com.capsule.app.ui.tokens.CapsuleType
 import java.util.Locale
@@ -429,18 +430,12 @@ private fun Hairline(palette: CapsulePalette.Tokens) {
     )
 }
 
-private fun String.toSourceGlyphKind(): SourceGlyphKind = when (lowercase(Locale.ROOT)) {
-    "browser", "chrome", "web" -> SourceGlyphKind.chrome
-    "video", "youtube" -> SourceGlyphKind.youtube
-    "messaging", "sms", "messages" -> SourceGlyphKind.sms
-    "social", "instagram" -> SourceGlyphKind.instagram
-    "reading", "article", "news" -> SourceGlyphKind.nyt
-    "email", "work_email", "gmail" -> SourceGlyphKind.gmail
-    "files", "file" -> SourceGlyphKind.files
-    "photos", "photo" -> SourceGlyphKind.photos
-    "share" -> SourceGlyphKind.share
-    else -> SourceGlyphKind.url
-}
+private fun String.toSourceGlyphKind(): SourceGlyphKind = SourceIdentityResolver.glyphKind(
+    textContent = null,
+    canonicalUrl = null,
+    sourceAppLabel = this,
+    appCategory = this,
+)
 
 private object ClusterDetailColors {
     val BgDeep = Color(0xFF080B14)
