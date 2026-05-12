@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,9 +40,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.capsule.app.data.model.Intent
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.tokens.CapsuleType
 import kotlinx.coroutines.delay
 
 /**
@@ -67,6 +72,12 @@ fun SilentWrapPill(
     fromLeadingEdge: Boolean = true
 ) {
     val haptics = LocalHapticFeedback.current
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val quietColors = QuietOverlayColors
+    val surfaceColor = if (useNewVisualLanguage) quietColors.DeepNavy else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    val contentColor = if (useNewVisualLanguage) quietColors.Cream else MaterialTheme.colorScheme.onSurface
+    val accentColor = if (useNewVisualLanguage) quietColors.Accent else MaterialTheme.colorScheme.primary
+    val trackColor = if (useNewVisualLanguage) quietColors.Rule else MaterialTheme.colorScheme.surfaceVariant
 
     var target by remember { mutableFloatStateOf(0f) }
     val progress by animateFloatAsState(
@@ -101,7 +112,8 @@ fun SilentWrapPill(
             tonalElevation = 6.dp,
             shadowElevation = 12.dp,
             shape = RoundedCornerShape(26.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+            color = surfaceColor,
+            border = if (useNewVisualLanguage) BorderStroke(1.dp, quietColors.RuleHi) else null,
         ) {
             Column {
                 // Drain bar — top edge, matches bubble edge side visually.
@@ -110,13 +122,13 @@ fun SilentWrapPill(
                         .fillMaxWidth()
                         .height(2.dp)
                         .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(trackColor)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(fraction = 1f - progress.coerceIn(0f, 1f))
                             .height(2.dp)
-                            .background(MaterialTheme.colorScheme.primary)
+                            .background(accentColor)
                     )
                 }
 
@@ -129,19 +141,24 @@ fun SilentWrapPill(
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = accentColor,
                         modifier = Modifier.sizeIn(minWidth = 18.dp, minHeight = 18.dp)
                     )
                     Text(
                         text = "Saved as ${intent.label()}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        style = if (useNewVisualLanguage) TextStyle(
+                            fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.sp,
+                        ) else MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = contentColor,
                         maxLines = 1
                     )
                     Spacer(Modifier.width(4.dp))
                     Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                        color = if (useNewVisualLanguage) quietColors.Accent else MaterialTheme.colorScheme.primaryContainer,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .sizeIn(minHeight = 36.dp)
@@ -156,9 +173,14 @@ fun SilentWrapPill(
                         Text(
                             text = "Undo",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            style = if (useNewVisualLanguage) TextStyle(
+                                fontFamily = CapsuleType.QuietAlmanac.bodySans,
+                                fontSize = 13.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.sp,
+                            ) else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (useNewVisualLanguage) quietColors.AccentInk else MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }

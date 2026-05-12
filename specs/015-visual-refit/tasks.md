@@ -271,31 +271,42 @@ against constitution.
 `main` before Phase 4 starts. (DEP-001 resolved 2026-04-29 — referred out
 to its own spec; drafted in parallel; Phase 4 simply waits.)
 
-- [ ] **T015-401** [P4] Refit `CaptureSheet` chrome per
+Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
+`96ac77d` via merge commit `aebac2f` so Phase 4 can compile against
+`READ_LATER`. Final landing still depends on 016 merging first.
+
+- [x] **T015-401** [P4] Refit `CaptureSheet` chrome per
   `design/visual-refit-2026-04-29/project/orbit-screen-capture.jsx`.
-- [ ] **T015-402** [P4] Replace intent chip set with `IntentChip`
+- [x] **T015-402** [P4] Replace intent chip set with `IntentChip`
   consuming the LD-002 5 intents. Drop "in orbit" + "archive". Add
   "for someone" (with contact-picker stub backed by spec 016's enum,
   which has merged by Phase 4 start).
-- [ ] **T015-403** [P4] Refit "Save" / "Cancel" CTAs to the new pattern.
+- [x] **T015-403** [P4] Refit "Save" / "Cancel" CTAs to the new pattern.
   ViewModel calls unchanged.
-- [ ] **T015-404** [P4] Audit copy for any "sealed at save" wording across
+- [x] **T015-404** [P4] Audit copy for any "sealed at save" wording across
   capture flow + adjacent strings; replace with "reclassify adds a layer,
   latest visible." (LD-003).
-- [ ] **T015-405** [P4] Consume shared `SourceIdentityResolver` in
+- [x] **T015-405** [P4] Consume shared `SourceIdentityResolver` in
   `CaptureSheetUI`; display provider-first glyphs consistently with Diary and
   preserve origin label for secondary copy.
-- [ ] **T015-406** [P4] Refit post-capture intent chip row (`ChipRow`) to the
+- [x] **T015-406** [P4] Refit post-capture intent chip row (`ChipRow`) to the
   Quiet Almanac visual language. This is presentation-only; chip semantics stay
   owned by spec 016.
-- [ ] **T015-407** [P4] Refit undo/silent-save/confirmation pills to Quiet
+- [x] **T015-407** [P4] Refit undo/silent-save/confirmation pills to Quiet
   Almanac styling and verify compact pill touch bounds match visible content.
 - [ ] **T015-408** [P4] If "for someone" wires to a contact picker, scope
   the picker UI to a separate sub-task; keep behind the same flag.
 - [ ] **T015-409** [P4] Verify capture instrumented tests green on
   flag-OFF; on flag-ON, save path persists envelope correctly per
   DEP-001 status.
-- [ ] **T015-410** [P4] **REVIEW GATE** per commit.
+  - Automated gates run 2026-05-11: `:app:compileDebugKotlin`,
+    `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`,
+    `:app:lintDebug`. Manual/connected capture verification remains pending;
+    use physical S24/Tab S9 flow per T015-905.
+- [x] **T015-410** [P4] **REVIEW GATE** per commit.
+  - Review completed 2026-05-11 after font-weight cleanup: no
+    blocking/high/medium findings. Residual physical-QA notes track under
+    T015-409/T015-905.
 
 **Phase 4 Checkpoint**: capture sheet refitted; LD-002 intent set live in
 UI; LD-003 wording purged.
