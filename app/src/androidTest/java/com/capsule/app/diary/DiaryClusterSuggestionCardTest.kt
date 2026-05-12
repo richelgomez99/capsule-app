@@ -1,6 +1,7 @@
 package com.capsule.app.diary
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +14,8 @@ import androidx.compose.ui.test.performClick
 import com.capsule.app.diary.ui.ClusterSuggestionCard
 import com.capsule.app.diary.ui.ClusterSuggestionCardState
 import com.capsule.app.diary.ui.ClusterSuggestionCardTestTags
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.theme.RuntimeFlagValues
 import org.junit.Rule
 import org.junit.Test
 
@@ -115,6 +118,33 @@ class DiaryClusterSuggestionCardTest {
 
         composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.CITATION_FOOT)
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun quietVisualLanguageFlag_rendersStableCardContract() {
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalRuntimeFlags provides RuntimeFlagValues(useNewVisualLanguage = true),
+                ) {
+                    ClusterSuggestionCard(
+                        state = surfaced,
+                        onSummarize = {},
+                        onOpenAll = {},
+                        onDismiss = {},
+                        onRetry = {},
+                        reduceMotion = true,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.CARD).assertIsDisplayed()
+        composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.HEADER_LABEL).assertIsDisplayed()
+        composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.BODY).assertIsDisplayed()
+        composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.TIME_RANGE).assertIsDisplayed()
+        composeRule.onNodeWithTag(ClusterSuggestionCardTestTags.ACTION_ROW).assertIsDisplayed()
+        composeRule.onNodeWithText("Summarize").assertIsDisplayed()
     }
 
     @Test
