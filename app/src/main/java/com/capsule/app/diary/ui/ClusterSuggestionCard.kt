@@ -24,6 +24,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,12 +37,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.capsule.app.ui.primitives.AgentVoiceMark
 import com.capsule.app.ui.primitives.ClusterAction
 import com.capsule.app.ui.primitives.ClusterActionRow
+import com.capsule.app.ui.primitives.MonoLabel
+import com.capsule.app.ui.primitives.OrbitMark
+import com.capsule.app.ui.primitives.SourceGlyph
+import com.capsule.app.ui.primitives.SourceGlyphKind
+import com.capsule.app.ui.theme.LocalRuntimeFlags
+import com.capsule.app.ui.theme.RuntimeFlagValues
 import com.capsule.app.ui.tokens.CapsulePalette
+import com.capsule.app.ui.tokens.CapsuleType
+import java.util.Locale
 
 /**
  * **ClusterSuggestionCard** — Phase 11 Block 8 / T145.
@@ -49,9 +59,9 @@ import com.capsule.app.ui.tokens.CapsulePalette
  * Stateless presentational composable that renders the v1
  * cluster-suggestion surface in the Diary, per spec 010 FR-010-018
  * through FR-010-024. Layout, typography hierarchy, and structural
- * rhythm follow the design canvas (`orbit-screen-diary.jsx`); colors
- * + fonts come from the existing token / theme layer (no amber, no
- * Cormorant — the visual-refit branch handles that sweep).
+ * rhythm follow the design canvas (`orbit-screen-diary.jsx`). The legacy
+ * branch preserves the existing treatment while the flag-on Quiet Almanac
+ * branch consumes the spec 015 primitives, amber accent, and serif tokens.
  *
  * The card is dumb — the parent (DiaryViewModel + DiaryScreen,
  * Block 9 / T148-T149) maps the data-layer [com.capsule.app.data.ClusterCardModel]
@@ -79,23 +89,40 @@ fun ClusterSuggestionCard(
     reduceMotion: Boolean = false,
 ) {
     val palette = CapsulePalette.current(dark = isSystemInDarkTheme())
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
 
     when (state) {
         is ClusterSuggestionCardState.DismissedTrace -> DismissedTraceRow(
             label = state.label,
             palette = palette,
+            useNewVisualLanguage = useNewVisualLanguage,
             modifier = modifier,
         )
-        else -> CardSurface(
-            state = state,
-            palette = palette,
-            reduceMotion = reduceMotion,
-            onSummarize = onSummarize,
-            onOpenAll = onOpenAll,
-            onDismiss = onDismiss,
-            onRetry = onRetry,
-            modifier = modifier,
-        )
+        else -> {
+            if (useNewVisualLanguage) {
+                QuietAlmanacCardSurface(
+                    state = state,
+                    palette = palette,
+                    reduceMotion = reduceMotion,
+                    onSummarize = onSummarize,
+                    onOpenAll = onOpenAll,
+                    onDismiss = onDismiss,
+                    onRetry = onRetry,
+                    modifier = modifier,
+                )
+            } else {
+                CardSurface(
+                    state = state,
+                    palette = palette,
+                    reduceMotion = reduceMotion,
+                    onSummarize = onSummarize,
+                    onOpenAll = onOpenAll,
+                    onDismiss = onDismiss,
+                    onRetry = onRetry,
+                    modifier = modifier,
+                )
+            }
+        }
     }
 }
 
@@ -113,9 +140,9 @@ fun ClusterSuggestionCard(
  * the caller — the card stays locale-agnostic.
  *
  * `sourceCategories` is the dedupe-ordered list of source app
- * categories drawn as the source-glyph row; the card maps each to a
- * single-letter monogram fallback (visual-refit branch will swap in
- * brand glyphs).
+ * categories drawn as the source-glyph row; legacy mode maps each to a
+ * single-letter monogram fallback, while Quiet Almanac mode renders
+ * [SourceGlyph]s.
  */
 sealed class ClusterSuggestionCardState {
 
@@ -319,6 +346,185 @@ private fun CardSurface(
 }
 
 @Composable
+private fun QuietAlmanacCardSurface(
+    state: ClusterSuggestionCardState,
+    palette: CapsulePalette.Tokens,
+    reduceMotion: Boolean,
+    onSummarize: () -> Unit,
+    onOpenAll: () -> Unit,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .border(
+                width = 1.dp,
+                color = QuietClusterColors.Accent.copy(alpha = 0.33f),
+                shape = RoundedCornerShape(18.dp),
+            )
+            .background(QuietClusterColors.Panel)
+            .padding(20.dp)
+            .testTag(TestTag.CARD)
+            .semantics { contentDescription = "Cluster suggestion card" },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AgentVoiceMark(size = 13.sp, tint = QuietClusterColors.Accent)
+            MonoLabel(
+                text = state.headerLabel,
+                color = QuietClusterColors.Accent,
+                size = 10.sp,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag(TestTag.HEADER_LABEL),
+            )
+            OrbitMark(
+                size = 22.dp,
+                ink = QuietClusterColors.CreamDim,
+                accent = QuietClusterColors.Accent,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        QuietBodyContent(state = state, palette = palette)
+
+        Spacer(Modifier.height(14.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(QuietClusterColors.Rule),
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        QuietSourceRow(
+            sources = state.sourceCategories,
+            timeRangeLabel = state.timeRangeLabel,
+            palette = palette,
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        ActionContent(
+            state = state,
+            palette = palette,
+            reduceMotion = reduceMotion,
+            actionInkColor = QuietClusterColors.Cream,
+            actionRuleColor = QuietClusterColors.RuleHi,
+            actionFaintColor = QuietClusterColors.CreamDim,
+            onSummarize = onSummarize,
+            onOpenAll = onOpenAll,
+            onDismiss = onDismiss,
+            onRetry = onRetry,
+        )
+
+        if (state is ClusterSuggestionCardState.Acted) {
+            Spacer(Modifier.height(12.dp))
+            CitationFoot(citations = state.citations, palette = palette)
+        }
+    }
+}
+
+@Composable
+private fun QuietBodyContent(
+    state: ClusterSuggestionCardState,
+    palette: CapsulePalette.Tokens,
+) {
+    val promptStyle = TextStyle(
+        fontFamily = CapsuleType.QuietAlmanac.displaySerif,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        fontStyle = FontStyle.Normal,
+        fontWeight = FontWeight.Normal,
+        letterSpacing = 0.sp,
+        color = QuietClusterColors.Cream,
+    )
+    val bodyStyle = TextStyle(
+        fontFamily = CapsuleType.QuietAlmanac.bodySans,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.Normal,
+        letterSpacing = 0.sp,
+        color = QuietClusterColors.Cream,
+    )
+
+    when (state) {
+        is ClusterSuggestionCardState.Surfaced -> QuietPrompt(
+            text = state.bodyText,
+            style = promptStyle,
+        )
+
+        is ClusterSuggestionCardState.Acting -> QuietPrompt(
+            text = state.bodyText,
+            style = promptStyle,
+        )
+
+        is ClusterSuggestionCardState.Acted -> Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.testTag(TestTag.BODY),
+        ) {
+            state.bullets.forEachIndexed { index, bullet ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    MonoLabel(
+                        text = (index + 1).toString().padStart(2, '0'),
+                        color = QuietClusterColors.Accent,
+                        size = 10.sp,
+                    )
+                    Text(
+                        text = bullet,
+                        style = bodyStyle,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+
+        is ClusterSuggestionCardState.Failed -> QuietPrompt(
+            text = "Orbit couldn't reach all captures. Try again?",
+            style = promptStyle.copy(fontSize = 18.sp, lineHeight = 24.sp),
+        )
+
+        is ClusterSuggestionCardState.Stale -> QuietPrompt(
+            text = state.inner.bodyText,
+            style = promptStyle,
+        )
+
+        is ClusterSuggestionCardState.SlowNetwork -> QuietPrompt(
+            text = state.bodyText,
+            style = promptStyle.copy(fontSize = 18.sp, lineHeight = 24.sp),
+        )
+
+        is ClusterSuggestionCardState.DismissedTrace -> Unit
+    }
+}
+
+@Composable
+private fun QuietPrompt(
+    text: String,
+    style: TextStyle,
+) {
+    Text(
+        text = text,
+        style = style,
+        modifier = Modifier.testTag(TestTag.BODY),
+    )
+}
+
+@Composable
 private fun BodyContent(
     state: ClusterSuggestionCardState,
     palette: CapsulePalette.Tokens,
@@ -390,6 +596,9 @@ private fun ActionContent(
     state: ClusterSuggestionCardState,
     palette: CapsulePalette.Tokens,
     reduceMotion: Boolean,
+    actionInkColor: Color? = null,
+    actionRuleColor: Color? = null,
+    actionFaintColor: Color? = null,
     onSummarize: () -> Unit,
     onOpenAll: () -> Unit,
     onDismiss: () -> Unit,
@@ -408,6 +617,9 @@ private fun ActionContent(
                     ClusterAction(label = "Open all", onClick = onOpenAll),
                     ClusterAction(label = "Dismiss", onClick = onDismiss),
                 ),
+                inkColor = actionInkColor,
+                ruleColor = actionRuleColor,
+                faintColor = actionFaintColor,
                 modifier = Modifier.testTag(TestTag.ACTION_ROW),
             )
 
@@ -429,6 +641,9 @@ private fun ActionContent(
                             ClusterAction(label = "↻ Retry", onClick = onRetry),
                             ClusterAction(label = "Dismiss", onClick = onDismiss),
                         ),
+                        inkColor = actionInkColor,
+                        ruleColor = actionRuleColor,
+                        faintColor = actionFaintColor,
                         modifier = Modifier.testTag(TestTag.ACTION_ROW),
                     )
                 }
@@ -440,6 +655,9 @@ private fun ActionContent(
                     ClusterAction(label = "Open all", onClick = onOpenAll),
                     ClusterAction(label = "Dismiss", onClick = onDismiss),
                 ),
+                inkColor = actionInkColor,
+                ruleColor = actionRuleColor,
+                faintColor = actionFaintColor,
                 modifier = Modifier.testTag(TestTag.ACTION_ROW),
             )
 
@@ -542,6 +760,59 @@ private fun SourceRow(
     }
 }
 
+@Composable
+private fun QuietSourceRow(
+    sources: List<String>,
+    timeRangeLabel: String,
+    palette: CapsulePalette.Tokens,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            sources.take(MAX_SOURCE_GLYPHS).forEach { category ->
+                SourceGlyph(
+                    kind = category.toSourceGlyphKind(),
+                    size = 22.dp,
+                )
+            }
+            if (sources.size > MAX_SOURCE_GLYPHS) {
+                MonoLabel(
+                    text = "+${sources.size - MAX_SOURCE_GLYPHS}",
+                    color = QuietClusterColors.CreamFaint,
+                    size = 10.sp,
+                    modifier = Modifier.testTag(TestTag.SOURCE_OVERFLOW),
+                )
+            }
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            MonoLabel(
+                text = timeRangeLabel,
+                color = QuietClusterColors.CreamFaint,
+                size = 10.sp,
+                modifier = Modifier.testTag(TestTag.TIME_RANGE),
+            )
+        }
+    }
+}
+
+private fun String.toSourceGlyphKind(): SourceGlyphKind = when (lowercase(Locale.ROOT)) {
+    "browser", "chrome", "web" -> SourceGlyphKind.chrome
+    "video", "youtube" -> SourceGlyphKind.youtube
+    "messaging", "sms", "messages" -> SourceGlyphKind.sms
+    "social", "instagram" -> SourceGlyphKind.instagram
+    "reading", "article", "news" -> SourceGlyphKind.nyt
+    "email", "work_email", "gmail" -> SourceGlyphKind.gmail
+    "files", "file" -> SourceGlyphKind.files
+    "photos", "photo" -> SourceGlyphKind.photos
+    "share" -> SourceGlyphKind.share
+    else -> SourceGlyphKind.url
+}
+
 /**
  * Single-letter monogram fallback for a source category — the
  * visual-refit branch will replace this with brand glyphs (twitter,
@@ -590,18 +861,36 @@ private fun CitationFoot(
 private fun DismissedTraceRow(
     label: String,
     palette: CapsulePalette.Tokens,
+    useNewVisualLanguage: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
+    val traceModifier = if (useNewVisualLanguage) {
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, QuietClusterColors.Rule, RoundedCornerShape(16.dp))
+            .background(QuietClusterColors.Panel)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .testTag(TestTag.DISMISSED_TRACE)
+    } else {
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 12.dp)
-            .testTag(TestTag.DISMISSED_TRACE),
+            .testTag(TestTag.DISMISSED_TRACE)
+    }
+
+    Box(
+        modifier = traceModifier,
     ) {
-        Text(
-            text = label,
-            style = monoFootStyle(palette),
-        )
+        if (useNewVisualLanguage) {
+            MonoLabel(text = label, color = QuietClusterColors.CreamFaint)
+        } else {
+            Text(
+                text = label,
+                style = monoFootStyle(palette),
+            )
+        }
     }
 }
 
@@ -643,3 +932,35 @@ object ClusterSuggestionCardTestTags {
 private typealias TestTag = ClusterSuggestionCardTestTags
 
 private const val MAX_SOURCE_GLYPHS: Int = 4
+
+private object QuietClusterColors {
+    val Panel = Color(0xFF141A2B)
+    val Cream = Color(0xFFF3EAD8)
+    val CreamDim = Color(0x8CF3EAD8)
+    val CreamFaint = Color(0x38F3EAD8)
+    val Rule = Color(0x1AF3EAD8)
+    val RuleHi = Color(0x2EF3EAD8)
+    val Accent = Color(0xFFE8B06A)
+}
+
+@Preview(name = "cluster card - quiet almanac")
+@Composable
+private fun QuietClusterSuggestionCardPreview() {
+    CompositionLocalProvider(
+        LocalRuntimeFlags provides RuntimeFlagValues(useNewVisualLanguage = true),
+    ) {
+        ClusterSuggestionCard(
+            state = ClusterSuggestionCardState.Surfaced(
+                headerLabel = "Cluster · 4 captures",
+                timeRangeLabel = "Sat 9:14AM → 11:42AM",
+                sourceCategories = listOf("BROWSER", "VIDEO", "READING"),
+                bodyText = "You kept circling the same launch-plan question across three sources.",
+            ),
+            onSummarize = {},
+            onOpenAll = {},
+            onDismiss = {},
+            onRetry = {},
+            reduceMotion = true,
+        )
+    }
+}

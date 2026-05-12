@@ -152,21 +152,25 @@ change. Phase 1 may begin.
 **Goal**: build `ClusterSuggestionCard` and `ClusterDetailScreen` from
 scratch on the new tokens. Coordinates with spec 002 Phase 11 Block 8.
 
-- [ ] **T015-101** [P1] Build `ClusterSuggestionCard` per
+- [x] **T015-101** [P1] Build `ClusterSuggestionCard` per
   `design/visual-refit-2026-04-29/project/orbit-screen-diary.jsx` cluster
   card section. Consume `OrbitMark`, `MonoLabel`, `SourceGlyph`,
   `ClusterActionRow`, `AgentVoiceMark` (where applicable per its lint
   allow-list). Read `RuntimeFlags.useNewVisualLanguage`; flag-OFF falls
   through to existing card (or no-op if none yet).
-- [ ] **T015-102** [P1] Build `ClusterDetailScreen` per
+- [x] **T015-102** [P1] Build `ClusterDetailScreen` per
   `design/visual-refit-2026-04-29/project/orbit-screen-cluster.jsx`. Hero
   question (serif), citation chips (per Principle XII), calendar block
   proposal section. ViewModel calls UNCHANGED from spec 002 expectations.
-- [ ] **T015-103** [P1] Add Compose `@Preview` for both surfaces with
+- [x] **T015-103** [P1] Add Compose `@Preview` for both surfaces with
   representative fixture data.
 - [ ] **T015-104** [P1] Verify gates: compile + lint clean; existing cluster
   tests (if any) green; manual flag-ON screenshot vs JSX reference recorded
   in PR body.
+  - Automated gates run 2026-05-12: `:app:compileDebugKotlin`,
+    `:app:testDebugUnitTest --tests 'com.capsule.app.diary.ui.ClusterSuggestionCardTest'`,
+    `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`. Manual flag-ON
+    screenshot remains pending for the PR body.
 - [ ] **T015-105** [P1] **REVIEW GATE** per commit landed in Phase 1.
   Phase 1 may span multiple commits; each gated.
 
