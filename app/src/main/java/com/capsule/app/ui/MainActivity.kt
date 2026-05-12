@@ -2,7 +2,9 @@ package com.capsule.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.capsule.app.permission.BatteryGuideInfo
 import com.capsule.app.permission.BatteryOptimizationGuide
 import com.capsule.app.permission.OverlayPermissionHelper
 import com.capsule.app.permission.UsageAccessHelper
@@ -401,26 +404,12 @@ class MainActivity : ComponentActivity() {
     private fun QuietBatteryGuideSection() {
         val guide = BatteryOptimizationGuide.getGuide() ?: return
         QuietSettingSection(label = "Battery") {
-            val action = guide.settingsAction
-            if (action == null) {
-                QuietStatusRow(
-                    title = "${guide.manufacturer} battery optimization",
-                    description = guide.instructions,
-                )
-            } else {
-                QuietSetupActionRow(
-                    title = "${guide.manufacturer} battery optimization",
-                    description = guide.instructions,
-                    action = "Open",
-                    onClick = {
-                        try {
-                            startActivity(Intent(action))
-                        } catch (_: Exception) {
-                            // Settings intent not available on this device
-                        }
-                    },
-                )
-            }
+            QuietSetupActionRow(
+                title = "${guide.manufacturer} battery optimization",
+                description = guide.instructions,
+                action = "Open",
+                onClick = { openBatterySettings(guide) },
+            )
         }
     }
 
@@ -487,19 +476,30 @@ class MainActivity : ComponentActivity() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
-                guide.settingsAction?.let { action ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = {
-                        try {
-                            startActivity(Intent(action))
-                        } catch (_: Exception) {
-                            // Settings intent not available on this device
-                        }
-                    }) {
-                        Text("Open Battery Settings")
-                    }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { openBatterySettings(guide) }) {
+                    Text("Open Battery Settings")
                 }
             }
+        }
+    }
+
+    private fun openBatterySettings(guide: BatteryGuideInfo) {
+        val candidates = buildList {
+            guide.settingsAction?.let { add(Intent(it)) }
+            add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            add(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+            )
+            add(Intent(Settings.ACTION_SETTINGS))
+        }
+
+        for (intent in candidates) {
+            if (intent.resolveActivity(packageManager) == null) continue
+            runCatching { startActivity(intent) }
+                .onSuccess { return }
         }
     }
 

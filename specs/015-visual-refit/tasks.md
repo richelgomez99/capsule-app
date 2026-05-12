@@ -264,6 +264,12 @@ danger row with refined wording.
   callback and the flag-ON Actions settings skill toggle callback. Automated
   gate: `:app:compileDebugKotlin :app:testDebugUnitTest
   :app:compileDebugAndroidTestKotlin :app:lintDebug`.
+- 2026-05-12 physical QA follow-up: Samsung battery guidance now always
+  exposes an Open action with safe fallbacks from OEM-specific action to
+  battery optimization settings, app details, then system settings. The
+  audit-log route opened from Settings → What Orbit did today now has a
+  flag-ON Quiet Almanac surface; Actions remains the separate skill settings
+  route.
 - [x] **T015-309** [P3] **REVIEW GATE** per commit.
   - Review completed 2026-05-12. Follow-up removed duplicate row/switch
     toggle handlers and added a stable test tag for the capture setup row.
@@ -305,6 +311,10 @@ Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
   owned by spec 016.
 - [x] **T015-407** [P4] Refit undo/silent-save/confirmation pills to Quiet
   Almanac styling and verify compact pill touch bounds match visible content.
+- 2026-05-12 physical QA follow-up: post-capture overlay window width is now
+  state-aware: chip selection keeps full-screen width, while undo/status/
+  confirmation pills wrap visible content so adjacent app taps are not blocked
+  by a full-row overlay.
 - [x] **T015-408** [P4] If "for someone" wires to a contact picker, scope
   the picker UI to a separate sub-task; keep behind the same flag.
   - 2026-05-12 audit: no contact picker is wired in spec 015; no-op / N/A.
@@ -317,6 +327,9 @@ Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
     `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`,
     `:app:lintDebug`. Manual/connected capture verification remains pending;
     use physical S24/Tab S9 flow per T015-905.
+  - 2026-05-12 physical QA follow-up removed the capture-sheet footer promise
+    of local-only behavior; flag-ON footer now says `PRIVATE BY DEFAULT · USER
+    CONTROLLED`.
 - [x] **T015-410** [P4] **REVIEW GATE** per commit.
   - Review completed 2026-05-11 after font-weight cleanup: no
     blocking/high/medium findings. Residual physical-QA notes track under

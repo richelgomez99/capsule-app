@@ -90,6 +90,7 @@ class CapsuleOverlayService : LifecycleService() {
     private var viewModel: OverlayViewModel? = null
     private var dismissTargetView: ComposeView? = null
     private var postCaptureView: ComposeView? = null
+    private var postCaptureParams: WindowManager.LayoutParams? = null
     private val tapStateCollector: StateSnapshotCollector by lazy {
         StateSnapshotCollector.create(applicationContext)
     }
@@ -373,7 +374,7 @@ class CapsuleOverlayService : LifecycleService() {
                     hidePostCaptureOverlay()
                 } else {
                     showPostCaptureOverlay(vm, ui)
-                    updatePostCaptureOverlayLayout(ui)
+                    syncPostCaptureOverlayLayout(ui)
                 }
             }
         }
@@ -608,10 +609,13 @@ class CapsuleOverlayService : LifecycleService() {
         dismissTargetView = null
     }
 
-    /**
-        * Mount the [PostCaptureOverlay] in its own window anchored to the bottom
-        * of the screen. Chip rows use full width; compact pills switch to
-        * WRAP_CONTENT so they don't block touches across the entire launcher row.
+        /**
+     * Mount the [PostCaptureOverlay] in its own bottom-anchored window.
+     * The window is touchable (for chip taps +
+     * undo) but does not absorb background touches thanks to
+     * `FLAG_NOT_FOCUSABLE`. Chip rows get the available screen width;
+     * compact pills wrap visible content so they do not block taps across
+     * the whole row.
      */
     private fun showPostCaptureOverlay(vm: OverlayViewModel, ui: PostCaptureUi) {
         if (postCaptureView != null) return
@@ -629,7 +633,7 @@ class CapsuleOverlayService : LifecycleService() {
 
         val bottomMarginPx = (24 * resources.displayMetrics.density).toInt()
         val params = WindowManager.LayoutParams(
-            postCaptureOverlayWidth(ui) ?: WindowManager.LayoutParams.WRAP_CONTENT,
+            postCaptureWidthFor(ui),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // NOT_FOCUSABLE: keyboards in other apps still work.
@@ -647,9 +651,36 @@ class CapsuleOverlayService : LifecycleService() {
         try {
             windowManager.addView(targetView, params)
             postCaptureView = targetView
+            postCaptureParams = params
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show post-capture overlay", e)
         }
+    }
+
+    private fun syncPostCaptureOverlayLayout(ui: PostCaptureUi) {
+        val targetView = postCaptureView ?: return
+        val params = postCaptureParams ?: return
+        val desiredWidth = postCaptureWidthFor(ui)
+        if (params.width == desiredWidth) return
+
+        params.width = desiredWidth
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT
+        try {
+            windowManager.updateViewLayout(targetView, params)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resize post-capture overlay", e)
+        }
+    }
+
+    private fun postCaptureWidthFor(ui: PostCaptureUi): Int = when (ui) {
+        is PostCaptureUi.ChipRow,
+        is PostCaptureUi.ReclassifyChipRow -> WindowManager.LayoutParams.MATCH_PARENT
+        is PostCaptureUi.None,
+        is PostCaptureUi.SilentWrapPill,
+        is PostCaptureUi.UndoPill,
+        is PostCaptureUi.RemovedConfirmation,
+        is PostCaptureUi.AlreadyInDiary,
+        is PostCaptureUi.AlreadySaved -> WindowManager.LayoutParams.WRAP_CONTENT
     }
 
     private fun hidePostCaptureOverlay() {
@@ -660,27 +691,7 @@ class CapsuleOverlayService : LifecycleService() {
             Log.e(TAG, "Failed to hide post-capture overlay", e)
         }
         postCaptureView = null
-    }
-
-    private fun updatePostCaptureOverlayLayout(ui: PostCaptureUi) {
-        val targetView = postCaptureView ?: return
-        val params = targetView.layoutParams as? WindowManager.LayoutParams ?: return
-        val targetWidth = postCaptureOverlayWidth(ui) ?: return
-        if (params.width == targetWidth) return
-        params.width = targetWidth
-        params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-        try {
-            windowManager.updateViewLayout(targetView, params)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update post-capture overlay layout", e)
-        }
-    }
-
-    private fun postCaptureOverlayWidth(ui: PostCaptureUi): Int? = when (ui) {
-        is PostCaptureUi.ChipRow -> WindowManager.LayoutParams.MATCH_PARENT
-        is PostCaptureUi.ReclassifyChipRow -> WindowManager.LayoutParams.MATCH_PARENT
-        is PostCaptureUi.None -> null
-        else -> WindowManager.LayoutParams.WRAP_CONTENT
+        postCaptureParams = null
     }
 
     private fun openExistingEnvelope(envelopeId: String, startNote: Boolean) {
