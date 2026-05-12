@@ -305,8 +305,11 @@ Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
   owned by spec 016.
 - [x] **T015-407** [P4] Refit undo/silent-save/confirmation pills to Quiet
   Almanac styling and verify compact pill touch bounds match visible content.
-- [ ] **T015-408** [P4] If "for someone" wires to a contact picker, scope
+- [x] **T015-408** [P4] If "for someone" wires to a contact picker, scope
   the picker UI to a separate sub-task; keep behind the same flag.
+  - 2026-05-12 audit: no contact picker is wired in spec 015; no-op / N/A.
+    "For someone" remains an intent chip only; picker UI stays out of this
+    branch.
 - [ ] **T015-409** [P4] Verify capture instrumented tests green on
   flag-OFF; on flag-ON, save path persists envelope correctly per
   DEP-001 status.
@@ -346,10 +349,16 @@ belong to the capture hardening bucket; the tasks below are visual refit work.
 
 - [ ] **T015-901** Manual screenshot sweep: each refitted screen with
   flag = true vs JSX reference. Record diffs in PR body.
-- [ ] **T015-902** APK size delta report (Cormorant + Inter + JetBrains Mono
+- [x] **T015-902** APK size delta report (Cormorant + Inter + JetBrains Mono
   subsets). If > +500 KB, flag to user.
-- [ ] **T015-903** A11y check: WCAG AA contrast on `bgDeep` + `cream`,
+  - 2026-05-12 debug APK font entries: 577,532 bytes uncompressed, 257,591
+    bytes compressed (251.6 KiB). Raw source font/XML footprint is 563.5 KiB,
+    but packaged APK font payload stays below the +500 KiB flag threshold.
+- [x] **T015-903** A11y check: WCAG AA contrast on `bgDeep` + `cream`,
   serif italic accent at body size.
+  - 2026-05-12 contrast ratios calculated from Quiet token hex values: cream
+    on bgDeep 16.45:1, creamDim over bgDeep approx 5.56:1, accent serif italic
+    on bgDeep 10.16:1, red on bgDeep 6.51:1, accentInk on accent 9.58:1.
 - [ ] **T015-904** Decision point: flip `RuntimeFlags.useNewVisualLanguage`
   default to `true` (or alpha-build override). Out of scope for this spec
   to actually flip — surface the readiness signal to the user.
