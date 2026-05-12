@@ -60,6 +60,7 @@ class SettingsActivity : ComponentActivity() {
                             prefs.continuationsPaused = next
                             if (next) engine.cancelAll("user_paused")
                         },
+                        onNavigateBack = { finish() },
                         onOpenCaptureSetup = {
                             startActivity(Intent(this, MainActivity::class.java))
                         },
