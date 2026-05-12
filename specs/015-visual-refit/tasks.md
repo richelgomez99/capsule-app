@@ -354,7 +354,12 @@ belong to the capture hardening bucket; the tasks below are visual refit work.
   the bubble must be able to reach the target across the full window bounds.
 - [ ] **T015-504** [P5] Verify bubble hit target and drag affordance with
   TalkBack/accessibility touch exploration enabled.
-- [ ] **T015-505** [P5] **REVIEW GATE** per commit.
+- [ ] **T015-505** [P5] Decide whether user-adjustable bubble size and
+  transparency belong in this visual-refit phase or a follow-up overlay
+  customization spec. If accepted here, add persisted settings controls,
+  bounded defaults, and physical QA for tap/drag reliability at every size and
+  alpha value.
+- [ ] **T015-506** [P5] **REVIEW GATE** per commit.
 
 ---
 
@@ -378,6 +383,11 @@ belong to the capture hardening bucket; the tasks below are visual refit work.
 - [ ] **T015-905** Physical QA matrix: S24 portrait/landscape + Tab S9
   portrait/landscape for Diary, Settings, Capture sheet, post-capture pills,
   and bubble drag/remove.
+  - 2026-05-12 user physical QA pass on temporary flag-ON clean-launcher build:
+    new What Orbit did today page renders in Quiet design; Samsung battery
+    settings Open action launches; capture-sheet footer no longer promises
+    local-only behavior; undo/status pill no longer blocks adjacent taps.
+    Remaining matrix coverage: Diary, landscape passes, and bubble drag/remove.
 - [ ] **T015-906** Branch hygiene: before opening PRs, split current mixed
   worktree changes into the owning branches: `015-*` for visual refit,
   `016-intent-set-migration` for enum/intent-label migration, and
