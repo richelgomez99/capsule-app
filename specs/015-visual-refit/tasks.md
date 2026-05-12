@@ -246,16 +246,27 @@ danger row with refined wording.
     and flag-ON callback/copy coverage in `SettingsScreenTest`. Connected
     execution remains pending with the same Compose harness limitation noted
     under T015-206.
-- [ ] **T015-306** [P3] Audit nested settings routes and setup/settings
+- [x] **T015-306** [P3] Audit nested settings routes and setup/settings
   surfaces for legacy `Capsule` copy. Replace user-facing product copy with
   `Orbit`; leave package names, process names, and developer-only identifiers
   unchanged.
-- [ ] **T015-307** [P3] Refit nested settings pages, including capture overlay
+- 2026-05-12 audit replaced user-facing setup, battery guidance, and foreground
+  notification copy with `Orbit`. Remaining `Capsule` hits are debug-only labels,
+  log tags, theme/package/service identifiers, and token KDoc.
+- [x] **T015-307** [P3] Refit nested settings pages, including capture overlay
   settings, to the same Quiet Almanac section pattern as the top-level settings
   screen.
-- [ ] **T015-308** [P3] Add/extend settings tests or manual QA notes covering
+- 2026-05-12 refitted flag-ON `ActionsSettingsUI`, `TrashScreen`, and the
+  `MainActivity` capture setup route opened by Settings → Floating bubble.
+- [x] **T015-308** [P3] Add/extend settings tests or manual QA notes covering
   top-level settings plus nested capture overlay route with flag ON.
-- [ ] **T015-309** [P3] **REVIEW GATE** per commit.
+- Added `SettingsScreenTest` coverage for the flag-ON Floating bubble route
+  callback and the flag-ON Actions settings skill toggle callback. Automated
+  gate: `:app:compileDebugKotlin :app:testDebugUnitTest
+  :app:compileDebugAndroidTestKotlin :app:lintDebug`.
+- [x] **T015-309** [P3] **REVIEW GATE** per commit.
+  - Review completed 2026-05-12. Follow-up removed duplicate row/switch
+    toggle handlers and added a stable test tag for the capture setup row.
 
 **Phase 3 Checkpoint**: settings refitted; danger-row wording approved
 against constitution.

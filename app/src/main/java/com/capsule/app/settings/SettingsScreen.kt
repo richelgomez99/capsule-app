@@ -242,6 +242,7 @@ private fun QuietSettingsScreen(
                         description = "Always available across apps. Manage overlay permission from the setup flow.",
                         value = "SETUP",
                         onClick = onOpenCaptureSetup,
+                        modifier = Modifier.testTag(SettingsScreenTestTags.CAPTURE_SETUP_ROW),
                     )
                 }
             }
@@ -359,7 +360,7 @@ private fun QuietSettingsHero() {
 }
 
 @Composable
-private fun QuietSettingSection(
+internal fun QuietSettingSection(
     label: String,
     content: @Composable () -> Unit,
 ) {
@@ -410,14 +411,15 @@ private fun QuietToggleRow(
 }
 
 @Composable
-private fun QuietNavRow(
+internal fun QuietNavRow(
     title: String,
     description: String,
     value: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 14.dp),
@@ -515,7 +517,7 @@ private fun QuietSettingsFooter() {
 }
 
 @Composable
-private fun QuietRowTitle(text: String) {
+internal fun QuietRowTitle(text: String) {
     Text(
         text = text,
         color = QuietSettingsColors.Cream,
@@ -529,7 +531,7 @@ private fun QuietRowTitle(text: String) {
 }
 
 @Composable
-private fun QuietRowDescription(text: String) {
+internal fun QuietRowDescription(text: String) {
     Text(
         text = text,
         color = QuietSettingsColors.CreamDim,
@@ -543,7 +545,7 @@ private fun QuietRowDescription(text: String) {
 }
 
 @Composable
-private fun QuietTag(text: String) {
+internal fun QuietTag(text: String) {
     Text(
         text = text,
         modifier = Modifier
@@ -579,7 +581,7 @@ private fun QuietToggle(checked: Boolean) {
 }
 
 @Composable
-private fun QuietRule() {
+internal fun QuietRule() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -588,7 +590,7 @@ private fun QuietRule() {
     )
 }
 
-private object QuietSettingsColors {
+internal object QuietSettingsColors {
     val BgDeep = Color(0xFF080B14)
     val Cream = Color(0xFFF3EAD8)
     val CreamDim = Color(0x8CF3EAD8)
@@ -675,4 +677,5 @@ private fun SettingsToggleRow(
 
 internal object SettingsScreenTestTags {
     const val PAUSE_TOGGLE = "settings-pause-toggle"
+    const val CAPTURE_SETUP_ROW = "settings-capture-setup-row"
 }

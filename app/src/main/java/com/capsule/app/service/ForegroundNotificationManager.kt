@@ -18,8 +18,8 @@ class ForegroundNotificationManager(private val context: Context) {
     companion object {
         const val CHANNEL_ID = "capsule_overlay"
         const val NOTIFICATION_ID = 1
-        private const val CHANNEL_NAME = "Capsule Overlay"
-        private const val CHANNEL_DESCRIPTION = "Keeps Capsule's floating overlay running"
+        private const val CHANNEL_NAME = "Orbit Overlay"
+        private const val CHANNEL_DESCRIPTION = "Keeps Orbit's floating overlay running"
     }
 
     fun createNotificationChannel() {
@@ -50,7 +50,7 @@ class ForegroundNotificationManager(private val context: Context) {
         )
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("Capsule Active")
+            .setContentTitle("Orbit Active")
             .setContentText("Tap bubble to capture clipboard")
             .setSmallIcon(R.drawable.ic_capsule_notification)
             .setOngoing(true)
