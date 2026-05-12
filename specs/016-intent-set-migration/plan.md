@@ -30,13 +30,13 @@ Replace stale `REMIND_ME` / `INSPIRATION` planning text with the product decisio
 
 **Gate**: Supabase function tests for `llm_gateway` pass.
 
-### Phase 3 - ContactRef Schema
+### Phase 3 - ContactRef Schema (Deferred)
 
-- Add `ContactRef` value object and nullable fields on `IntentEnvelopeEntity` only when the Room migration is implemented in the same change set.
-- Bump the Room schema version and add an additive migration for `contactRefId`, `contactRefName`, `contactRefSource` plus CHECK constraints.
-- Generate and commit the exported schema.
+- No ContactRef value object, `IntentEnvelopeEntity` fields, Room migration, or exported schema lands in this implementation slice.
+- Follow-up ContactRef work must target the next migration after the then-current Room schema version. Earlier migration names are already owned by prior schema work and MUST NOT be reused for ContactRef.
+- ContactRef fields and their Room migration must still land in the same future change set.
 
-**Gate**: migration tests prove existing intent values are unchanged and new contact-ref columns back-fill `NULL`.
+**Gate for future slice**: migration tests prove existing intent values are unchanged and new contact-ref columns back-fill `NULL`.
 
 ### Phase 4 - Cross-Tree Verification
 
@@ -58,5 +58,5 @@ Replace stale `REMIND_ME` / `INSPIRATION` planning text with the product decisio
 |---|---|
 | Stale docs push implementation toward `REMIND_ME` / `INSPIRATION` | This amendment removes those names from active requirements and tasks. |
 | Cloud returns labels Android cannot parse | Prompt and allowlist use Android enum names; sanitizer collapses unknown labels to `AMBIGUOUS`. |
-| Adding ContactRef without migration breaks Room startup | Entity fields and schema migration must land together. |
+| Adding ContactRef without migration breaks Room startup | ContactRef is deferred; future entity fields and schema migration must land together. |
 | Five chips crowd the compact overlay | Spec 015 owns visual refinement; spec 016 verifies behavior/order only. |

@@ -17,6 +17,7 @@
 - [x] **T016-103** Update `ChipRow.kt` to render five chips in order: `Want it`, `Reference`, `Read later`, `For someone`, `Interesting`.
 - [x] **T016-104** Update `IntentChipPicker.kt` to render the same five chips in the same order.
 - [x] **T016-105** Verify no user-pickable chip path offers `Intent.AMBIGUOUS`.
+- [x] **T016-106** Add an Android unit test for shared intent string parsing: all durable enum names round-trip and unknown/stale values fallback to `AMBIGUOUS`.
 
 **Gate**: `:app:compileDebugKotlin` and `:app:testDebugUnitTest` pass.
 
@@ -24,19 +25,16 @@
 
 - [x] **T016-201** Update `supabase/functions/llm_gateway/handlers/classify_intent.ts` to prompt for Android labels: `WANT_IT`, `REFERENCE`, `READ_LATER`, `FOR_SOMEONE`, `INTERESTING`, `AMBIGUOUS`.
 - [x] **T016-202** Update `supabase/functions/llm_gateway/lib/allowlists.ts` so the closed set matches Android.
-- [x] **T016-203** Update Supabase tests to cover accepted `WANT_IT` and `READ_LATER` labels plus out-of-set fallback to `AMBIGUOUS`.
+- [x] **T016-203** Update Supabase tests to cover representative handler responses, all six allowlisted Android labels, and out-of-set fallback to `AMBIGUOUS`.
 
 **Gate**: Supabase `llm_gateway` tests pass.
 
-## Phase 3 - ContactRef schema, if included in this branch
+## Phase 3 - ContactRef schema (deferred follow-up; no active tasks in this branch)
 
-- [ ] **T016-301** Add `ContactRef` and `ContactRefSource` value types.
-- [ ] **T016-302** Add nullable `contactRefId`, `contactRefName`, and `contactRefSource` fields to `IntentEnvelopeEntity` only in the same change set as the Room migration.
-- [ ] **T016-303** Add Room migration for contact-ref columns and CHECK constraints; do not rewrite existing `intent` values.
-- [ ] **T016-304** Generate and commit the exported Room schema for the new version.
-- [ ] **T016-305** Add migration tests proving row count and all existing `intent` values are preserved, contact-ref columns back-fill `NULL`, and both CHECK constraints reject invalid rows.
+- ContactRef value types, `IntentEnvelopeEntity` fields, Room migration, exported schema, and migration tests are deferred to a future schema slice.
+- That future slice must target the next migration after the then-current Room schema version; do not reuse already-consumed earlier migration names.
 
-**Gate**: migration tests pass and exported schema includes the contact-ref columns/constraints.
+**Gate for future slice**: migration tests pass and exported schema includes the contact-ref columns/constraints.
 
 ## Phase 4 - Verification and branch hygiene
 
@@ -44,17 +42,19 @@
 - [x] **T016-402** Run Supabase classifier tests.
 - [x] **T016-403** Confirm implementation paths contain no stale `REMIND_ME`, `INSPIRATION`, or `intent-set rename` behavior.
 - [x] **T016-404** Commit amended spec 016 and implementation slices separately enough for review.
+- [x] **T016-405** Confirm the spec 016 diff contains no Room entity, migration, or exported schema changes for ContactRef or intent rewrites.
 
 ## Verification Matrix
 
 | Requirement | Verifying task |
 |---|---|
 | FR-016-001 enum set | T016-101 + compile |
-| FR-016-002 no historical rename | T016-003 + T016-303/T016-305 if migration lands |
+| FR-016-002 no historical rename | T016-106 + T016-403 + T016-405 |
 | FR-016-003 chip order | T016-103 + T016-104 |
 | FR-016-004 label resolvers | T016-102 + compile |
 | FR-016-005 no Ambiguous chip | T016-105 |
 | FR-016-006 cloud labels | T016-201..203 |
-| FR-016-007 contact-ref schema | T016-301..305 |
-| FR-016-009 fallback parse | Existing parser + T016-401 |
+| FR-016-007 no ContactRef schema in this slice | T016-405 |
+| FR-016-008 existing intents preserved | T016-106 + T016-405 |
+| FR-016-009 fallback parse | T016-106 + T016-401 |
 | FR-016-010 no stale rename work | T016-003 + T016-403 |

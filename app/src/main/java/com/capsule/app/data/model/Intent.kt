@@ -9,3 +9,6 @@ enum class Intent {
     INTERESTING,
     AMBIGUOUS
 }
+
+fun String.toIntentOrAmbiguous(): Intent =
+    runCatching { Intent.valueOf(this) }.getOrElse { Intent.AMBIGUOUS }

@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.capsule.app.data.ipc.EnvelopeViewParcel
 import com.capsule.app.data.model.Intent
+import com.capsule.app.data.model.toIntentOrAmbiguous
 import com.capsule.app.ui.IntentChipPicker
 import java.time.Instant
 import java.time.ZoneId
@@ -379,9 +380,6 @@ private fun String.humanizeActivityOrNull(): String? {
         .replace('_', ' ')
         .replaceFirstChar { it.titlecase(Locale.ROOT) }
 }
-
-private fun String.toIntentOrAmbiguous(): Intent =
-    runCatching { Intent.valueOf(this) }.getOrElse { Intent.AMBIGUOUS }
 
 private fun Intent.displayLabel(): String = when (this) {
     Intent.WANT_IT -> "Want it"

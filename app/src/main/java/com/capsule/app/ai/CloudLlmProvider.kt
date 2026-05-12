@@ -16,6 +16,7 @@ import com.capsule.app.ai.model.SummaryResult
 import com.capsule.app.data.entity.StateSnapshot
 import com.capsule.app.data.model.Intent
 import com.capsule.app.data.model.SensitivityScope
+import com.capsule.app.data.model.toIntentOrAmbiguous
 import com.capsule.app.net.ipc.INetworkGateway
 import com.capsule.app.net.ipc.LlmGatewayRequestParcel
 import com.capsule.app.net.ipc.LlmGatewayResponseParcel
@@ -221,8 +222,7 @@ class CloudLlmProvider(
         sensitivityScope = decodeSensitivityScope(sensitivityScope),
     )
 
-    private fun decodeIntent(raw: String): Intent =
-        runCatching { Intent.valueOf(raw) }.getOrDefault(Intent.AMBIGUOUS)
+    private fun decodeIntent(raw: String): Intent = raw.toIntentOrAmbiguous()
 
     private fun decodeSensitivityScope(raw: String): SensitivityScope =
         runCatching { SensitivityScope.valueOf(raw) }.getOrDefault(SensitivityScope.PERSONAL)
