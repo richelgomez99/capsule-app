@@ -56,6 +56,7 @@ analysis gate after Phase 1 schema details are finalized.
 - [x] **T017-106** Preserve existing URL hydration result reuse: duplicate logic
   must not remove `sharedContinuationResultId` behavior or continuation-result
   canonical-hash cache hits.
+
 ## Phase 2 - Overlay feedback actions
 
 - [x] **T017-201** Add `SealOutcome.AlreadySaved(existingEnvelopeId, matchedBy)`
@@ -90,8 +91,19 @@ analysis gate after Phase 1 schema details are finalized.
   the latest note on the existing envelope and confirm no ad-hoc note field is
   introduced. Open-existing tests must tap the action and assert navigation targets
   `existingEnvelopeId` without creating a new envelope.
-- [ ] **T017-304** Physical QA on S24 and Tab S9: duplicate URL, duplicate text,
+- [x] **T017-304** Physical QA on S24 and Tab S9: duplicate URL, duplicate text,
   adjacent icon tap outside pill, portrait and landscape.
+  - [x] S24 physical duplicate URL pass confirmed `Already saved`, 2026-05-11.
+  - [x] S24 physical duplicate exact-text pass confirmed `Already saved`,
+    2026-05-11.
+  - [x] Tab S9 physical duplicate URL pass confirmed `Already saved`,
+    2026-05-11.
+  - [x] Tab S9 physical duplicate exact-text pass confirmed `Already saved`,
+    2026-05-11.
+  - [x] Adjacent tap pass-through outside compact feedback/undo pill confirmed
+    on physical device feedback, 2026-05-11.
+  - [x] Landscape drag/remove and bounds behavior confirmed on physical device
+    feedback, 2026-05-11.
 - [x] **T017-305** Verification gate: `:app:compileDebugKotlin`,
   `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`.
 - [x] **T017-306** Regression test: existing URL hydration dedupe contract still
