@@ -40,6 +40,7 @@ As a user in the diary, I tap an unobtrusive affordance at the bottom-right (typ
 **Why P1**: Core feature. Without it, Orbit feels incomplete to anyone used to any journaling app.
 
 **Acceptance**:
+
 1. **Given** the diary is open, **When** I tap the `＋` affordance, **Then** a compose sheet appears covering the lower 60% of the screen, focus is in the text field, and the keyboard auto-opens.
 2. **Given** I've typed ≥1 character, **When** I tap Seal with no intent chosen, **Then** the envelope is sealed with intent `AMBIGUOUS` (matching the auto-dismiss default from FR-003 spec 002).
 3. **Given** I've tapped an intent wax seal before Seal, **Then** the envelope is sealed with that intent directly, no ambiguity.
@@ -54,6 +55,7 @@ As a user realizing I forgot to capture something, I navigate to an older day vi
 **Why P2**: High-value for trust and retention; not blocking v1 release. P2 lets us ship User Story 1 alone if time pressures demand it.
 
 **Acceptance**:
+
 1. **Given** I am viewing 2026-04-18 in the pager, **When** I tap the day-scoped compose affordance, **Then** a compose sheet opens with a subtle header "Adding to April 18" so I understand the temporal context.
 2. **Given** I compose a backfill envelope on 2026-04-18, **When** it is sealed, **Then** `envelope.createdAt = now()` (true wall-clock honesty), `envelope.dayLocal = 2026-04-18` (diary placement), and a NEW field `envelope.backfillFor = 2026-04-18` is set so the UI can annotate the card with a small "Added on April 21" note.
 3. **Given** the backfill envelope is on the older page, **Then** the day-header generator (spec 002 T048) RE-runs for that day so the paragraph can reflect the new entry on next open.
@@ -67,38 +69,83 @@ As a user reading a webpage or in any app, I tap the system share button, choose
 **Why P3**: Large convenience win but partially overlapping with the clipboard bubble. Moves to v1.1 unless trivial.
 
 **Acceptance**:
+
 1. Orbit registers a `SEND` intent filter for `text/plain` and `text/*; S.android.intent.extra.TEXT`.
 2. Activating share opens the compose sheet pre-populated with the shared payload.
 3. Sealing a shared-sheet envelope writes `envelope.captureSource = SHARE_SHEET` (new enum) in place of `CLIPBOARD` / `SCREENSHOT_OBSERVER`.
+
+### User Story 4 — Add a note to a live capture before sealing (P1)
+
+As a user saving something from another app through the bubble, I can tap an
+in-sheet "Add note" affordance on the capture sheet, type why I am saving it
+or what I want to remember, and seal without being redirected into Orbit. The
+note travels with the capture as user-authored context; it does not replace the
+captured text, URL, image, source attribution, or intent.
+
+**Product decision**: Notes are envelope annotations, not a separate app-mode.
+Orbit is still a capture-with-intent system: the artifact is what was captured,
+the intent says why it matters, and notes are marginalia the user adds when the
+artifact alone is not enough. A capture may have multiple notes over time,
+because interpretation can evolve after the first save. The initial note added
+from the capture sheet becomes the first note in that envelope's note stack;
+later notes are added from capture detail.
+
+**Acceptance**:
+
+1. **Given** the capture sheet is open from the bubble, **When** I tap Add note,
+   **Then** the sheet expands in place with a focused plaintext field and the
+   keyboard; Orbit does not switch me to the diary or a separate app screen.
+2. **Given** I type a note and tap Save, **Then** the note is sealed in the
+   same transaction as the captured artifact and appears on the capture detail
+   screen as the first user note.
+3. **Given** I skip the note, **Then** capture behavior is unchanged.
+4. **Given** a capture already has notes, **When** I open its detail screen,
+   **Then** notes render as a chronological stack of short user-authored
+   entries with timestamps and an Add note affordance.
+5. **Given** I add more than one note over time, **Then** each note remains a
+   distinct entry rather than being merged into the captured text.
 
 ---
 
 ## Functional Requirements
 
 **Schema / data model** (amendments to [data-model.md](specs/002-intent-envelope-and-diary/data-model.md)):
+
 - **FR-011-001**: System MUST add `captureSource: CaptureSource` enum to `IntentEnvelope` with values `{CLIPBOARD_BUBBLE, SCREENSHOT_OBSERVER, MANUAL_COMPOSE, SHARE_SHEET, AGENT}`. Existing rows default to `CLIPBOARD_BUBBLE` (safe because screenshot rows already carry a distinct `isScreenshot` flag; migration preserves that).
 - **FR-011-002**: System MUST add `backfillFor: LocalDate?` to `IntentEnvelope`. Null for all existing rows.
 - **FR-011-003**: System MUST add `AuditAction.ENVELOPE_BACKFILLED` to the audit-log enum.
 - **FR-011-004**: Room migration from the current schema is additive-only (two nullable columns + enum extension). No data rewrite.
+- **FR-011-004a**: System MUST model user notes as an append-only child
+  collection attached to an envelope, not as a single nullable `userNote`
+  column. Each note carries `{id, envelopeId, body, createdAt, deletedAt?}`.
+  The first note may be created during the capture-sheet seal transaction;
+  later notes are created from capture detail.
 
 **Compose UI**:
+
 - **FR-011-005**: System MUST ship `ComposeSheet` as a Compose modal bottom sheet rendered above DiaryScreen, styled per design.md §4 (to be coded after spec 010). Until 010 lands, ship with palette + typography tokens even if primitives aren't final.
 - **FR-011-006**: System MUST pipe the composed payload through the `SealOrchestrator` (spec 002) using the same scrub → intent-classify → seal path as clipboard capture. No new seal path.
 - **FR-011-007**: System MUST expose a `ComposeViewModel` with states `{Idle, Composing(text, url?, intent?, backfillFor?), Sealing, Sealed, Error}`. Standard sealed-class UI pattern.
 - **FR-011-008**: System MUST allow backfill only for days between the first envelope's dayLocal and yesterday (inclusive). Today's affordance writes directly to today (no backfill marker).
 
 **Affordance placement**:
+
 - **FR-011-009**: DiaryScreen MUST show a compose affordance that is discoverable but not visually loud — a small typographic `＋` glyph in the bottom-right of the scaffold, sized to 56 dp (Material FAB baseline) but styled per design.md (no circle-with-shadow).
 - **FR-011-010**: When viewing a past day (day pager index > 0), the affordance label extends to `＋ Add to this day` so the user understands the context before tapping.
 
 **Audit + telemetry**:
+
 - **FR-011-011**: Every manual seal writes `AuditAction.ENVELOPE_CREATED` with `extraJson = {"source":"manual_compose","hasUrl":<bool>,"intent":"<chosen or ambiguous>"}`.
 - **FR-011-012**: Every backfill seal writes BOTH `ENVELOPE_CREATED` and `ENVELOPE_BACKFILLED` rows in one transaction. The backfill row carries `{originalDay, backfillFor}`.
 
 **Principle compliance**:
+
 - **FR-011-013**: Manual composition MUST NOT bypass the sensitivity scrubber (spec 002 FR-002a). Same rules, same redaction, same audit.
 - **FR-011-014**: Manual composition MUST NOT trigger any network call. If the user composes a URL, the URL is queued into the existing continuation pipeline (spec 002), which independently respects charger+wifi rules.
 - **FR-011-015**: Composition is an on-device-only path: no prompt, no classification, no inference crosses the process boundary. (Intent classification runs in `:ml` per Principle VI.)
+- **FR-011-016**: Capture-sheet notes MUST be in-context. The capture overlay
+  may expand to collect a note, but MUST NOT redirect to `DiaryActivity` or
+  require opening Orbit before sealing.
 
 ---
 
@@ -106,7 +153,7 @@ As a user reading a webpage or in any app, I tap the system share button, choose
 
 - **SC-011-1**: A new user can find the compose affordance within 60 seconds of first opening the diary (A/B test or moderated usability session).
 - **SC-011-2**: Manual envelopes round-trip through SealOrchestrator with identical audit trail to clipboard captures (excepting the `source` discriminator).
-- **SC-011-3**: Backfill envelopes appear on the targeted day AND carry a visible "Added on <date>" annotation so the user can distinguish in-the-moment capture from retroactive capture at a glance.
+- **SC-011-3**: Backfill envelopes appear on the targeted day AND carry a visible `Added on {date}` annotation so the user can distinguish in-the-moment capture from retroactive capture at a glance.
 - **SC-011-4**: Sensitivity scrubber rules applied identically to manual payloads (unit-test parity with clipboard path).
 - **SC-011-5**: Zero regressions on existing clipboard capture latency (the manual path is additive, not a rewrite).
 
@@ -128,6 +175,7 @@ This spec requires one constitution amendment, added by a companion diff in the 
 > **Principle II — amendment (2026-04-21)**: Capture is *effortless* AND *deliberate*. The primary paths (bubble, screenshots) minimize friction for reactive thoughts. The secondary path (manual composition, share sheet, future voice) serves deliberate thoughts the user initiates from outside an observed surface. Both paths converge on the same seal contract, the same scrub pipeline, the same audit obligation. Composition is never *required* — a user who only ever uses the bubble gets a complete Orbit.
 
 All other principles are respected unchanged:
+
 - **I (Local-First Supremacy)**: manual composition never touches the network; the only network path is the post-seal URL continuation, identical to clipboard.
 - **III (Intent Before Artifact)**: the wax-seal chooser in the compose sheet enforces intent selection at seal time; ambiguous is still the default.
 - **VI (Privilege Separation)**: the compose sheet lives in the `:ui` process and hands the payload to `:ml` via the existing seal binder. No new process boundary, no new permission.

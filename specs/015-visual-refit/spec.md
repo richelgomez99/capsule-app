@@ -39,10 +39,10 @@ These were resolved before spec authoring. Do not relitigate during implementati
 - **LD-004 — Local-AI hardware phrasing is**
   "for local-model-capable phones (Pixel 8 Pro+, Galaxy S24+, capable hardware)".
   Not "Pixel 8 and up."
-- **LD-005 — Bubble overlay refit (Phase 5) deferred to post-Demo Day (May 22, 2026).**
-  The bubble in the working tree is the demo bubble; do not do a visual refit
-  before Demo Day. Geometry/accessibility bug fixes may land in the capture
-  hardening bucket when they preserve the existing demo visual treatment.
+- **LD-005 — Bubble overlay refit is in scope before Demo Day.**
+  Visual quality matters for the primary capture affordance. Phase 5 should
+  refit the working bubble to the Orbit mark language behind the visual flag,
+  while preserving tap/drag reliability and explicit accessibility checks.
 - **LD-006 — Source glyphs are provider-first, origin-preserving.** When the
   captured content contains a strong provider URL (for example YouTube), that
   provider wins the primary glyph even if the foreground app was Brave,
@@ -123,9 +123,8 @@ flag = true vs the design bundle reference renders.
 **Acceptance Scenarios**:
 
 1. **Given** all phases complete, **When** flag flips on, **Then** Diary,
-   Cluster detail, Settings, and Capture sheet render in the new language
-   and the bubble overlay still renders in the existing visual language
-   (LD-005).
+  Cluster detail, Settings, Capture sheet, capture detail, and bubble overlay
+  render in the new language behind the visual flag.
 
 ---
 
@@ -190,8 +189,9 @@ flag = true vs the design bundle reference renders.
 - **FR-015-011**: Settings danger-row copy MUST scope honestly: distinguish
   what Orbit controls (local data, on-device caches) vs what depends on
   third-party LLM-provider SLAs. (Per spec.md context for LD-004.)
-- **FR-015-012**: Bubble overlay (`com.capsule.app.bubble.*`) MUST NOT be
-  modified by this spec before Demo Day (2026-05-22). (Per LD-005.)
+- **FR-015-012**: Bubble overlay work MUST preserve tap/drag reliability,
+  overlay touch bounds, and accessibility behavior while refitting to the Orbit
+  mark language. (Per LD-005.)
 - **FR-015-013**: A Claude-review gate MUST be enforced after every commit
   on `015-visual-refit` before the next commit lands. The gate is not
   automated; it is a manual checkpoint enumerated in `tasks.md` Phase 0.
@@ -285,7 +285,6 @@ layer.
 
 ## Out of Scope (Explicit)
 
-- Bubble overlay refit (deferred per LD-005 to post-Demo Day).
 - Duplicate capture detection and `Already saved` product behavior; this lands
   in spec 017 (`017-capture-feedback-actions`) because it changes repository,
   IPC, and user action semantics.
