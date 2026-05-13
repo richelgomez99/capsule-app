@@ -43,6 +43,30 @@ class SourceIdentityResolverTest {
     }
 
     @Test
+    fun categoryOnlyVideoCapture_usesGenericVideoGlyph() {
+        val glyph = SourceIdentityResolver.glyphKind(
+            textContent = "clip I want to remember",
+            canonicalUrl = null,
+            sourceAppLabel = null,
+            appCategory = "VIDEO",
+        )
+
+        assertEquals(SourceGlyphKind.video, glyph)
+    }
+
+    @Test
+    fun categoryOnlyReadingCapture_usesGenericReadingGlyph() {
+        val glyph = SourceIdentityResolver.glyphKind(
+            textContent = "article note",
+            canonicalUrl = null,
+            sourceAppLabel = null,
+            appCategory = "READING",
+        )
+
+        assertEquals(SourceGlyphKind.reading, glyph)
+    }
+
+    @Test
     fun youtubeDetectionCoversMobileAndNoCookieHosts() {
         assertTrue(SourceIdentityResolver.containsYouTubeUrl("https://m.youtube.com/shorts/abc123"))
         assertTrue(SourceIdentityResolver.containsYouTubeUrl("https://www.youtube-nocookie.com/embed/abc123"))

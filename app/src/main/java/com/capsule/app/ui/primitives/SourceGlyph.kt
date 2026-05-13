@@ -36,11 +36,16 @@ enum class SourceGlyphKind(val label: String) {
     notes("✎"),
     instagram("◎"),
     sms("✉"),
+    browser("↗"),
     chrome("C"),
+    mail("✉"),
     gmail("M"),
     photos("◐"),
+    video("▶"),
     youtube("▶"),
+    reading("T"),
     nyt("T"),
+    social("@"),
     substack("S"),
     files("◫"),
     tiktok("T"),
@@ -114,11 +119,16 @@ private fun SourceGlyphKind.fill(palette: CapsulePalette.Tokens): SourceGlyphFil
         ),
     )
     SourceGlyphKind.sms -> SourceGlyphFill.Solid(Color(0xFF34C759))
+    SourceGlyphKind.browser -> SourceGlyphFill.Solid(palette.inkFaint)
     SourceGlyphKind.chrome -> SourceGlyphFill.Solid(Color(0xFF1A73E8))
+    SourceGlyphKind.mail -> SourceGlyphFill.Solid(palette.inkFaint)
     SourceGlyphKind.gmail -> SourceGlyphFill.Solid(Color(0xFFEA4335))
     SourceGlyphKind.photos -> SourceGlyphFill.Solid(Color(0xFFFBBF24))
+    SourceGlyphKind.video -> SourceGlyphFill.Solid(palette.inkFaint)
     SourceGlyphKind.youtube -> SourceGlyphFill.Solid(Color(0xFFFF0000))
+    SourceGlyphKind.reading -> SourceGlyphFill.Solid(palette.inkFaint)
     SourceGlyphKind.nyt -> SourceGlyphFill.Solid(Color(0xFF000000))
+    SourceGlyphKind.social -> SourceGlyphFill.Solid(palette.inkFaint)
     SourceGlyphKind.substack -> SourceGlyphFill.Solid(Color(0xFFFF6719))
     SourceGlyphKind.files -> SourceGlyphFill.Solid(Color(0xFF34C759))
     SourceGlyphKind.tiktok -> SourceGlyphFill.Solid(Color(0xFFFE2C55))
