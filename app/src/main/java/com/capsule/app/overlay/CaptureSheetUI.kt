@@ -321,7 +321,7 @@ private fun QuietCaptureSheet(
             }
 
             QuietMonoLabel(
-                text = "PRIVATE BY DEFAULT · USER CONTROLLED",
+                text = "USER CONTROLLED · AUDITABLE",
                 color = colors.CreamFaint,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
