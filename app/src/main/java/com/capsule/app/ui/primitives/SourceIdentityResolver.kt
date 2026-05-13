@@ -16,17 +16,19 @@ object SourceIdentityResolver {
 
         val label = sourceAppLabel.orEmpty().lowercase(Locale.ROOT)
         if ("youtube" in label) return SourceGlyphKind.youtube
-        if ("brave" in label || "chrome" in label || "browser" in label) return SourceGlyphKind.chrome
-        if ("gmail" in label || "mail" in label) return SourceGlyphKind.gmail
+        if ("brave" in label || "chrome" in label) return SourceGlyphKind.chrome
+        if ("browser" in label || "internet" in label) return SourceGlyphKind.browser
+        if ("gmail" in label) return SourceGlyphKind.gmail
+        if ("mail" in label) return SourceGlyphKind.mail
         if ("message" in label || "sms" in label) return SourceGlyphKind.sms
 
         return when (appCategory.orEmpty().lowercase(Locale.ROOT)) {
-            "browser" -> SourceGlyphKind.chrome
-            "video" -> SourceGlyphKind.youtube
+            "browser" -> SourceGlyphKind.browser
+            "video" -> SourceGlyphKind.video
             "messaging" -> SourceGlyphKind.sms
-            "social" -> SourceGlyphKind.twitter
-            "reading" -> SourceGlyphKind.nyt
-            "work_email" -> SourceGlyphKind.gmail
+            "social" -> SourceGlyphKind.social
+            "reading" -> SourceGlyphKind.reading
+            "work_email" -> SourceGlyphKind.mail
             else -> SourceGlyphKind.url
         }
     }
