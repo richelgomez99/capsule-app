@@ -333,14 +333,41 @@ Commit/PR result: committed the staged `015` closeout work as `275ead9`, pushed 
 
 **Independent Test**: A reviewer can approve the first rebaselined Spec Kit prompt knowing there are no hidden staged implementation leftovers, stale PR traps, or unresolved product-truth contradictions.
 
-- [ ] T058 Verify `/Users/richelgomez/dev/capsule-app`, `/Users/richelgomez/dev/capsule-app-spec-016`, `/Users/richelgomez/dev/capsule-app-spec-017`, and `/Users/richelgomez/dev/capsule-app-015-phase1-split` have no unexpected staged or untracked implementation work; record results in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md).
-- [ ] T059 Verify PR #5 and PR #8 are closed, replaced, landed, or explicitly labeled stale in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md).
-- [ ] T060 Verify `016`, `017`, `015`, and `docs/product-truth-reset` each have a merge commit or explicit defer note in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md).
-- [ ] T061 Run markdown diagnostics for [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md), [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md), and changed spec docs; fix markdown-only issues before PR.
-- [ ] T062 Confirm no new `004` through `012` branch exists locally or remotely before T057 is complete by checking branch lists from `/Users/richelgomez/dev/capsule-app`; record results in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md).
-- [ ] T063 Confirm the first rebaselined branch remains `004-capture-understanding`, not `018+`, and confirm the full active roadmap occupies `004` through `012` after the stale folders are archived. Any exception requires a documented tooling failure in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md) before Speckit generation.
-- [ ] T064 Confirm the first rebaselined `004-capture-understanding` prompt includes the required stop signs from [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md): no Ask Orbit, no KG tables before deletion/invalidation, no generic browser automation, no raw evidence over Binder, and no network clients outside `com.capsule.app.net.*`.
-- [ ] T065 Mark this closeout checklist complete or explicitly deferred in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md) before running `/speckit.specify` for the first rebaselined `004` through `012` feature.
+### Phase 6 Snapshot - 2026-05-13
+
+Final gate verification was run after PR #22 opened and after the PR-state follow-up commit `050a9ab` was pushed.
+
+Implementation worktree status:
+
+- `/Users/richelgomez/dev/capsule-app-spec-016` on `016-intent-set-migration` is clean against `origin/016-intent-set-migration-closeout`.
+- `/Users/richelgomez/dev/capsule-app-spec-017` on `017-capture-feedback-actions` is clean against `origin/017-capture-feedback-actions`.
+- `/Users/richelgomez/dev/capsule-app-015-phase1-split` on `015-phase1-cluster-surface` is clean against `origin/015-phase1-cluster-surface`.
+- `/Users/richelgomez/dev/capsule-app-docs-product-truth-reset` is clean with final pushed head `050a9ab` on `origin/docs/product-truth-reset`.
+- `/Users/richelgomez/dev/capsule-app` on `qa/015-017-stacked` still has expected docs/spec-only residue from the planning session: untracked planning docs and modified legacy `004` through `012` status headers. Those files are represented by PR #22 and are not implementation work. Do not delete or discard them unless the integration/reference worktree is intentionally cleaned later.
+
+GitHub PR state verified through the GitHub API:
+
+| PR | State | Meaning |
+| --- | --- | --- |
+| #5 | Closed, not merged | Stale planning-only `015-visual-refit`, superseded by #21. |
+| #8 | Closed, not merged | Stale planning-only `016-intent-set-migration`, superseded by #19. |
+| #19 | Open | `016-intent-set-migration-closeout`, PR-ready/deferred pending review. |
+| #20 | Open | `017-capture-feedback-actions`, PR-ready/deferred pending review. |
+| #21 | Open | `015-phase1-cluster-surface`, PR-ready/deferred pending review. |
+| #22 | Open | `docs/product-truth-reset`, PR-ready/deferred pending review. |
+
+Roadmap branch check found no local branches matching `004-*` through `012-*` or remote branches matching `origin/004-*` through `origin/012-*`. Active top-level spec folders in PR #22 are `004-capture-understanding`, `005-retrieval-and-ask-citations`, `006-approval-action-runtime`, `007-memory-candidates-inspector`, `008-cloud-controls-storage-budgeting`, `009-kg-backend-poc`, `010-agent-coordinator`, `011-manual-compose`, and `012-resolution-semantics`; no `018+` exception is needed.
+
+The first `004-capture-understanding` Speckit prompt in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md) includes the required stop signs: stop if the spec implements Ask Orbit, adds KG tables before deletion/invalidation, adds generic browser automation, passes raw HTML/screenshots/embeddings/full evidence bundles over Binder, or adds network clients outside `com.capsule.app.net.*`.
+
+- [x] T058 Verify `/Users/richelgomez/dev/capsule-app`, `/Users/richelgomez/dev/capsule-app-spec-016`, `/Users/richelgomez/dev/capsule-app-spec-017`, and `/Users/richelgomez/dev/capsule-app-015-phase1-split` have no unexpected staged or untracked implementation work; record results in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md).
+- [x] T059 Verify PR #5 and PR #8 are closed, replaced, landed, or explicitly labeled stale in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md).
+- [x] T060 Verify `016`, `017`, `015`, and `docs/product-truth-reset` each have a merge commit or explicit defer note in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md).
+- [x] T061 Run markdown diagnostics for [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md), [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md), and changed spec docs; fix markdown-only issues before PR.
+- [x] T062 Confirm no new `004` through `012` branch exists locally or remotely before T057 is complete by checking branch lists from `/Users/richelgomez/dev/capsule-app`; record results in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md).
+- [x] T063 Confirm the first rebaselined branch remains `004-capture-understanding`, not `018+`, and confirm the full active roadmap occupies `004` through `012` after the stale folders are archived. Any exception requires a documented tooling failure in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md) before Speckit generation.
+- [x] T064 Confirm the first rebaselined `004-capture-understanding` prompt includes the required stop signs from [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md): no Ask Orbit, no KG tables before deletion/invalidation, no generic browser automation, no raw evidence over Binder, and no network clients outside `com.capsule.app.net.*`.
+- [x] T065 Mark this closeout checklist complete or explicitly deferred in [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md) before running `/speckit.specify` for the first rebaselined `004` through `012` feature. The closeout checklist is complete with landing explicitly deferred for PRs #19, #20, #21, and #22 pending review.
 
 **Checkpoint**: Branch debt is closed or intentionally deferred. The next Speckit session may start with `004-capture-understanding`.
 
