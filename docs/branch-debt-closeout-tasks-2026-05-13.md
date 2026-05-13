@@ -36,9 +36,9 @@
 | Track | Worktree / branch | Current role |
 | --- | --- | --- |
 | Integration docs | `/Users/richelgomez/dev/capsule-app` on `qa/015-017-stacked` | Reference workspace with untracked planning docs; no app implementation work here. |
-| 016 | `/Users/richelgomez/dev/capsule-app-spec-016` on `016-intent-set-migration` | Clean locally, but stale/diverged relative to PR #8 branch. |
-| 017 | `/Users/richelgomez/dev/capsule-app-spec-017` on `017-capture-feedback-actions` | Actual implementation PR #20; review fixes pushed at `1d0d100`. |
-| 015 | `/Users/richelgomez/dev/capsule-app-015-phase1-split` on `015-phase1-cluster-surface` | Actual implementation PR #21; closeout commit `275ead9` pushed. |
+| 016 | `/Users/richelgomez/dev/capsule-app-spec-016` on `016-intent-set-migration` | Actual implementation PR #19; markdown cleanup pushed at `9431568`. |
+| 017 | `/Users/richelgomez/dev/capsule-app-spec-017` on `017-capture-feedback-actions` | Actual implementation PR #20; restore duplicate-key fix pushed at `acac810`. |
+| 015 | `/Users/richelgomez/dev/capsule-app-015-phase1-split` on `015-phase1-cluster-surface` | Actual implementation PR #21; closeout-copy cleanup pushed at `9814121`. |
 | Stale 015 PR | `/Users/richelgomez/dev/capsule-app-visual-refit` on `015-visual-refit` | Historical planning branch behind PR #5; closed as superseded by PR #21. |
 | Docs reset | `docs/product-truth-reset` | New branch to create from clean base after branch debt is known. |
 
@@ -99,9 +99,9 @@ Recorded from read-only checks in the owning worktrees. No staged files were uns
 | --- | --- | --- |
 | `/Users/richelgomez/dev/capsule-app` | `qa/015-017-stacked` | `450183f452e71aa70cc3ebf1e31c8bddd7760ef4` |
 | `/Users/richelgomez/dev/capsule-app-015-p0c1` | `main` | `93be2d75758e5630ee402afee79176697f18dd62` |
-| `/Users/richelgomez/dev/capsule-app-015-phase1-split` | `015-phase1-cluster-surface` | `275ead90c64a8fcaaa66d804774d3ba32a11abbe` |
-| `/Users/richelgomez/dev/capsule-app-spec-016` | `016-intent-set-migration` | `96ac77dcfa74fbe5b0f86ec83bbdb6da44c5ad00` |
-| `/Users/richelgomez/dev/capsule-app-spec-017` | `017-capture-feedback-actions` | `ceca6e65cb9ab4974e1cd1992e4f19ed37e03138` |
+| `/Users/richelgomez/dev/capsule-app-015-phase1-split` | `015-phase1-cluster-surface` | `9814121948489869b0e03ca66e9a16a736b2cbbd` |
+| `/Users/richelgomez/dev/capsule-app-spec-016` | `016-intent-set-migration` | `943156873f800f5fe238a2e58635019edfc6dc12` |
+| `/Users/richelgomez/dev/capsule-app-spec-017` | `017-capture-feedback-actions` | `acac81056e2bc9bbd222fa04948bf00940e25a75` |
 | `/Users/richelgomez/dev/capsule-app-visual-refit` | `015-visual-refit` | `d9d5db01957cdfc846734c3af8e9178284013317` |
 
 **PR reality**:
@@ -111,9 +111,9 @@ Recorded from read-only checks in the owning worktrees. No staged files were uns
 | #1 `cloud-pivot` | Merged | Cloud pivot baseline already landed in `main`. |
 | #5 `015-visual-refit` | Closed | Planning-only/stale; closed after replacement PR #21 was opened from the actual `015-phase1-cluster-surface` implementation branch state. |
 | #8 `016-intent-set-migration` | Closed | Planning-only/stale; closed after replacement PR #19 was opened from the actual local implementation branch state. |
-| #19 `016-intent-set-migration-closeout` | Open | Replacement implementation PR for `016`, including the 2026-05-13 closeout gate notes. |
-| #21 `015-phase1-cluster-surface` | Open | Actual `015` implementation PR with closeout commit `275ead9`; land after PR #19 and preferably after PR #20 unless reviewers explicitly accept the dependency state. |
-| #20 `017-capture-feedback-actions` | Open | Actual `017` implementation PR created from the sibling worktree; depends on PR #19 unless reviewers explicitly accept the dependency state. |
+| #19 `016-intent-set-migration-closeout` | Open | Replacement implementation PR for `016`, including closeout gate notes and markdown cleanup `9431568`. |
+| #21 `015-phase1-cluster-surface` | Open | Actual `015` implementation PR with closeout commit `275ead9` and closeout-copy cleanup `9814121`; land after PR #19 and preferably after PR #20 unless reviewers explicitly accept the dependency state. |
+| #20 `017-capture-feedback-actions` | Open | Actual `017` implementation PR with review fixes through `acac810`; depends on PR #19 unless reviewers explicitly accept the dependency state. |
 
 **016 worktree**: `/Users/richelgomez/dev/capsule-app-spec-016` is clean. It is ahead 11 / behind 3 relative to `origin/016-intent-set-migration`, and `git rev-list --left-right --count origin/main...HEAD` reports `0 5` relative to `origin/main`.
 
@@ -235,9 +235,9 @@ Focused duplicate tests: `:app:testDebugUnitTest --tests com.capsule.app.overlay
 
 Duplicate audit metadata check: [EnvelopeRepositoryImpl.kt](../app/src/main/java/com/capsule/app/data/EnvelopeRepositoryImpl.kt) records duplicate attempts with `existingEnvelopeId` and `matchedBy` only in the duplicate audit `extraJson`; no raw text or full URL is added to that duplicate audit payload.
 
-Commit/PR result: committed the staged `017` closeout work as `b872e38`, pushed `origin/017-capture-feedback-actions`, and opened PR #20. Self-review fixes were then committed as `1d0d100` and pushed to the same PR, adding database-backed active duplicate keys, exact-text active-key indexing, concurrent duplicate coverage, v5-to-v7 migration coverage, and androidTest schema assets. PR body includes S24 and Tab S9 physical QA evidence from `specs/017-capture-feedback-actions/tasks.md`. Landing remains deferred pending review and the `016` dependency state.
+Commit/PR result: committed the staged `017` closeout work as `b872e38`, pushed `origin/017-capture-feedback-actions`, and opened PR #20. Self-review fixes were then pushed through `acac810`, adding database-backed active duplicate keys, exact-text active-key indexing, concurrent duplicate coverage, v5-to-v7 migration coverage, androidTest schema assets, and conflict-safe restore-from-trash duplicate-key reactivation. PR body includes S24 and Tab S9 physical QA evidence from `specs/017-capture-feedback-actions/tasks.md`. Landing remains deferred pending review and the `016` dependency state.
 
-Review-fix validation passed with explicit local environment (`JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home`, `ANDROID_HOME=/Users/richelgomez/Library/Android/sdk`): `:app:compileDebugKotlin`, `:app:compileDebugAndroidTestKotlin`, `:app:testDebugUnitTest --tests com.capsule.app.overlay.PostCaptureOverlayBoundsRegressionTest`, focused `:app:connectedDebugAndroidTest` for `UrlHashDedupeContractTest`, `DuplicateLookupPerformanceContractTest`, `OrbitDatabaseMigrationV5toV7Test`, and `OverlayDuplicateFeedbackTest` on SM-S928U1 and SM-X710, plus `:app:lintDebug`.
+Review-fix validation passed with explicit local environment (`JAVA_HOME=/Applications/Android Studio.app/Contents/jbr/Contents/Home`, `ANDROID_HOME=/Users/richelgomez/Library/Android/sdk`): `:app:compileDebugKotlin`, `:app:compileDebugAndroidTestKotlin`, `:app:testDebugUnitTest`, and `:app:lintDebug`. Earlier focused connected tests for `UrlHashDedupeContractTest`, `DuplicateLookupPerformanceContractTest`, `OrbitDatabaseMigrationV5toV7Test`, and `OverlayDuplicateFeedbackTest` passed on SM-S928U1 and SM-X710 before the final restore fix; the post-`acac810` focused connected `UrlHashDedupeContractTest` run was attempted but not executed because no Android devices were connected. The new restore regression tests compiled via `:app:compileDebugAndroidTestKotlin`.
 
 - [x] T021 Confirm T020 is complete or explicitly deferred before mutating `/Users/richelgomez/dev/capsule-app-spec-017`; record the dependency state in `specs/017-capture-feedback-actions/tasks.md`.
 - [x] T022 Capture the staged file list in `/Users/richelgomez/dev/capsule-app-spec-017` with `git diff --staged --name-status` and copy the summary into [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md) before any commit or split.
@@ -264,9 +264,9 @@ Review-fix validation passed with explicit local environment (`JAVA_HOME=/Applic
 
 ### Phase 4 Snapshot - 2026-05-13
 
-Recorded from `/Users/richelgomez/dev/capsule-app-015-phase1-split`. The worktree is on `015-phase1-cluster-surface`, ahead of `origin/main` by 17 commits, with no unstaged edits before closeout recording.
+Recorded from `/Users/richelgomez/dev/capsule-app-015-phase1-split`. The worktree is on `015-phase1-cluster-surface`, ahead of `origin/main` by 18 commits, with no unstaged edits before closeout recording.
 
-Dependency state: T020 (`016`) is explicitly PR-ready/deferred after replacement PR #19; T032 (`017`) is complete with PR #20 open and review-fix commit `1d0d100` pushed. Continue `015` as the third landing track; landing remains after `016` and preferably after `017` unless reviewers accept the dependency state.
+Dependency state: T020 (`016`) is explicitly PR-ready/deferred after replacement PR #19; T032 (`017`) is complete with PR #20 open and review-fix commit `acac810` pushed. Continue `015` as the third landing track; landing remains after `016` and preferably after `017` unless reviewers accept the dependency state.
 
 Staged file list summary:
 
@@ -284,7 +284,7 @@ Decision state: T015-501 through T015-506 are closed for this PR. Bubble size/tr
 
 Validation: staged diff hygiene passed. Android gate passed with `ANDROID_HOME="$HOME/Library/Android/sdk" JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home' ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:lintDebug`. Build-logic lint gate passed with `JAVA_HOME='/Applications/Android Studio.app/Contents/jbr/Contents/Home' ./gradlew :build-logic:lint:test`. Focused connected regression `:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.capsule.app.service.ServiceHealthMonitorTest` was attempted but not run because no Android devices were connected; do not claim new connected evidence for this run.
 
-Commit/PR result: committed the staged `015` closeout work as `275ead9`, pushed `origin/015-phase1-cluster-surface`, and opened PR #21. PR body preserves the Orbit mark philosophy, packaged font-size result, contrast results, local-only copy removal, Samsung battery action QA, touch-bounds QA, flag default decision, and the no-device connected-test caveat. Stale planning PR #5 was closed as superseded by PR #21. Landing remains deferred pending review and the `016`/`017` dependency state.
+Commit/PR result: committed the staged `015` closeout work as `275ead9`, pushed `origin/015-phase1-cluster-surface`, and opened PR #21. Review cleanup `9814121` then removed stale `PRIVATE BY DEFAULT` capture-sheet copy, updated the matching spec 015 closeout note, and fixed diff-check whitespace inherited from design/016 files. PR body preserves the Orbit mark philosophy, packaged font-size result, contrast results, local-only copy removal, Samsung battery action QA, touch-bounds QA, flag default decision, and the no-device connected-test caveat. Stale planning PR #5 was closed as superseded by PR #21. Landing remains deferred pending review and the `016`/`017` dependency state.
 
 - [x] T033 Confirm T020 and T032 are complete or explicitly deferred before mutating `/Users/richelgomez/dev/capsule-app-015-phase1-split`; record the dependency state in `specs/015-visual-refit/tasks.md`.
 - [x] T034 Capture the staged file list in `/Users/richelgomez/dev/capsule-app-015-phase1-split` with `git diff --staged --name-status` and copy the summary into [docs/branch-debt-closeout-tasks-2026-05-13.md](branch-debt-closeout-tasks-2026-05-13.md) before any commit or split.
@@ -335,14 +335,14 @@ Commit/PR result: committed the staged `015` closeout work as `275ead9`, pushed 
 
 ### Phase 6 Snapshot - 2026-05-13
 
-Final gate verification was run after PR #22 opened and after the PR-state follow-up commit `050a9ab` was pushed.
+Final gate verification was run after PR #22 opened and after PR-state follow-up documentation was pushed.
 
 Implementation worktree status:
 
 - `/Users/richelgomez/dev/capsule-app-spec-016` on `016-intent-set-migration` is clean against `origin/016-intent-set-migration-closeout`.
 - `/Users/richelgomez/dev/capsule-app-spec-017` on `017-capture-feedback-actions` is clean against `origin/017-capture-feedback-actions`.
 - `/Users/richelgomez/dev/capsule-app-015-phase1-split` on `015-phase1-cluster-surface` is clean against `origin/015-phase1-cluster-surface`.
-- `/Users/richelgomez/dev/capsule-app-docs-product-truth-reset` is clean with final pushed head `050a9ab` on `origin/docs/product-truth-reset`.
+- `/Users/richelgomez/dev/capsule-app-docs-product-truth-reset` is clean against `origin/docs/product-truth-reset` after each pushed tracking update.
 - `/Users/richelgomez/dev/capsule-app` on `qa/015-017-stacked` still has expected docs/spec-only residue from the planning session: untracked planning docs and modified legacy `004` through `012` status headers. Those files are represented by PR #22 and are not implementation work. Do not delete or discard them unless the integration/reference worktree is intentionally cleaned later.
 
 GitHub PR state verified through the GitHub API:
