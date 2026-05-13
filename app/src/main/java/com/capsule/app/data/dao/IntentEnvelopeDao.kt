@@ -21,7 +21,7 @@ interface IntentEnvelopeDao {
     @Query(
         """
         SELECT * FROM intent_envelope
-        WHERE primaryCanonicalUrlHash = :hash
+        WHERE activePrimaryCanonicalUrlHash = :hash
           AND deletedAt IS NULL
           AND isDeleted = 0
           AND isArchived = 0
@@ -49,7 +49,7 @@ interface IntentEnvelopeDao {
     @Query(
         """
         SELECT * FROM intent_envelope
-        WHERE textContentSha256 = :hash
+        WHERE activeTextContentSha256 = :hash
           AND deletedAt IS NULL
           AND isDeleted = 0
           AND isArchived = 0
@@ -126,10 +126,10 @@ interface IntentEnvelopeDao {
     @Query("UPDATE intent_envelope SET todoMetaJson = :json WHERE id = :id")
     suspend fun updateTodoMetaJson(id: String, json: String): Int
 
-    @Query("UPDATE intent_envelope SET isArchived = 1 WHERE id = :id")
+    @Query("UPDATE intent_envelope SET isArchived = 1, activePrimaryCanonicalUrlHash = NULL, activeTextContentSha256 = NULL WHERE id = :id")
     suspend fun archive(id: String)
 
-    @Query("UPDATE intent_envelope SET deletedAt = :deletedAt, isDeleted = 1 WHERE id = :id")
+    @Query("UPDATE intent_envelope SET deletedAt = :deletedAt, isDeleted = 1, activePrimaryCanonicalUrlHash = NULL, activeTextContentSha256 = NULL WHERE id = :id")
     suspend fun softDelete(id: String, deletedAt: Long)
 
     @Query("UPDATE intent_envelope SET deletedAt = NULL, isDeleted = 0 WHERE id = :id")

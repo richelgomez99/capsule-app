@@ -235,6 +235,8 @@ internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
 internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE intent_envelope ADD COLUMN primaryCanonicalUrlHash TEXT")
+        db.execSQL("ALTER TABLE intent_envelope ADD COLUMN activePrimaryCanonicalUrlHash TEXT")
+        db.execSQL("ALTER TABLE intent_envelope ADD COLUMN activeTextContentSha256 TEXT")
         db.execSQL(
             """
             UPDATE intent_envelope
@@ -258,6 +260,60 @@ internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS index_intent_envelope_primaryCanonicalUrlHash " +
                 "ON intent_envelope(primaryCanonicalUrlHash)"
+        )
+        db.execSQL(
+            """
+            UPDATE intent_envelope
+            SET activePrimaryCanonicalUrlHash = primaryCanonicalUrlHash
+            WHERE primaryCanonicalUrlHash IS NOT NULL
+              AND deletedAt IS NULL
+              AND isDeleted = 0
+              AND isArchived = 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM intent_envelope AS earlier
+                  WHERE earlier.primaryCanonicalUrlHash = intent_envelope.primaryCanonicalUrlHash
+                    AND earlier.deletedAt IS NULL
+                    AND earlier.isDeleted = 0
+                    AND earlier.isArchived = 0
+                    AND (
+                        earlier.createdAt < intent_envelope.createdAt
+                        OR (earlier.createdAt = intent_envelope.createdAt AND earlier.id < intent_envelope.id)
+                    )
+              )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            UPDATE intent_envelope
+            SET activeTextContentSha256 = textContentSha256
+            WHERE textContentSha256 IS NOT NULL
+              AND primaryCanonicalUrlHash IS NULL
+              AND deletedAt IS NULL
+              AND isDeleted = 0
+              AND isArchived = 0
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM intent_envelope AS earlier
+                  WHERE earlier.textContentSha256 = intent_envelope.textContentSha256
+                    AND earlier.primaryCanonicalUrlHash IS NULL
+                    AND earlier.deletedAt IS NULL
+                    AND earlier.isDeleted = 0
+                    AND earlier.isArchived = 0
+                    AND (
+                        earlier.createdAt < intent_envelope.createdAt
+                        OR (earlier.createdAt = intent_envelope.createdAt AND earlier.id < intent_envelope.id)
+                    )
+              )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_intent_envelope_activePrimaryCanonicalUrlHash " +
+                "ON intent_envelope(activePrimaryCanonicalUrlHash)"
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_intent_envelope_activeTextContentSha256 " +
+                "ON intent_envelope(activeTextContentSha256)"
         )
     }
 }

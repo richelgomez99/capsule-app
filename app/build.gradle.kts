@@ -153,6 +153,9 @@ android {
                 "src/test/resources"
             )
         }
+        getByName("androidTest") {
+            assets.srcDirs("schemas")
+        }
     }
 
     lint {

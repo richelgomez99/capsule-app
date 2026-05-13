@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "fae069c814e24f017adc72d41068f55b",
+    "identityHash": "ee65c984a0b883bc72b3f32191dfce8d",
     "entities": [
       {
         "tableName": "intent_envelope",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `contentType` TEXT NOT NULL, `textContent` TEXT, `imageUri` TEXT, `textContentSha256` TEXT, `intent` TEXT NOT NULL, `intentConfidence` REAL, `intentSource` TEXT NOT NULL, `intentHistoryJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `day_local` TEXT NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `deletedAt` INTEGER, `sharedContinuationResultId` TEXT, `kind` TEXT NOT NULL, `derivedFromEnvelopeIdsJson` TEXT, `todoMetaJson` TEXT, `derivedVia` TEXT, `primaryCanonicalUrlHash` TEXT, `appCategory` TEXT NOT NULL, `activityState` TEXT NOT NULL, `tzId` TEXT NOT NULL, `hourLocal` INTEGER NOT NULL, `dayOfWeekLocal` INTEGER NOT NULL, `sourceAppLabel` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `contentType` TEXT NOT NULL, `textContent` TEXT, `imageUri` TEXT, `textContentSha256` TEXT, `intent` TEXT NOT NULL, `intentConfidence` REAL, `intentSource` TEXT NOT NULL, `intentHistoryJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `day_local` TEXT NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `deletedAt` INTEGER, `sharedContinuationResultId` TEXT, `kind` TEXT NOT NULL, `derivedFromEnvelopeIdsJson` TEXT, `todoMetaJson` TEXT, `derivedVia` TEXT, `primaryCanonicalUrlHash` TEXT, `activePrimaryCanonicalUrlHash` TEXT, `activeTextContentSha256` TEXT, `appCategory` TEXT NOT NULL, `activityState` TEXT NOT NULL, `tzId` TEXT NOT NULL, `hourLocal` INTEGER NOT NULL, `dayOfWeekLocal` INTEGER NOT NULL, `sourceAppLabel` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -119,6 +119,16 @@
             "affinity": "TEXT"
           },
           {
+            "fieldPath": "activePrimaryCanonicalUrlHash",
+            "columnName": "activePrimaryCanonicalUrlHash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "activeTextContentSha256",
+            "columnName": "activeTextContentSha256",
+            "affinity": "TEXT"
+          },
+          {
             "fieldPath": "state.appCategory",
             "columnName": "appCategory",
             "affinity": "TEXT",
@@ -187,6 +197,24 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_intent_envelope_primaryCanonicalUrlHash` ON `${TABLE_NAME}` (`primaryCanonicalUrlHash`)"
+          },
+          {
+            "name": "index_intent_envelope_activePrimaryCanonicalUrlHash",
+            "unique": true,
+            "columnNames": [
+              "activePrimaryCanonicalUrlHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_intent_envelope_activePrimaryCanonicalUrlHash` ON `${TABLE_NAME}` (`activePrimaryCanonicalUrlHash`)"
+          },
+          {
+            "name": "index_intent_envelope_activeTextContentSha256",
+            "unique": true,
+            "columnNames": [
+              "activeTextContentSha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_intent_envelope_activeTextContentSha256` ON `${TABLE_NAME}` (`activeTextContentSha256`)"
           },
           {
             "name": "index_intent_envelope_day_local",
@@ -1240,7 +1268,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fae069c814e24f017adc72d41068f55b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ee65c984a0b883bc72b3f32191dfce8d')"
     ]
   }
 }

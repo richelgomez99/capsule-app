@@ -16,6 +16,8 @@ import com.capsule.app.data.model.IntentSource
         Index(value = ["createdAt"]),
         Index(value = ["intent"]),
         Index(value = ["primaryCanonicalUrlHash"]),
+        Index(value = ["activePrimaryCanonicalUrlHash"], unique = true),
+        Index(value = ["activeTextContentSha256"], unique = true),
         Index(value = ["day_local"]),
         // 003 v1.1: speeds up the Diary's `kind = 'DIGEST'` filter and the
         // per-day rendering query that orders by kind ascending then time.
@@ -61,6 +63,10 @@ data class IntentEnvelopeEntity(
      */
     val derivedVia: String? = null,
     /** Spec 017: canonical URL duplicate key for envelope-level already-saved detection. */
-    val primaryCanonicalUrlHash: String? = null
+    val primaryCanonicalUrlHash: String? = null,
+    /** Active-only unique URL key. Cleared when archived/deleted so inactive rows do not block new saves. */
+    val activePrimaryCanonicalUrlHash: String? = null,
+    /** Active-only unique exact-text key. Cleared when archived/deleted so inactive rows do not block new saves. */
+    val activeTextContentSha256: String? = null
 )
 

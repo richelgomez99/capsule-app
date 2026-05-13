@@ -22,8 +22,11 @@ import com.capsule.app.data.model.IntentSource
 import com.capsule.app.data.security.KeystoreKeyProvider
 import com.capsule.app.net.CanonicalUrlHasher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import org.junit.After
@@ -218,6 +221,25 @@ class UrlHashDedupeContractTest {
             .filter { it.action == AuditAction.DUPLICATE_CAPTURE_ATTEMPT }
         assertEquals(1, duplicateRows.size)
         assertTrue(duplicateRows.single().extraJson?.contains("same exact note") != true)
+    }
+
+    @Test
+    fun concurrentSameUrlCapture_databaseGuardAllowsOnlyOneVisibleEnvelope() = runTest {
+        val results = (0 until 12).map {
+            async(Dispatchers.Default) {
+                repository.sealWithResult(draft("https://example.com/race?utm_source=$it"), state())
+            }
+        }.awaitAll()
+
+        assertEquals(1, results.count { it.status == SealResultParcel.STATUS_CREATED })
+        assertEquals(11, results.count { it.status == SealResultParcel.STATUS_ALREADY_SAVED })
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+        val createdId = results.single { it.status == SealResultParcel.STATUS_CREATED }.envelopeId
+        assertTrue(results.all { it.envelopeId == createdId })
+        val duplicateRows = db.auditLogDao()
+            .entriesForEnvelope(createdId)
+            .filter { it.action == AuditAction.DUPLICATE_CAPTURE_ATTEMPT }
+        assertEquals(11, duplicateRows.size)
     }
 
     @Test
