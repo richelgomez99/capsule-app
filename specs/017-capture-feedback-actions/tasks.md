@@ -116,6 +116,18 @@ analysis gate after Phase 1 schema details are finalized.
   fixture, run at least 100 repeated URL and text lookups, and keep p95 under
   50 ms or explicitly document any measured exception.
 
+## Branch Debt Closeout Reconciliation - 2026-05-13
+
+- Dependency state: spec 016 is PR-ready in replacement PR #19, while final landing remains deferred pending PR review/merge.
+- Staged file list captured before any commit/split: `UrlHashDedupeContractTest.kt`, `EnvelopeRepositoryImpl.kt`, `EnvelopeStorageBackend.kt`, `LocalRoomBackend.kt`, `OrbitMigrations.kt`, and `IntentEnvelopeDao.kt`.
+- Staged diff stat: 6 files changed, 129 insertions, 41 deletions.
+- Ownership check: staged files align with duplicate capture/data ownership: URL hash duplicate matching, exact-text duplicate matching, active non-deleted/non-archived lookup, Room migration, storage backend/DAO routes, and URL-hash dedupe contract coverage.
+- Reroute check: no staged visual-only `015`, ContactRef `016`, or future `004` through `012` files were found.
+- Android gate passed: `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, and `:app:lintDebug` succeeded.
+- Duplicate audit metadata check: duplicate attempts record `existingEnvelopeId` and `matchedBy` in audit `extraJson`; no raw text or full URL is added to that duplicate audit payload.
+- Schema verification result: matching schema/entity/database files are already committed in the `017` branch history. Full `origin/main...HEAD` includes `app/schemas/com.capsule.app.data.OrbitDatabase/6.json`, `app/schemas/com.capsule.app.data.OrbitDatabase/7.json`, `OrbitDatabase.kt`, `IntentEnvelopeEntity.kt`, `EnvelopeNoteEntity.kt`, `EnvelopeNoteDao.kt`, `SealResultParcel`, storage/backend changes, and `OrbitMigrations.kt`. The current staged `OrbitMigrations.kt` edit is a follow-up migration adjustment, not an orphaned schema change.
+- Focused duplicate tests passed: `:app:testDebugUnitTest --tests com.capsule.app.overlay.PostCaptureOverlayBoundsRegressionTest` and connected `:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.capsule.app.data.UrlHashDedupeContractTest,com.capsule.app.overlay.OverlayDuplicateFeedbackTest,com.capsule.app.data.DuplicateLookupPerformanceContractTest` on SM-X710, 14 connected tests.
+
 ## Landing Map
 
 - Spec 015: visual refit, shared source glyph resolver, settings subpage visual

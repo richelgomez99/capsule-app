@@ -127,9 +127,10 @@ class EnvelopeRepositoryImpl(
             if (contentType == ContentType.TEXT)
                 ContinuationEngine.extractUrls(draft.textContent.orEmpty())
             else emptyList()
+        val exactText = draft.textContent?.takeIf { contentType == ContentType.TEXT && it.isNotBlank() }
         val primaryCanonicalUrlHash = urls.firstOrNull()?.let(CanonicalUrlHasher::hash)
         val exactTextHash = if (contentType == ContentType.TEXT && primaryCanonicalUrlHash == null) {
-            draft.textContent?.takeIf { it.isNotBlank() }?.let(::sha256)
+            exactText?.let(::sha256)
         } else {
             null
         }
@@ -138,10 +139,20 @@ class EnvelopeRepositoryImpl(
             primaryCanonicalUrlHash?.let { hash ->
                 backend.findActiveEnvelopeByPrimaryCanonicalUrlHash(hash)?.let {
                     it to SealResultParcel.MATCHED_BY_CANONICAL_URL
+                } ?: backend.findActiveEnvelopeByContinuationCanonicalUrlHash(hash)?.let {
+                    it to SealResultParcel.MATCHED_BY_CANONICAL_URL
+                } ?: exactText?.let { text ->
+                    backend.findActiveEnvelopeByExactTextContent(text)?.let {
+                        it to SealResultParcel.MATCHED_BY_EXACT_TEXT
+                    }
                 }
             } ?: exactTextHash?.let { hash ->
                 backend.findActiveEnvelopeByTextContentSha256(hash)?.let {
                     it to SealResultParcel.MATCHED_BY_EXACT_TEXT
+                } ?: exactText?.let { text ->
+                    backend.findActiveEnvelopeByExactTextContent(text)?.let {
+                        it to SealResultParcel.MATCHED_BY_EXACT_TEXT
+                    }
                 }
             }
         }

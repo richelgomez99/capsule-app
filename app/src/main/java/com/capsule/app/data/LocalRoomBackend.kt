@@ -224,9 +224,17 @@ class LocalRoomBackend(
         hash: String
     ): IntentEnvelopeEntity? = envelopeDao.findActiveByPrimaryCanonicalUrlHash(hash)
 
+    override suspend fun findActiveEnvelopeByContinuationCanonicalUrlHash(
+        hash: String
+    ): IntentEnvelopeEntity? = envelopeDao.findActiveByContinuationCanonicalUrlHash(hash)
+
     override suspend fun findActiveEnvelopeByTextContentSha256(
         hash: String
     ): IntentEnvelopeEntity? = envelopeDao.findActiveByTextContentSha256(hash)
+
+    override suspend fun findActiveEnvelopeByExactTextContent(
+        text: String
+    ): IntentEnvelopeEntity? = envelopeDao.findActiveByExactTextContent(text)
 
     override suspend fun recordDuplicateCaptureAttempt(auditEntry: AuditLogEntryEntity) {
         auditDao.insert(auditEntry)

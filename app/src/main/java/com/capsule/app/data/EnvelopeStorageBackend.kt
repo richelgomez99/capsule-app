@@ -150,7 +150,11 @@ interface EnvelopeStorageBackend {
 
     suspend fun findActiveEnvelopeByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
 
+    suspend fun findActiveEnvelopeByContinuationCanonicalUrlHash(hash: String): IntentEnvelopeEntity? = null
+
     suspend fun findActiveEnvelopeByTextContentSha256(hash: String): IntentEnvelopeEntity?
+
+    suspend fun findActiveEnvelopeByExactTextContent(text: String): IntentEnvelopeEntity? = null
 
     suspend fun recordDuplicateCaptureAttempt(auditEntry: AuditLogEntryEntity)
 
