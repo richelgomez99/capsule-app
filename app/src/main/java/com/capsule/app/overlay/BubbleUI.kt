@@ -20,9 +20,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.capsule.app.R
+import com.capsule.app.ui.theme.LocalRuntimeFlags
 import kotlin.math.abs
 
 /**
@@ -40,6 +44,9 @@ fun BubbleUI(
     modifier: Modifier = Modifier
 ) {
     var isDragging by remember { mutableStateOf(false) }
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val containerColor = if (useNewVisualLanguage) QuietOverlayColors.DeepNavy else MaterialTheme.colorScheme.primaryContainer
+    val contentColor = if (useNewVisualLanguage) QuietOverlayColors.Cream else MaterialTheme.colorScheme.onPrimaryContainer
 
     Box(
         modifier = modifier,
@@ -87,13 +94,21 @@ fun BubbleUI(
                         }
                     }
                 },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = containerColor,
+            contentColor = contentColor
         ) {
-            Icon(
-                imageVector = Icons.Default.ContentPaste,
-                contentDescription = "Capture clipboard"
-            )
+            if (useNewVisualLanguage) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_orbit_logo_mark),
+                    contentDescription = "Capture with Orbit",
+                    modifier = Modifier.size(26.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ContentPaste,
+                    contentDescription = "Capture clipboard"
+                )
+            }
         }
     }
 }
@@ -103,15 +118,16 @@ fun DismissTargetUI(
     isActive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val containerColor = if (isActive) {
-        MaterialTheme.colorScheme.error
+    val useNewVisualLanguage = LocalRuntimeFlags.current.useNewVisualLanguage
+    val containerColor = if (useNewVisualLanguage) {
+        if (isActive) QuietBubbleColors.Red else QuietOverlayColors.DeepNavy.copy(alpha = 0.94f)
     } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+        if (isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     }
-    val contentColor = if (isActive) {
-        MaterialTheme.colorScheme.onError
+    val contentColor = if (useNewVisualLanguage) {
+        if (isActive) QuietBubbleColors.RedInk else QuietOverlayColors.Cream
     } else {
-        MaterialTheme.colorScheme.onSurface
+        if (isActive) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface
     }
     val elevation = if (isActive) {
         FloatingActionButtonDefaults.elevation(defaultElevation = 10.dp)
@@ -133,4 +149,9 @@ fun DismissTargetUI(
             tint = contentColor
         )
     }
+}
+
+private object QuietBubbleColors {
+    val Red = Color(0xFFD97A6C)
+    val RedInk = Color(0xFF1A0806)
 }

@@ -335,6 +335,11 @@ Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
     `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`,
     `:app:lintDebug`. Manual/connected capture verification remains pending;
     use physical S24/Tab S9 flow per T015-905.
+  - 2026-05-13 closeout note: no new connected capture evidence is claimed in
+    this branch closeout. The focused connected service-health regression was
+    attempted but no Android devices were connected; flag-off capture harness
+    limitations remain documented as pending physical/connected coverage rather
+    than marked green by automation.
   - 2026-05-12 physical QA follow-up removed the capture-sheet footer promise
     of local-only behavior; flag-ON footer now says `PRIVATE BY DEFAULT · USER
     CONTROLLED`.
@@ -354,27 +359,58 @@ UI; LD-003 wording purged.
 language before Demo Day, while preserving tap/drag reliability and overlay
 touch bounds.
 
-- [ ] **T015-501** [P5] Refit the draggable bubble to the Orbit mark language
+- [x] **T015-501** [P5] Refit the draggable bubble to the Orbit mark language
   from `design/visual-refit-2026-04-29/project/orbit-screen-bubble.jsx`.
-- [ ] **T015-502** [P5] Refit dismiss/remove target visuals for portrait,
+- [x] **T015-502** [P5] Refit dismiss/remove target visuals for portrait,
   landscape, phone, and tablet layouts.
-- [ ] **T015-503** [P5] Verify drag-to-remove in landscape on S24 and Tab S9;
+  - 2026-05-12 implementation: bubble/dismiss visuals are gated by
+    `RuntimeFlags.useNewVisualLanguage`; flag-off keeps the original Material
+    clipboard bubble, while flag-on uses the canonical Orbit mark and Quiet
+    overlay colors. Physical drag/remove validation remains tracked by
+    T015-503, T015-504, and T015-905.
+- [x] **T015-503** [P5] Verify drag-to-remove in landscape on S24 and Tab S9;
   the bubble must be able to reach the target across the full window bounds.
-- [ ] **T015-504** [P5] Verify bubble hit target and drag affordance with
+  - 2026-05-12 physical QA: user reported the Phase 5 flag-on build is all
+    good after S24/Tab S9 bubble/remove validation request.
+  - 2026-05-12 follow-up confirmation: landscape bubble/remove behavior is
+    good too.
+- [x] **T015-504** [P5] Verify bubble hit target and drag affordance with
   TalkBack/accessibility touch exploration enabled.
-- [ ] **T015-505** [P5] Decide whether user-adjustable bubble size and
+  - 2026-05-12 product decision: defer TalkBack/touch exploration from this
+    Demo Day visual QA split. The standard physical bubble hit target and
+    drag/remove pass is covered by T015-503/T015-905.
+- [x] **T015-505** [P5] Decide whether user-adjustable bubble size and
   transparency belong in this visual-refit phase or a follow-up overlay
   customization spec. If accepted here, add persisted settings controls,
   bounded defaults, and physical QA for tap/drag reliability at every size and
   alpha value.
-- [ ] **T015-506** [P5] **REVIEW GATE** per commit.
+  - 2026-05-12 decision: defer user-adjustable bubble size/transparency to a
+    follow-up overlay customization spec. Phase 5 keeps one stable tap target
+    and one alpha value so Demo Day QA can focus on drag/remove reliability
+    across S24 and Tab S9 orientations.
+- [x] **T015-506** [P5] **REVIEW GATE** per commit.
+  - 2026-05-12 focused review gate: checked implementation diff for bubble,
+    dismiss target, Settings permission-row refit, service-health internals,
+    and regression coverage. Ran `:app:compileDebugKotlin`,
+    `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, and
+    `:app:lintDebug` successfully after cleanup.
+  - 2026-05-13 closeout validation in `../capsule-app-015-phase1-split`:
+    staged diff hygiene passed; Android gate passed for
+    `:app:compileDebugKotlin`, `:app:testDebugUnitTest`,
+    `:app:compileDebugAndroidTestKotlin`, and `:app:lintDebug`; build-logic
+    lint gate `:build-logic:lint:test` passed. Focused connected regression
+    `ServiceHealthMonitorTest` was attempted but not run because no Android
+    devices were connected in the environment.
 
 ---
 
 ## Cross-Cutting / Polish (post-Phase 4, pre-flag-flip)
 
-- [ ] **T015-901** Manual screenshot sweep: each refitted screen with
+- [x] **T015-901** Manual screenshot sweep: each refitted screen with
   flag = true vs JSX reference. Record diffs in PR body.
+  - 2026-05-12 product decision: skip the screenshot sweep for this branch
+    split; user-confirmed physical S24/Tab S9 visual QA is the acceptance
+    signal for the current stacked QA branch.
 - [x] **T015-902** APK size delta report (Cormorant + Inter + JetBrains Mono
   subsets). If > +500 KB, flag to user.
   - 2026-05-12 debug APK font entries: 577,532 bytes uncompressed, 257,591
@@ -385,10 +421,13 @@ touch bounds.
   - 2026-05-12 contrast ratios calculated from Quiet token hex values: cream
     on bgDeep 16.45:1, creamDim over bgDeep approx 5.56:1, accent serif italic
     on bgDeep 10.16:1, red on bgDeep 6.51:1, accentInk on accent 9.58:1.
-- [ ] **T015-904** Decision point: flip `RuntimeFlags.useNewVisualLanguage`
+- [x] **T015-904** Decision point: flip `RuntimeFlags.useNewVisualLanguage`
   default to `true` (or alpha-build override). Out of scope for this spec
   to actually flip — surface the readiness signal to the user.
-- [ ] **T015-905** Physical QA matrix: S24 portrait/landscape + Tab S9
+  - 2026-05-12 decision: do not flip the source default yet. Continue shipping
+    flag-on QA/alpha APKs while source stays `false` until branch hygiene and
+    explicit alpha/release readiness are complete.
+- [x] **T015-905** Physical QA matrix: S24 portrait/landscape + Tab S9
   portrait/landscape for Diary, Settings, Capture sheet, post-capture pills,
   and bubble drag/remove.
   - 2026-05-12 user physical QA pass on temporary flag-ON clean-launcher build:
@@ -396,12 +435,35 @@ touch bounds.
     settings Open action launches; capture-sheet footer no longer promises
     local-only behavior; undo/status pill no longer blocks adjacent taps.
     Remaining matrix coverage: Diary, landscape passes, and bubble drag/remove.
-- [ ] **T015-906** Branch hygiene: before opening PRs, split current mixed
+  - 2026-05-12 user reported the flag-on Phase 5 bubble/remove QA is all good
+    on the installed S24/Tab S9 build. Remaining matrix coverage: full Diary
+    and landscape screen sweeps beyond the overlay bubble/remove path.
+  - 2026-05-12 user reported landscape and full Diary/Settings paths work,
+    except Settings could show the floating bubble service as Active when the
+    bubble was not actually running. Fixed by tracking actual service running
+    state separately from the enabled preference, refreshing the Settings state
+    from prefs on resume, and removing the UI shortcut that promoted enabled +
+    stopped to Active. Regression coverage: `ServiceHealthMonitorTest`.
+  - 2026-05-12 product decision after physical QA: remove the user-facing
+    Service health row from capture setup. The floating bubble switch owns
+    start/stop, while Permissions rows own Android overlay/usage access and
+    provide Grant/Review recovery paths for users who skipped setup.
+  - 2026-05-12 user confirmed the Settings permission-row refit works after
+    the Service health row was removed. Physical QA matrix is complete.
+- [x] **T015-906** Branch hygiene: before opening PRs, split current mixed
   worktree changes into the owning branches: `015-*` for visual refit,
   `016-intent-set-migration` for enum/intent-label migration, and
   `017-capture-feedback-actions` for duplicate/Already Saved product behavior.
   Use [docs/capture-overlay-followups.md](../../docs/capture-overlay-followups.md)
   as the current dirty-worktree routing map.
+  - 2026-05-12 routing map refreshed for `qa/015-017-stacked`, including the
+    launcher/logo resources, BubbleUI refit, Settings permission-row refit,
+    internal service-health hardening, and legacy duplicate fallback files.
+  - 2026-05-12 branch split complete: 015 visual/setup/logo changes applied to
+    `../capsule-app-015-phase1-split` on `015-phase1-cluster-surface`; 017
+    duplicate fallback changes applied to `../capsule-app-spec-017` on
+    `017-capture-feedback-actions`; `qa/015-017-stacked` returned to a clean
+    worktree. No 016 files were dirty in this split.
 
 ---
 

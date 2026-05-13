@@ -18,31 +18,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -57,8 +48,6 @@ import com.capsule.app.settings.QuietRule
 import com.capsule.app.settings.QuietSettingSection
 import com.capsule.app.settings.QuietSettingsColors
 import com.capsule.app.service.CapsuleOverlayService
-import com.capsule.app.service.ServiceHealthMonitor
-import com.capsule.app.service.ServiceHealthStatus
 import com.capsule.app.ui.primitives.MonoLabel
 import com.capsule.app.ui.theme.CapsuleTheme
 import com.capsule.app.ui.theme.LocalRuntimeFlags
@@ -71,7 +60,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private val prefs by lazy { getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-    private val healthMonitor by lazy { ServiceHealthMonitor(this) }
 
     private var isServiceEnabled by mutableStateOf(false)
     private var hasOverlayPermission by mutableStateOf(false)
@@ -111,6 +99,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        isServiceEnabled = prefs.getBoolean("service_enabled", false)
         hasOverlayPermission = OverlayPermissionHelper.canDrawOverlays(this)
         hasUsageAccess = UsageAccessHelper.hasUsageAccess(this)
     }
@@ -235,11 +224,6 @@ class MainActivity : ComponentActivity() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Service health indicator
-                ServiceHealthCard()
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Battery optimization guide (OEM-specific)
                 BatteryGuideCard()
             }
@@ -285,35 +269,32 @@ class MainActivity : ComponentActivity() {
             }
 
             QuietSettingSection(label = "Permissions") {
-                if (!hasOverlayPermission) {
-                    QuietSetupActionRow(
-                        title = "Overlay permission required",
-                        description = "Allows Orbit to show the capture bubble above other apps.",
-                        action = "Grant",
-                        onClick = {
-                            overlayPermissionLauncher.launch(
-                                OverlayPermissionHelper.buildOverlayPermissionIntent(this@MainActivity)
-                            )
-                        },
-                    )
-                }
-                if (!hasUsageAccess) {
-                    QuietSetupActionRow(
-                        title = "Usage access optional",
-                        description = "Lets Orbit attribute captures to the app you copied from. Without it, captures are labelled Unknown source.",
-                        action = "Grant",
-                        onClick = { startActivity(UsageAccessHelper.buildUsageAccessIntent()) },
-                    )
-                }
-                if (hasOverlayPermission && hasUsageAccess) {
-                    QuietStatusRow(
-                        title = "Capture context",
-                        description = "Overlay and usage access are ready.",
-                    )
-                }
+                QuietSetupActionRow(
+                    title = if (hasOverlayPermission) "Overlay permission" else "Overlay permission required",
+                    description = if (hasOverlayPermission) {
+                        "Android allows Orbit to show the capture bubble above other apps."
+                    } else {
+                        "Allow Orbit to show the capture bubble above other apps before turning it on."
+                    },
+                    action = if (hasOverlayPermission) "Review" else "Grant",
+                    onClick = {
+                        overlayPermissionLauncher.launch(
+                            OverlayPermissionHelper.buildOverlayPermissionIntent(this@MainActivity)
+                        )
+                    },
+                )
+                QuietSetupActionRow(
+                    title = if (hasUsageAccess) "Usage access" else "Usage access optional",
+                    description = if (hasUsageAccess) {
+                        "Android allows Orbit to attribute captures to the app you copied from."
+                    } else {
+                        "Lets Orbit attribute captures to the app you copied from. Without it, captures are labelled Unknown source."
+                    },
+                    action = if (hasUsageAccess) "Review" else "Grant",
+                    onClick = { startActivity(UsageAccessHelper.buildUsageAccessIntent()) },
+                )
             }
 
-            QuietHealthSection()
             QuietBatteryGuideSection()
 
             Spacer(Modifier.height(28.dp))
@@ -371,36 +352,6 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun QuietStatusRow(title: String, description: String) {
-        Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
-            QuietRowTitle(title)
-            Spacer(Modifier.height(3.dp))
-            QuietRowDescription(description)
-        }
-        QuietRule()
-    }
-
-    @Composable
-    private fun QuietHealthSection() {
-        val health by healthMonitor.health.collectAsState()
-        val label = when (health.status) {
-            ServiceHealthStatus.ACTIVE -> "Active"
-            ServiceHealthStatus.DEGRADED -> "Degraded"
-            ServiceHealthStatus.KILLED -> "Stopped"
-        }
-        QuietSettingSection(label = "Service health") {
-            QuietStatusRow(
-                title = "Service: $label",
-                description = if (health.restartCount > 0) {
-                    "Restarts: ${health.restartCount}"
-                } else {
-                    "The capture service has not reported restarts."
-                },
-            )
-        }
-    }
-
-    @Composable
     private fun QuietBatteryGuideSection() {
         val guide = BatteryOptimizationGuide.getGuide() ?: return
         QuietSettingSection(label = "Battery") {
@@ -410,47 +361,6 @@ class MainActivity : ComponentActivity() {
                 action = "Open",
                 onClick = { openBatterySettings(guide) },
             )
-        }
-    }
-
-    @Composable
-    private fun ServiceHealthCard() {
-        val health by healthMonitor.health.collectAsState()
-
-        val (icon, color, label) = when (health.status) {
-            ServiceHealthStatus.ACTIVE -> Triple(Icons.Default.CheckCircle, Color(0xFF4CAF50), "Active")
-            ServiceHealthStatus.DEGRADED -> Triple(Icons.Default.Warning, Color(0xFFFFC107), "Degraded")
-            ServiceHealthStatus.KILLED -> Triple(Icons.Default.Error, Color(0xFFF44336), "Stopped")
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Service: $label",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    if (health.restartCount > 0) {
-                        Text(
-                            text = "Restarts: ${health.restartCount}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
         }
     }
 

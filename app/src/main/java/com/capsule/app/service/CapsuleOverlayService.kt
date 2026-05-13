@@ -178,6 +178,8 @@ class CapsuleOverlayService : LifecycleService() {
         when (intent?.action) {
             ACTION_STOP_OVERLAY -> {
                 Log.d(TAG, "STOP_OVERLAY received")
+                prefs.edit().putBoolean("service_enabled", false).apply()
+                healthMonitor.onServiceStopped()
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -208,7 +210,9 @@ class CapsuleOverlayService : LifecycleService() {
         // If the service is being stopped by user toggle (not a kill), record it
         // so the health indicator reflects reality instead of staying ACTIVE.
         val userEnabled = prefs.getBoolean("service_enabled", false)
-        if (!userEnabled) {
+        if (userEnabled) {
+            healthMonitor.onServiceKilled()
+        } else {
             healthMonitor.onServiceStopped()
         }
         // T104 — write SERVICE_STOPPED audit row. Fire-and-forget from

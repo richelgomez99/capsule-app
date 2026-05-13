@@ -37,6 +37,8 @@ class ServiceHealthMonitor(context: Context) {
         private const val KEY_RESTART_COUNT = "restart_count"
         private const val KEY_LAST_START_TS = "last_start_ts"
         private const val KEY_LAST_KILL_TS = "last_kill_ts"
+        private const val KEY_STATUS = "service_health_status"
+        private const val KEY_IS_RUNNING = "service_is_running"
         private const val DEGRADED_THRESHOLD_MS = 5 * 60 * 1000L // 5 minutes
     }
 
@@ -60,6 +62,8 @@ class ServiceHealthMonitor(context: Context) {
         prefs.edit()
             .putInt(KEY_RESTART_COUNT, newCount)
             .putLong(KEY_LAST_START_TS, now)
+            .putString(KEY_STATUS, status.name)
+            .putBoolean(KEY_IS_RUNNING, true)
             .apply()
 
         _health.value = ServiceHealth(
@@ -76,7 +80,11 @@ class ServiceHealthMonitor(context: Context) {
 
     fun onServiceKilled() {
         val now = System.currentTimeMillis()
-        prefs.edit().putLong(KEY_LAST_KILL_TS, now).apply()
+        prefs.edit()
+            .putLong(KEY_LAST_KILL_TS, now)
+            .putString(KEY_STATUS, ServiceHealthStatus.KILLED.name)
+            .putBoolean(KEY_IS_RUNNING, false)
+            .apply()
         degradedJob?.cancel()
         _health.value = _health.value.copy(
             status = ServiceHealthStatus.KILLED,
@@ -92,7 +100,15 @@ class ServiceHealthMonitor(context: Context) {
      */
     fun onServiceStopped() {
         degradedJob?.cancel()
+        prefs.edit()
+            .putString(KEY_STATUS, ServiceHealthStatus.KILLED.name)
+            .putBoolean(KEY_IS_RUNNING, false)
+            .apply()
         _health.value = _health.value.copy(status = ServiceHealthStatus.KILLED)
+    }
+
+    fun refresh() {
+        _health.value = readPersistedHealth()
     }
 
     /**
@@ -108,13 +124,21 @@ class ServiceHealthMonitor(context: Context) {
         degradedJob?.cancel()
         degradedJob = scope.launch {
             delay(DEGRADED_THRESHOLD_MS)
-            _health.value = _health.value.copy(status = ServiceHealthStatus.ACTIVE)
+            if (prefs.getBoolean(KEY_IS_RUNNING, false)) {
+                prefs.edit().putString(KEY_STATUS, ServiceHealthStatus.ACTIVE.name).apply()
+                _health.value = _health.value.copy(status = ServiceHealthStatus.ACTIVE)
+            }
         }
     }
 
     private fun readPersistedHealth(): ServiceHealth {
+        val persistedStatus = prefs.getString(KEY_STATUS, ServiceHealthStatus.KILLED.name)
+            ?.let { runCatching { ServiceHealthStatus.valueOf(it) }.getOrNull() }
+            ?: ServiceHealthStatus.KILLED
+        val isRunning = prefs.getBoolean(KEY_IS_RUNNING, false)
+        val status = if (isRunning) persistedStatus else ServiceHealthStatus.KILLED
         return ServiceHealth(
-            status = ServiceHealthStatus.KILLED,
+            status = status,
             restartCount = prefs.getInt(KEY_RESTART_COUNT, 0),
             lastStartTimestamp = prefs.getLong(KEY_LAST_START_TS, 0L),
             lastKillTimestamp = prefs.getLong(KEY_LAST_KILL_TS, 0L)
