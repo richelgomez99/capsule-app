@@ -262,6 +262,40 @@ class UrlHashDedupeContractTest {
         assertNotEquals(deleted.envelopeId, afterDelete.envelopeId)
     }
 
+    @Test
+    fun restoreFromTrash_reactivatesUrlDuplicateKeyWhenNoActiveConflict() = runTest {
+        val first = repository.sealWithResult(draft("https://example.com/restored"), state())
+        repository.delete(first.envelopeId)
+        assertNull(db.intentEnvelopeDao().getById(first.envelopeId)!!.activePrimaryCanonicalUrlHash)
+
+        repository.restoreFromTrash(first.envelopeId)
+        clock.advance(1_000L)
+
+        val duplicate = repository.sealWithResult(draft("https://www.example.com/restored/"), state())
+
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, duplicate.status)
+        assertEquals(SealResultParcel.MATCHED_BY_CANONICAL_URL, duplicate.matchedBy)
+        assertEquals(first.envelopeId, duplicate.envelopeId)
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+    }
+
+    @Test
+    fun restoreFromTrash_reactivatesExactTextDuplicateKeyWhenNoActiveConflict() = runTest {
+        val first = repository.sealWithResult(draft("restored exact note"), state())
+        repository.delete(first.envelopeId)
+        assertNull(db.intentEnvelopeDao().getById(first.envelopeId)!!.activeTextContentSha256)
+
+        repository.restoreFromTrash(first.envelopeId)
+        clock.advance(1_000L)
+
+        val duplicate = repository.sealWithResult(draft("restored exact note"), state())
+
+        assertEquals(SealResultParcel.STATUS_ALREADY_SAVED, duplicate.status)
+        assertEquals(SealResultParcel.MATCHED_BY_EXACT_TEXT, duplicate.matchedBy)
+        assertEquals(first.envelopeId, duplicate.envelopeId)
+        assertEquals(1, db.intentEnvelopeDao().countAll())
+    }
+
     // ---- Helpers ----
 
     private suspend fun seedResult(rawUrl: String): SeededUrlResult {

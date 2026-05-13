@@ -76,6 +76,8 @@ class LocalRoomBackend(
     ) {
         database.withTransaction {
             envelopeDao.restoreFromTrash(id)
+            envelopeDao.restoreActivePrimaryCanonicalUrlHashIfAvailable(id)
+            envelopeDao.restoreActiveTextContentSha256IfAvailable(id)
             auditDao.insert(auditEntry)
         }
     }

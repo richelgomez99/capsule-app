@@ -137,6 +137,56 @@ interface IntentEnvelopeDao {
 
     @Query(
         """
+        UPDATE intent_envelope
+        SET activePrimaryCanonicalUrlHash = primaryCanonicalUrlHash
+        WHERE id = :id
+          AND deletedAt IS NULL
+          AND isDeleted = 0
+          AND isArchived = 0
+          AND primaryCanonicalUrlHash IS NOT NULL
+          AND NOT EXISTS(
+              SELECT 1 FROM intent_envelope AS other
+              WHERE other.id != :id
+                AND other.activePrimaryCanonicalUrlHash = (
+                    SELECT target.primaryCanonicalUrlHash
+                    FROM intent_envelope AS target
+                    WHERE target.id = :id
+                )
+                AND other.deletedAt IS NULL
+                AND other.isDeleted = 0
+                AND other.isArchived = 0
+          )
+        """
+    )
+    suspend fun restoreActivePrimaryCanonicalUrlHashIfAvailable(id: String): Int
+
+    @Query(
+        """
+        UPDATE intent_envelope
+        SET activeTextContentSha256 = textContentSha256
+        WHERE id = :id
+          AND deletedAt IS NULL
+          AND isDeleted = 0
+          AND isArchived = 0
+          AND textContentSha256 IS NOT NULL
+          AND NOT EXISTS(
+              SELECT 1 FROM intent_envelope AS other
+              WHERE other.id != :id
+                AND other.activeTextContentSha256 = (
+                    SELECT target.textContentSha256
+                    FROM intent_envelope AS target
+                    WHERE target.id = :id
+                )
+                AND other.deletedAt IS NULL
+                AND other.isDeleted = 0
+                AND other.isArchived = 0
+          )
+        """
+    )
+    suspend fun restoreActiveTextContentSha256IfAvailable(id: String): Int
+
+    @Query(
+        """
         SELECT * FROM intent_envelope
         WHERE deletedAt IS NOT NULL
           AND deletedAt > :cutoffMillis
