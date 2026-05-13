@@ -36,6 +36,17 @@
 
 **Gate for future slice**: migration tests pass and exported schema includes the contact-ref columns/constraints.
 
+## Branch Debt Closeout Reconciliation - 2026-05-13
+
+- Clean status: `/Users/richelgomez/dev/capsule-app-spec-016` returned no `git status --short` output before reconciliation checks.
+- Diff against `origin/main...HEAD`: 22 files changed, 630 insertions, 37 deletions. Scope is spec docs, Android intent/label surfaces, Android parsing test, and Supabase classifier/allowlist/tests.
+- Diff against `origin/016-intent-set-migration...HEAD`: branch is materially diverged from the stale PR branch; PR #8 should be updated or replaced after the gates are reviewed.
+- Android gate passed: `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, and `:app:lintDebug` succeeded.
+- Supabase gateway package has no `npm test` script. Actual package gates passed with `npm run typecheck` and `npm run test:unit`; Vitest reported 6 files passed and 53 tests passed.
+- Stale-label search returned no implementation hits for `REMIND_ME`, `INSPIRATION`, or `intent-set rename` under `app/src/main` and `supabase/functions/llm_gateway`.
+- READ_LATER coverage search confirmed Android and cloud classifier coverage in `DigestComposer`, `Intent`, Diary surfaces, overlay chips, picker, classifier prompt, allowlist, and Anthropic handler tests.
+- ContactRef/schema leakage check: no `ContactRef`, `contact_ref`, `contactRef`, `OrbitMigrations`, `OrbitDatabase`, or `app/schemas` paths appear in the `origin/main...HEAD` diff.
+
 ## Phase 4 - Verification and branch hygiene
 
 - [x] **T016-401** Run Android gate: `:app:compileDebugKotlin`, `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`.
@@ -47,7 +58,7 @@
 ## Verification Matrix
 
 | Requirement | Verifying task |
-|---|---|
+| --- | --- |
 | FR-016-001 enum set | T016-101 + compile |
 | FR-016-002 no historical rename | T016-106 + T016-403 + T016-405 |
 | FR-016-003 chip order | T016-103 + T016-104 |
