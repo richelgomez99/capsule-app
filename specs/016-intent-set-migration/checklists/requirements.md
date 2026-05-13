@@ -6,42 +6,42 @@
 
 ## Content Quality
 
-- [x] No implementation details (languages, frameworks, APIs)  
+- [x] No implementation details (languages, frameworks, APIs)
   _Spec describes intent set, mapping, audit behavior; planning artifacts (plan.md, tasks.md) carry the implementation specifics._
-- [x] Focused on user value and business needs  
+- [x] Focused on user value and business needs
   _Each active user story names the alpha-user impact: chip palette correctness, existing capture preservation, and cloud classifier alignment._
-- [x] Written for non-technical stakeholders  
+- [x] Written for non-technical stakeholders
   _The three active user stories and deferred ContactRef follow-up read in plain language; FR list and Key Entities use minimal jargon._
-- [x] All mandatory sections completed  
+- [x] All mandatory sections completed
   _User Scenarios & Testing, Edge Cases, Requirements (FR-016-001..010), Key Entities, Success Criteria all populated._
 
 ## Requirement Completeness
 
 - [x] No [NEEDS CLARIFICATION] markers remain
-- [x] Requirements are testable and unambiguous  
+- [x] Requirements are testable and unambiguous
   _Every FR maps to a verification task in tasks.md (see verification matrix at the end of tasks.md)._
-- [x] Success criteria are measurable  
+- [x] Success criteria are measurable
   _SC-016-001..006 reference observable outcomes: stored intent preservation, chip labels/order, classifier labels, unknown-label fallback, deferred ContactRef scope, and verification gates._
-- [x] Success criteria are appropriately scoped  
+- [x] Success criteria are appropriately scoped
   _User-visible behavior is primary; build/test gates are tracked as implementation readiness criteria for this cross-tree Android + Supabase change._
-- [x] All acceptance scenarios are defined  
+- [x] All acceptance scenarios are defined
   _Each user story has Given/When/Then scenarios._
-- [x] Edge cases are identified  
+- [x] Edge cases are identified
   _Unknown intent fallback, stale rename text, non-pickable `AMBIGUOUS`, and deferred ContactRef absence are listed._
-- [x] Scope is clearly bounded  
+- [x] Scope is clearly bounded
   _Out of Scope explicitly defers ContactRef schema, contact-picker UI, multi-recipient UI, visual styling, and label renames._
-- [x] Dependencies and assumptions identified  
+- [x] Dependencies and assumptions identified
   _Spec 015 dependency posture documented in Assumptions; cluster-engine independence and AIDL string-typed surface verified by audit and recorded in research.md._
 
 ## Feature Readiness
 
-- [x] All functional requirements have clear acceptance criteria  
+- [x] All functional requirements have clear acceptance criteria
   _Each FR is paired with a verifying task in tasks.md verification matrix._
-- [x] User scenarios cover primary flows  
+- [x] User scenarios cover primary flows
   _Existing-user preservation (P1), chip palette/order (P1), cloud classifier alignment (P1), and deferred ContactRef scope._
-- [x] Feature meets measurable outcomes defined in Success Criteria  
+- [x] Feature meets measurable outcomes defined in Success Criteria
   _SC-016-001..006 are observable post-implementation._
-- [x] No implementation details leak into specification  
+- [x] No implementation details leak into specification
   _Implementation specifics (Migration class names, SQL, Compose icon choices) live in plan.md and tasks.md, not spec.md._
 
 ## Notes
