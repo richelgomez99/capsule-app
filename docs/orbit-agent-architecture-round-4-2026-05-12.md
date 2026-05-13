@@ -21,7 +21,7 @@ Related docs:
 - [Agent Stack Landscape Research - 2026-05-12](agent-stack-landscape-research-2026-05-12.md)
 - [Agent Stack POC Research - 2026-05-12](agent-stack-poc-research-2026-05-12.md)
 - [specs/003 Orbit Actions](../specs/003-orbit-actions/spec.md)
-- [specs/008 Orbit Agent](../specs/008-orbit-agent/spec.md)
+- [specs/008 Orbit Agent](../specs/legacy/2026-05-13-roadmap-rebaseline/008-orbit-agent/spec.md)
 - [specs/014 Gateway request/response contract](../specs/014-edge-function-llm-gateway/contracts/gateway-request-response.md)
 
 ## Round 4 conclusion

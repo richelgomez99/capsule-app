@@ -11,7 +11,7 @@ Related docs:
 - [Agent Stack Landscape Research - 2026-05-12](agent-stack-landscape-research-2026-05-12.md)
 - [Capture Source Identity Plan](capture-source-identity-plan.md)
 - [Orbit Agent Architecture Round 2 - 2026-05-12](orbit-agent-architecture-round-2-2026-05-12.md)
-- [specs/008-orbit-agent/spec.md](../specs/008-orbit-agent/spec.md)
+- [specs/008-orbit-agent/spec.md](../specs/legacy/2026-05-13-roadmap-rebaseline/008-orbit-agent/spec.md)
 
 ## Round 1 conclusion
 

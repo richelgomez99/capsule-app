@@ -201,7 +201,7 @@ The shape is right, but a real local/Nano kill-switch story requires:
 
 ### Source identity and YouTube handling
 
-[app/src/main/java/com/capsule/app/ui/primitives/SourceIdentityResolver.kt](../app/src/main/java/com/capsule/app/ui/primitives/SourceIdentityResolver.kt) and [app/src/main/java/com/capsule/app/net/ProviderMetadataResolver.kt](../app/src/main/java/com/capsule/app/net/ProviderMetadataResolver.kt) already cover YouTube URL recognition and oEmbed metadata.
+[app/src/main/java/com/capsule/app/net/ProviderMetadataResolver.kt](../app/src/main/java/com/capsule/app/net/ProviderMetadataResolver.kt) already covers provider metadata and oEmbed handling. The shared `SourceIdentityResolver` shape is tracked in [docs/capture-source-identity-plan.md](capture-source-identity-plan.md) and the `015-phase1-cluster-surface` branch before it becomes mainline source.
 
 Android feasibility: **high**.
 
