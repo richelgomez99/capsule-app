@@ -228,12 +228,33 @@ internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
 }
 
 /**
- * v6 — spec 017 envelope-level duplicate key for URL captures. This is
- * additive; old rows keep NULL and new captures populate the key at seal time.
+ * v6 — spec 017 envelope-level duplicate key for URL captures. Existing hydrated
+ * rows inherit their continuation-result URL hash so the first post-upgrade
+ * duplicate attempt still resolves to Already Saved.
  */
 internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE intent_envelope ADD COLUMN primaryCanonicalUrlHash TEXT")
+        db.execSQL(
+            """
+            UPDATE intent_envelope
+            SET primaryCanonicalUrlHash = (
+                SELECT canonicalUrlHash
+                FROM continuation_result
+                WHERE continuation_result.envelopeId = intent_envelope.id
+                  AND canonicalUrlHash IS NOT NULL
+                ORDER BY producedAt DESC
+                LIMIT 1
+            )
+            WHERE primaryCanonicalUrlHash IS NULL
+              AND EXISTS (
+                SELECT 1
+                FROM continuation_result
+                WHERE continuation_result.envelopeId = intent_envelope.id
+                  AND canonicalUrlHash IS NOT NULL
+              )
+            """.trimIndent()
+        )
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS index_intent_envelope_primaryCanonicalUrlHash " +
                 "ON intent_envelope(primaryCanonicalUrlHash)"

@@ -25,11 +25,26 @@ interface IntentEnvelopeDao {
           AND deletedAt IS NULL
           AND isDeleted = 0
           AND isArchived = 0
-        ORDER BY createdAt DESC
+        ORDER BY createdAt ASC
         LIMIT 1
         """
     )
     suspend fun findActiveByPrimaryCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
+
+    @Query(
+        """
+        SELECT envelope.* FROM intent_envelope AS envelope
+        INNER JOIN continuation_result AS result
+          ON result.envelopeId = envelope.id
+        WHERE result.canonicalUrlHash = :hash
+          AND envelope.deletedAt IS NULL
+          AND envelope.isDeleted = 0
+          AND envelope.isArchived = 0
+        ORDER BY envelope.createdAt ASC
+        LIMIT 1
+        """
+    )
+    suspend fun findActiveByContinuationCanonicalUrlHash(hash: String): IntentEnvelopeEntity?
 
     @Query(
         """
@@ -38,11 +53,25 @@ interface IntentEnvelopeDao {
           AND deletedAt IS NULL
           AND isDeleted = 0
           AND isArchived = 0
-        ORDER BY createdAt DESC
+        ORDER BY createdAt ASC
         LIMIT 1
         """
     )
     suspend fun findActiveByTextContentSha256(hash: String): IntentEnvelopeEntity?
+
+    @Query(
+        """
+        SELECT * FROM intent_envelope
+        WHERE contentType = 'TEXT'
+          AND textContent = :text
+          AND deletedAt IS NULL
+          AND isDeleted = 0
+          AND isArchived = 0
+        ORDER BY createdAt ASC
+        LIMIT 1
+        """
+    )
+    suspend fun findActiveByExactTextContent(text: String): IntentEnvelopeEntity?
 
     @Query(
         """
