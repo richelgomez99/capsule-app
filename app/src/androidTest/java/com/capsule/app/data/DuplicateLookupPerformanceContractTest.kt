@@ -73,12 +73,16 @@ class DuplicateLookupPerformanceContractTest {
     private suspend fun seedVisibleEnvelopes(count: Int) {
         repeat(count) { index ->
             val isUrlRow = index < count / 2
+            val urlHash = if (isUrlRow) "url-$index" else null
+            val textHash = if (isUrlRow) null else "text-${index - count / 2}"
             db.intentEnvelopeDao().insert(
                 envelope(
                     id = "env-$index",
                     textContent = if (isUrlRow) "https://example.com/$index" else "note $index",
-                    primaryCanonicalUrlHash = if (isUrlRow) "url-$index" else null,
-                    textContentSha256 = if (isUrlRow) null else "text-${index - count / 2}",
+                    primaryCanonicalUrlHash = urlHash,
+                    textContentSha256 = textHash,
+                    activePrimaryCanonicalUrlHash = urlHash,
+                    activeTextContentSha256 = textHash,
                     createdAt = 1_700_000_000_000L + index
                 )
             )
@@ -92,6 +96,8 @@ class DuplicateLookupPerformanceContractTest {
                 textContent = "https://example.com/archived",
                 primaryCanonicalUrlHash = "url-42",
                 textContentSha256 = null,
+                activePrimaryCanonicalUrlHash = null,
+                activeTextContentSha256 = null,
                 createdAt = 1_700_000_999_000L,
                 isArchived = true
             )
@@ -102,6 +108,8 @@ class DuplicateLookupPerformanceContractTest {
                 textContent = "deleted note",
                 primaryCanonicalUrlHash = null,
                 textContentSha256 = "text-42",
+                activePrimaryCanonicalUrlHash = null,
+                activeTextContentSha256 = null,
                 createdAt = 1_700_000_999_001L,
                 isDeleted = true,
                 deletedAt = 1_700_000_999_001L
@@ -114,6 +122,8 @@ class DuplicateLookupPerformanceContractTest {
         textContent: String,
         primaryCanonicalUrlHash: String?,
         textContentSha256: String?,
+        activePrimaryCanonicalUrlHash: String?,
+        activeTextContentSha256: String?,
         createdAt: Long,
         isArchived: Boolean = false,
         isDeleted: Boolean = false,
@@ -140,7 +150,9 @@ class DuplicateLookupPerformanceContractTest {
         isArchived = isArchived,
         isDeleted = isDeleted,
         deletedAt = deletedAt,
-        primaryCanonicalUrlHash = primaryCanonicalUrlHash
+        primaryCanonicalUrlHash = primaryCanonicalUrlHash,
+        activePrimaryCanonicalUrlHash = activePrimaryCanonicalUrlHash,
+        activeTextContentSha256 = activeTextContentSha256
     )
 
     private fun p95Millis(durationsNanos: List<Long>): Double {

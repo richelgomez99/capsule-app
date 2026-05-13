@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
+import android.database.sqlite.SQLiteConstraintException
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
@@ -211,7 +212,9 @@ class EnvelopeRepositoryImpl(
             createdAt = now,
             dayLocal = dayLocal,
             sharedContinuationResultId = sharedResultId,
-            primaryCanonicalUrlHash = primaryCanonicalUrlHash
+            primaryCanonicalUrlHash = primaryCanonicalUrlHash,
+            activePrimaryCanonicalUrlHash = primaryCanonicalUrlHash,
+            activeTextContentSha256 = exactTextHash
         )
 
         val audit = auditWriter.build(
@@ -267,12 +270,37 @@ class EnvelopeRepositoryImpl(
             )
         }
 
-        runBlocking {
-            backend.sealTransaction(
-                envelope = envelope,
-                continuations = continuationRows,
-                auditEntries = auditEntries
+        val collision = runCatching {
+            runBlocking {
+                backend.sealTransaction(
+                    envelope = envelope,
+                    continuations = continuationRows,
+                    auditEntries = auditEntries
+                )
+            }
+        }.exceptionOrNull()
+        if (collision != null) {
+            if (collision !is SQLiteConstraintException) throw collision
+            val existing = runBlocking {
+                primaryCanonicalUrlHash?.let { backend.findActiveEnvelopeByPrimaryCanonicalUrlHash(it) }
+                    ?: exactTextHash?.let { backend.findActiveEnvelopeByTextContentSha256(it) }
+            } ?: throw collision
+            val matchedBy = if (primaryCanonicalUrlHash != null) {
+                SealResultParcel.MATCHED_BY_CANONICAL_URL
+            } else {
+                SealResultParcel.MATCHED_BY_EXACT_TEXT
+            }
+            val duplicateAudit = auditWriter.build(
+                action = AuditAction.DUPLICATE_CAPTURE_ATTEMPT,
+                description = "Duplicate capture matched existing envelope",
+                envelopeId = existing.id,
+                extraJson = JSONObject()
+                    .put("existingEnvelopeId", existing.id)
+                    .put("matchedBy", matchedBy)
+                    .toString()
             )
+            runBlocking { backend.recordDuplicateCaptureAttempt(duplicateAudit) }
+            return SealResultParcel.alreadySaved(existing.id, matchedBy)
         }
 
         // T068 — AFTER the Room txn commits, hand each PENDING row to the
