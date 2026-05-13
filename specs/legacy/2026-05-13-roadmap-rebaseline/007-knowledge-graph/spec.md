@@ -1,5 +1,7 @@
 # Knowledge Graph (v1.2)
 
+**Legacy status (2026-05-13)**: Archived input for the roadmap rebaseline. This is not the active `007` Speckit source anymore. During `docs/product-truth-reset`, preserve this draft under an archive/legacy path and reuse slot `007` for `007-memory-candidates-inspector`; carry graph/backend ideas forward only after memory controls exist, with backend POC work moving to `009-kg-backend-poc`.
+
 **Status**: DRAFT — full PRD to be drafted after spec 006 ships
 **Target release**: v1.2
 **Depends on**: spec 002 complete; spec 006 (Orbit Cloud) shipped (KG lives in Orbit Cloud by default); spec 004 (Ask Orbit) consumes KG

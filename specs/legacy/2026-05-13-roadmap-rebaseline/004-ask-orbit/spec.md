@@ -1,5 +1,7 @@
 # Ask Orbit (v1.2)
 
+**Legacy status (2026-05-13)**: Archived input for the roadmap rebaseline. This is not the active `004` Speckit source anymore. During `docs/product-truth-reset`, preserve this draft under an archive/legacy path and reuse slot `004` for `004-capture-understanding`; carry the Ask/citation requirements forward into `005-retrieval-and-ask-citations`.
+
 **Status**: STUB — full PRD to be drafted after v1.1 (spec 003, spec 005) ships
 **Target release**: v1.2
 **Depends on**: spec 002 complete; spec 005 optional; spec 006 optional; spec 007 optional

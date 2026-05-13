@@ -1,4 +1,12 @@
+<!-- markdownlint-disable -->
+
 # Tasks: Cloud LLM Routing + Supabase Backbone (Day 1)
+
+## 2026-05-13 Docs Reset Status
+
+This task file predates the merged `cloud-pivot` baseline and is historical input for the cloud-routing story. During docs reset, representative code-reality checks on `origin/main` found the Supabase migrations, `supabase/tests/multi_user_smoke.sql`, `LlmGatewayClient.kt`, `CloudLlmProvider.kt`, and `LlmProviderRouter.kt` present. PR #1 `cloud-pivot` is merged and should be treated as the current Day 1/Day 2 cloud baseline.
+
+No checkboxes were changed in this pass because this file mixes original Day 1 sequencing with later `cloud-pivot` follow-up work. Future cloud controls should not reopen this spec directly; carry provider, routing, RLS, and budget-control lessons into rebaselined `008-cloud-controls-storage-budgeting`, while implementation truth comes from `origin/main`, `supabase/`, spec `014`, and the current planning docs.
 
 **Spec dir**: `specs/013-cloud-llm-routing/` | **Branch**: `cloud-pivot` | **Generated**: 2026-04-28
 **Inputs**: [spec.md](spec.md), [plan.md](plan.md), [data-model.md](data-model.md), [research.md](research.md), [quickstart.md](quickstart.md), [contracts/](contracts/)

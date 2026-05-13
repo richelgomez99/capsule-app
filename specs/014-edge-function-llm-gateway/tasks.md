@@ -1,4 +1,12 @@
+<!-- markdownlint-disable -->
+
 # Tasks: 014-edge-function-llm-gateway (Day 2 — Vercel AI Gateway Edge Function)
+
+## 2026-05-13 Docs Reset Status
+
+This task file is retained as the gateway closeout record. During docs reset, representative code-reality checks on `origin/main` found `supabase/functions/llm_gateway/package.json`, `supabase/functions/llm_gateway/index.ts`, Supabase migrations `00000000` through `00000003`, and `supabase/tests/multi_user_smoke.sql` present. The gateway package exposes `npm run typecheck` and `npm run test:unit`; there is no `npm test` script.
+
+Do not regenerate Day 2 from scratch. Future work should treat the deployed Vercel/Supabase gateway baseline as current, carry audit/cost/budget lessons into rebaselined `008-cloud-controls-storage-budgeting`, and run gateway validation with `npm run typecheck` plus `npm run test:unit` from `supabase/functions/llm_gateway`.
 
 **Input**: Design documents in `/Users/richelgomez/dev/capsule-app/specs/014-edge-function-llm-gateway/`
 **Prerequisites**: spec.md, plan.md, research.md, data-model.md, quickstart.md, contracts/{gateway-request-response,auth-jwt-contract,audit-row-contract}.md

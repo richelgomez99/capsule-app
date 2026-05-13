@@ -1,4 +1,8 @@
+<!-- markdownlint-disable -->
+
 # Orbit Agent (v1.2)
+
+**Legacy status (2026-05-13)**: Archived input for the roadmap rebaseline. This is not the active `008` Speckit source anymore. During `docs/product-truth-reset`, preserve this draft under an archive/legacy path and reuse slot `008` for `008-cloud-controls-storage-budgeting`; carry agent-coordinator ideas forward into `010-agent-coordinator` after approval runtime, memory controls, and cloud controls exist.
 
 **Status**: STUB — full PRD to be drafted after v1.1 stabilizes
 **Target release**: v1.2 (full agent with planner + executor + consent filter)
