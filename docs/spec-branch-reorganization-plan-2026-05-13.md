@@ -84,6 +84,7 @@ These staged leftovers have now been committed into their owning implementation 
 | PR #19 `016-intent-set-migration-closeout` -> `main` | Open replacement implementation PR | Carries the actual local `016` implementation branch state plus 2026-05-13 closeout gate notes. |
 | PR #21 `015-phase1-cluster-surface` -> `main` | Open implementation PR | Closeout commit `275ead9` pushed; land after PR #19 and preferably after PR #20 unless reviewers explicitly accept the dependency state. |
 | PR #20 `017-capture-feedback-actions` -> `main` | Open implementation PR | Staged worktree debt committed as `b872e38`; self-review fixes pushed as `1d0d100` with active duplicate-key enforcement, text-key indexing, concurrent duplicate coverage, and v5-to-v7 migration coverage. Depends on PR #19 unless reviewers explicitly accept the dependency state. |
+| PR #22 `docs/product-truth-reset` -> `main` | Open docs reset PR | Carries README/PRD truth reset, planning docs, archived legacy `004` through `012`, refreshed active `004` through `012` placeholders, and `003`/`013`/`014` status notes. Landing is deferred pending review of the branch-debt PR stack. |
 | `qa/015-017-stacked` | No upstream; 24 commits ahead of local main merge-base; docs untracked | Integration/reference branch only. Do not keep adding new implementation here. |
 
 ### What this changes
@@ -112,6 +113,10 @@ PR #8 has been closed as superseded. Replacement PR #19 is open from `016-intent
 
 As of the 2026-05-13 closeout run, `017-capture-feedback-actions` staged work has been committed as `b872e38`, pushed to `origin/017-capture-feedback-actions`, and opened as PR #20. After self-review, fixes were committed as `1d0d100` and pushed to PR #20: database-backed active duplicate keys, exact-text active-key indexing, concurrent duplicate regression coverage, v5-to-v7 migration coverage, and androidTest schema assets. Android compile/lint gates passed, focused unit tests passed, focused connected instrumentation passed on SM-S928U1 and SM-X710, and S24/Tab S9 physical QA evidence is preserved in the PR body. Treat `017` as PR-ready, not landed; merge after PR #19 unless reviewers explicitly accept the dependency state.
 
+### Docs product truth reset status
+
+As of the 2026-05-13 docs reset run, `docs/product-truth-reset` has been committed as `b266a69`, pushed to `origin/docs/product-truth-reset`, and opened as PR #22. The branch updates README/PRD product truth to local-first/cloud-augmented, archives the old spec-only `004` through `012` folders under `specs/legacy/2026-05-13-roadmap-rebaseline`, recreates active placeholders for `004-capture-understanding` through `012-resolution-semantics`, copies the planning/research docs, and adds status reconciliation notes to `003`, `013`, and `014`. Markdown diagnostics passed on touched docs/spec files, `git diff --check` passed, and the changed paths were reviewed as docs/spec/status only with no app code changes. Treat docs reset as PR-ready, not landed; landing remains deferred pending review of the branch-debt PR stack.
+
 ## Branch count
 
 ### Before the first rebaselined Speckit feature
@@ -123,7 +128,7 @@ Use **four landing tracks total**, only **one of which is a new branch**. The ex
 | 1 | `016-intent-set-migration` | No | Durable intent enum/label alignment. | Clean locally, but remote PR #8 is stale/diverged. Reconcile local branch vs PR before landing. |
 | 2 | `017-capture-feedback-actions` | No | Duplicate capture, Already Saved, notes/reclassify/open actions. | PR #20 is open with review-fix commit `1d0d100`. Land after 016. |
 | 3 | `015-phase1-cluster-surface` | No | Visual refit and overlay/bubble/settings polish. | PR #21 is open with closeout commit `275ead9`. Land after 016 and preferably after 017. |
-| 4 | `docs/product-truth-reset` | Yes | Commit the new research/planning docs, update stale local-only copy, reconcile spec statuses. | Create from clean base after branch debt is known and current untracked docs are preserved. |
+| 4 | `docs/product-truth-reset` | Yes | Commit the new research/planning docs, update stale local-only copy, reconcile spec statuses. | PR #22 is open from clean `origin/main`; land after review of the branch-debt PR stack. |
 
 Do not create another implementation branch until these four tracks are closed or intentionally deferred.
 

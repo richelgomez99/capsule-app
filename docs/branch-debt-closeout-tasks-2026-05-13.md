@@ -321,7 +321,7 @@ Commit/PR result: committed the staged `015` closeout work as `275ead9`, pushed 
 - [x] T054 Reconcile stale task status in [specs/013-cloud-llm-routing/tasks.md](../specs/013-cloud-llm-routing/tasks.md) by verifying Android/provider/router and Supabase migration reality after PR #1 cloud-pivot.
 - [x] T055 Reconcile [specs/014-edge-function-llm-gateway/tasks.md](../specs/014-edge-function-llm-gateway/tasks.md) by adding status or follow-up notes for `supabase/functions/llm_gateway` without regenerating Day 2 from scratch.
 - [x] T056 Confirm `docs/product-truth-reset` changes are markdown/docs/spec status only by running `git -C /Users/richelgomez/dev/capsule-app-docs-product-truth-reset diff --name-only origin/main...HEAD` and reviewing paths before PR.
-- [ ] T057 Open and land the `docs/product-truth-reset` PR, then record merge commit or defer reason in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md).
+- [x] T057 Open and land the `docs/product-truth-reset` PR, then record merge commit or defer reason in [docs/spec-branch-reorganization-plan-2026-05-13.md](spec-branch-reorganization-plan-2026-05-13.md). PR #22 is open; landing is deferred pending review of the branch-debt PR stack.
 
 **Checkpoint**: Product truth and roadmap status are current. New Spec Kit prompts can cite the repo without re-litigating the local-first/cloud-augmented pivot.
 
