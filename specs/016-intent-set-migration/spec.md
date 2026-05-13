@@ -1,9 +1,9 @@
 # Feature Specification: Intent Set Extension
 
-**Feature Branch**: `016-intent-set-migration`  
-**Created**: 2026-04-29  
-**Amended**: 2026-05-11  
-**Status**: Implementation ready for product-label preservation; ContactRef schema deferred  
+**Feature Branch**: `016-intent-set-migration`
+**Created**: 2026-04-29
+**Amended**: 2026-05-11
+**Status**: Implementation ready for product-label preservation; ContactRef schema deferred
 **Input**: Preserve the shipped product labels `Want it`, `Reference`, `For someone`, and `Interesting`; add `Read later`; retain `AMBIGUOUS` as a defensive sentinel; align the cloud classifier with Android enum names; defer future `ContactRef` schema work to its own migration slice.
 
 ## Clarifications

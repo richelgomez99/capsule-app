@@ -1,7 +1,7 @@
 # Tasks: Intent Set Extension (Spec 016)
 
-**Input**: [spec.md](spec.md), [plan.md](plan.md), [data-model.md](data-model.md)  
-**Branch**: `016-intent-set-migration`  
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [data-model.md](data-model.md)
+**Branch**: `016-intent-set-migration`
 **Workflow**: specify -> plan -> tasks -> implement. Run `speckit.analyze` after this amendment before committing implementation work.
 
 ## Phase 0 - Product-label amendment
