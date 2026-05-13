@@ -125,7 +125,7 @@ Use **four landing tracks total**, only **one of which is a new branch**. The ex
 
 | Track | Branch | New? | Purpose | Recommendation |
 | --- | --- | ---: | --- | --- |
-| 1 | `016-intent-set-migration` | No | Durable intent enum/label alignment. | Clean locally, but remote PR #8 is stale/diverged. Reconcile local branch vs PR before landing. |
+| 1 | `016-intent-set-migration` | No | Durable intent enum/label alignment. | PR #19 is open with markdown cleanup `9431568`. Review/land first, or keep explicitly deferred. |
 | 2 | `017-capture-feedback-actions` | No | Duplicate capture, Already Saved, notes/reclassify/open actions. | PR #20 is open with review-fix commit `acac810`. Land after 016. |
 | 3 | `015-phase1-cluster-surface` | No | Visual refit and overlay/bubble/settings polish. | PR #21 is open with closeout cleanup `9814121`. Land after 016 and preferably after 017. |
 | 4 | `docs/product-truth-reset` | Yes | Commit the new research/planning docs, update stale local-only copy, reconcile spec statuses. | PR #22 is open from clean `origin/main`; land after review of the branch-debt PR stack. |
@@ -355,6 +355,17 @@ specs/004-capture-understanding/
 - Stop if it adds generic browser automation.
 - Stop if it passes raw HTML, screenshots, embeddings, or full evidence bundles over Binder.
 - Stop if it adds network clients outside `com.capsule.app.net.*`.
+
+### Speckit execution policy
+
+Use the rebaselined `004` through `012` folders as the roadmap skeleton, not as permission to generate every full branch spec up front. The better workflow is:
+
+1. Keep lightweight placeholder `spec.md` files for `004` through `012` so the whole product order is visible.
+2. For the branch being worked now, run the full Speckit loop: `/speckit.specify` -> `/speckit.plan` -> `/speckit.tasks` -> implementation.
+3. Before starting the next branch, reread the roadmap, the previous branch's actual outputs, and any changed code/docs. Then rerun Speckit for that next branch with the updated reality.
+4. Do not pre-generate detailed `plan.md`, `data-model.md`, `contracts/`, or `tasks.md` for every future branch in one batch. Those artifacts become stale as soon as `004` changes the model, deletion semantics, Binder payload shape, or cloud policy.
+
+This preserves the good part of the earlier approach: every pending branch has a designated slot and rough scope. It avoids the bad part: false precision across nine future branches. The only exception is a very small tactical branch such as `011-manual-compose`; it may be pulled forward after `004` if it can reuse the capture-understanding path without new schema, Binder, or cloud decisions.
 
 ## Later rebaselined Speckit pre-work
 
