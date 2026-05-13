@@ -50,7 +50,7 @@ This audit used the `specs/` artifact set, task checkbox counts, file modificati
 | `012-resolution-semantics` | `spec.md` only | none | 2026-04-29 | Spec-only broad concept; split later. |
 | `013-cloud-llm-routing` | Full Speckit set | 14 done / 14 open | 2026-04-29 | Real cloud-pivot plan; PR #1 merged, tasks stale. |
 | `014-edge-function-llm-gateway` | Full Speckit set | 0 checkbox markers | 2026-05-10 | Real gateway plan; task file uses non-checkbox format, PR #1 merged. |
-| `015-visual-refit` | `spec`, `plan`, `research`, `quickstart`, `tasks` | 50 done / 14 open | 2026-05-12 | Active implementation PR #21 with closeout-copy review fix pushed at `9814121`. |
+| `015-visual-refit` | `spec`, `plan`, `research`, `quickstart`, `tasks` | 50 done / 14 open | 2026-05-12 | Active implementation PR #21 with closeout-copy and source-identity review fixes pushed through `a8a1c55`. |
 | `016-intent-set-migration` | Full Speckit set | 17 done / 0 open | 2026-05-11 | Active implementation PR #19 with markdown cleanup pushed at `9431568`. |
 | `017-capture-feedback-actions` | `spec`, `plan`, `data-model`, `tasks` | 30 done / 0 open | 2026-05-12 | Active implementation PR #20 with restore-from-trash duplicate-key fix pushed at `acac810`. |
 
@@ -61,7 +61,7 @@ Takeaway: only `004` through `012` are mostly spec-only drafts. The real work in
 | Worktree | Branch | Dirty state | What it means |
 | --- | --- | ---: | --- |
 | `/Users/richelgomez/dev/capsule-app` | `qa/015-017-stacked` | 14 untracked docs | Current integration/docs workspace. Planning docs are not committed. |
-| `/Users/richelgomez/dev/capsule-app-015-phase1-split` | `015-phase1-cluster-surface` | Clean after `9814121` | Actual `015` implementation branch pushed as PR #21. |
+| `/Users/richelgomez/dev/capsule-app-015-phase1-split` | `015-phase1-cluster-surface` | Clean after `a8a1c55` | Actual `015` implementation branch pushed as PR #21. |
 | `/Users/richelgomez/dev/capsule-app-spec-016` | `016-intent-set-migration` | clean after `9431568` | Actual `016` implementation branch pushed as PR #19 replacement. |
 | `/Users/richelgomez/dev/capsule-app-spec-017` | `017-capture-feedback-actions` | clean after `acac810` | Actual `017` implementation branch is represented by PR #20. |
 | `/Users/richelgomez/dev/capsule-app-visual-refit` | `015-visual-refit` | clean | Old planning branch, not the current implementation split. |
@@ -69,7 +69,7 @@ Takeaway: only `004` through `012` are mostly spec-only drafts. The real work in
 
 Dirty file dates confirm the staged implementation leftovers are recent:
 
-- `015-phase1-cluster-surface`: staged files modified 2026-05-12 19:37-19:42 were committed as `275ead9` and pushed to PR #21, then review cleanup `9814121` removed stale private-by-default capture-sheet copy and fixed diff hygiene.
+- `015-phase1-cluster-surface`: staged files modified 2026-05-12 19:37-19:42 were committed as `275ead9` and pushed to PR #21, review cleanup `9814121` removed stale private-by-default capture-sheet copy and fixed diff hygiene, and review cleanup `a8a1c55` made category-only source glyphs generic instead of branded.
 - `017-capture-feedback-actions`: staged files modified 2026-05-12 19:35, including `EnvelopeRepositoryImpl`, `EnvelopeStorageBackend`, `LocalRoomBackend`, `OrbitMigrations`, `IntentEnvelopeDao`, and `UrlHashDedupeContractTest`.
 
 These staged leftovers have now been committed into their owning implementation PRs (#20 for `017`, #21 for `015`). Do not assume older draft PRs contain the current work.
@@ -82,7 +82,7 @@ These staged leftovers have now been committed into their owning implementation 
 | PR #5 `015-visual-refit` -> `main` | Closed as superseded | Planning-only draft replaced by PR #21 from `015-phase1-cluster-surface`. |
 | PR #8 `016-intent-set-migration` -> `main` | Closed stale/planning-era draft | Superseded by PR #19 from `016-intent-set-migration-closeout`. |
 | PR #19 `016-intent-set-migration-closeout` -> `main` | Open replacement implementation PR | Carries the actual local `016` implementation branch state plus 2026-05-13 closeout gate notes and markdown cleanup `9431568`. |
-| PR #21 `015-phase1-cluster-surface` -> `main` | Open implementation PR | Closeout commit `275ead9` plus review cleanup `9814121` pushed; land after PR #19 and preferably after PR #20 unless reviewers explicitly accept the dependency state. |
+| PR #21 `015-phase1-cluster-surface` -> `main` | Open implementation PR | Closeout commit `275ead9` plus review cleanups `9814121` and `a8a1c55` pushed; land after PR #19 and preferably after PR #20 unless reviewers explicitly accept the dependency state. |
 | PR #20 `017-capture-feedback-actions` -> `main` | Open implementation PR | Staged worktree debt committed as `b872e38`; review fixes pushed through `acac810`, including active duplicate-key enforcement, text-key indexing, concurrent duplicate coverage, v5-to-v7 migration coverage, and restore-from-trash duplicate-key reactivation. Depends on PR #19 unless reviewers explicitly accept the dependency state. |
 | PR #22 `docs/product-truth-reset` -> `main` | Open docs reset PR | Carries README/PRD truth reset, planning docs, archived legacy `004` through `012`, refreshed active `004` through `012` placeholders, and `003`/`013`/`014` status notes. Landing is deferred pending review of the branch-debt PR stack. |
 | `qa/015-017-stacked` | No upstream; 24 commits ahead of local main merge-base; docs untracked | Integration/reference branch only. Do not keep adding new implementation here. |
@@ -127,7 +127,7 @@ Use **four landing tracks total**, only **one of which is a new branch**. The ex
 | --- | --- | ---: | --- | --- |
 | 1 | `016-intent-set-migration` | No | Durable intent enum/label alignment. | PR #19 is open with markdown cleanup `9431568`. Review/land first, or keep explicitly deferred. |
 | 2 | `017-capture-feedback-actions` | No | Duplicate capture, Already Saved, notes/reclassify/open actions. | PR #20 is open with review-fix commit `acac810`. Land after 016. |
-| 3 | `015-phase1-cluster-surface` | No | Visual refit and overlay/bubble/settings polish. | PR #21 is open with closeout cleanup `9814121`. Land after 016 and preferably after 017. |
+| 3 | `015-phase1-cluster-surface` | No | Visual refit and overlay/bubble/settings polish. | PR #21 is open with source-identity review cleanup `a8a1c55`. Land after 016 and preferably after 017. |
 | 4 | `docs/product-truth-reset` | Yes | Commit the new research/planning docs, update stale local-only copy, reconcile spec statuses. | PR #22 is open from clean `origin/main`; land after review of the branch-debt PR stack. |
 
 Do not create another implementation branch until these four tracks are closed or intentionally deferred.
