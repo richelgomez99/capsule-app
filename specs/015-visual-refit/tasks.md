@@ -340,9 +340,9 @@ Local implementation note 2026-05-11: 015 is stacked on clean 016 commit
     attempted but no Android devices were connected; flag-off capture harness
     limitations remain documented as pending physical/connected coverage rather
     than marked green by automation.
-  - 2026-05-12 physical QA follow-up removed the capture-sheet footer promise
-    of local-only behavior; flag-ON footer now says `PRIVATE BY DEFAULT · USER
-    CONTROLLED`.
+  - 2026-05-13 closeout follow-up removed the capture-sheet footer promise
+    of local-only/private-by-default behavior; flag-ON footer now says
+    `USER CONTROLLED · AUDITABLE`.
 - [x] **T015-410** [P4] **REVIEW GATE** per commit.
   - Review completed 2026-05-11 after font-weight cleanup: no
     blocking/high/medium findings. Residual physical-QA notes track under

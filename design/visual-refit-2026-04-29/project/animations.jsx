@@ -670,4 +670,3 @@ Object.assign(window, {
   TextSprite, ImageSprite, RectSprite,
   Stage, PlaybackBar,
 });
-
