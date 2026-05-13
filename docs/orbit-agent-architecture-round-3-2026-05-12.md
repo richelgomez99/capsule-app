@@ -21,11 +21,11 @@ Related docs:
 - [Agent Stack Landscape Research - 2026-05-12](agent-stack-landscape-research-2026-05-12.md)
 - [Agent Stack POC Research - 2026-05-12](agent-stack-poc-research-2026-05-12.md)
 - [Capture Understanding Stack Research - 2026-05-12](capture-understanding-stack-research-2026-05-12.md)
-- [specs/004 Ask Orbit](../specs/004-ask-orbit/spec.md)
-- [specs/006 Orbit Cloud Storage](../specs/006-orbit-cloud-storage/spec.md)
-- [specs/007 Knowledge Graph](../specs/007-knowledge-graph/spec.md)
-- [specs/008 Orbit Agent](../specs/008-orbit-agent/spec.md)
-- [specs/012 Resolution Semantics](../specs/012-resolution-semantics/spec.md)
+- [specs/004 Ask Orbit](../specs/legacy/2026-05-13-roadmap-rebaseline/004-ask-orbit/spec.md)
+- [specs/006 Orbit Cloud Storage](../specs/legacy/2026-05-13-roadmap-rebaseline/006-orbit-cloud-storage/spec.md)
+- [specs/007 Knowledge Graph](../specs/legacy/2026-05-13-roadmap-rebaseline/007-knowledge-graph/spec.md)
+- [specs/008 Orbit Agent](../specs/legacy/2026-05-13-roadmap-rebaseline/008-orbit-agent/spec.md)
+- [specs/012 Resolution Semantics](../specs/legacy/2026-05-13-roadmap-rebaseline/012-resolution-semantics/spec.md)
 
 ## Round 3 conclusion
 
