@@ -8,8 +8,9 @@
 
 ## Current Dirty Worktree Split
 
-This worktree is currently on `015-phase1-cluster-surface`, but the changed files
-span multiple Spec Kit buckets. Before PRs, split or replay them as follows.
+The former `qa/015-017-stacked` dirty worktree has been split into owning
+branches as of 2026-05-12. Use this map to review the applied branch changes
+before opening PRs.
 
 Verification note from the 2026-05-11 autonomous pass: `:app:compileDebugKotlin`,
 `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, `:app:lintDebug`,
@@ -28,10 +29,20 @@ results as a product signal.
 - `app/src/main/java/com/capsule/app/diary/ui/ClusterDetailScreen.kt`
 - `app/src/main/java/com/capsule/app/diary/ui/DiaryScreen.kt` visual refit and `SourceIdentityResolver` consumption
 - `app/src/main/java/com/capsule/app/overlay/CaptureSheetUI.kt` visual refit and `SourceIdentityResolver` consumption
+- `app/src/main/java/com/capsule/app/overlay/BubbleUI.kt`
 - `app/src/main/java/com/capsule/app/settings/SettingsActivity.kt`
 - `app/src/main/java/com/capsule/app/settings/SettingsScreen.kt`
+- `app/src/main/java/com/capsule/app/ui/MainActivity.kt` capture setup visual/product refit
+- `app/src/main/java/com/capsule/app/service/ServiceHealthMonitor.kt` false-active hardening retained as internal diagnostics
+- `app/src/main/java/com/capsule/app/service/CapsuleOverlayService.kt` stop-action preference/status consistency
+- `app/src/androidTest/java/com/capsule/app/service/ServiceHealthMonitorTest.kt`
 - `app/src/main/java/com/capsule/app/ui/primitives/IntentChip.kt`
 - `app/src/main/java/com/capsule/app/ui/primitives/SourceIdentityResolver.kt`
+- `app/src/main/res/drawable/ic_orbit_logo_mark.xml`
+- `app/src/main/res/drawable/ic_capsule_notification.xml`
+- `app/src/main/res/drawable/ic_launcher_background.xml`
+- `app/src/main/res/drawable/ic_launcher_foreground.xml`
+- deleted stale density launcher WebPs under `app/src/main/res/mipmap-*/`
 - `app/src/test/java/com/capsule/app/ui/primitives/SourceIdentityResolverTest.kt`
 - `app/src/androidTest/java/com/capsule/app/diary/DiaryClusterSuggestionCardTest.kt`
 - `app/src/androidTest/java/com/capsule/app/settings/SettingsScreenTest.kt`
@@ -56,8 +67,14 @@ amended before implementation to preserve `WANT_IT` / `INTERESTING` and add
 ### 017 capture feedback actions / overlay hardening
 
 - `specs/017-capture-feedback-actions/**`
+- `app/src/androidTest/java/com/capsule/app/data/UrlHashDedupeContractTest.kt`
+- `app/src/main/java/com/capsule/app/data/EnvelopeRepositoryImpl.kt`
+- `app/src/main/java/com/capsule/app/data/EnvelopeStorageBackend.kt`
+- `app/src/main/java/com/capsule/app/data/LocalRoomBackend.kt`
+- `app/src/main/java/com/capsule/app/data/OrbitMigrations.kt`
+- `app/src/main/java/com/capsule/app/data/dao/IntentEnvelopeDao.kt`
 - `app/src/main/java/com/capsule/app/overlay/PostCaptureOverlay.kt`
-- `app/src/main/java/com/capsule/app/service/CapsuleOverlayService.kt` compact post-capture window bounds and live landscape metrics
+- `app/src/main/java/com/capsule/app/service/CapsuleOverlayService.kt` compact post-capture window bounds, live landscape metrics, and stop/remove consistency if not kept with 015 setup QA
 
 The current geometry fix may land before the full duplicate-capture behavior if
 it is treated as capture hardening, but it should not be hidden inside the visual
@@ -114,14 +131,27 @@ Target direction:
 
 Current fix: compact post-capture pills use `WRAP_CONTENT` width so the whole bottom row is not blocked, while chip rows can still use full width. Bubble drag now uses current window metrics so landscape rotation does not retain portrait bounds.
 
+Verified in the 2026-05-12 Phase 5 QA pass:
+
+- Drag-to-remove in landscape on phone and tablet.
+- Dismiss target reachability near gesture nav/system bars.
+- Undo pill only blocks its visible bounds.
+- Chip row still has enough width and does not clip on small screens.
+
 Remaining QA:
 
-- Verify drag-to-remove in landscape on phone and tablet.
-- Verify the dismiss target is reachable near gesture nav/system bars.
-- Verify undo pill only blocks its visible bounds.
-- Verify chip row still has enough width and does not clip on small screens.
+- Verify the bubble hit target and drag affordance with TalkBack/accessibility
+  touch exploration enabled.
 
-## 5. Settings Copy And Naming Audit
+## 5. Overlay Customization Follow-up
+
+Bubble size and transparency controls are intentionally deferred out of spec
+015 Phase 5. The visual refit should keep one stable default tap target and one
+alpha value through Demo Day QA; a follow-up customization spec can add
+persisted settings, bounded defaults, and a full tap/drag reliability matrix
+for every supported size and transparency value.
+
+## 6. Settings Copy And Naming Audit
 
 Outstanding issue: nested settings pages still use the old visual treatment and some old `Capsule` naming.
 
