@@ -613,7 +613,7 @@ class CapsuleOverlayService : LifecycleService() {
         dismissTargetView = null
     }
 
-        /**
+    /**
      * Mount the [PostCaptureOverlay] in its own bottom-anchored window.
      * The window is touchable (for chip taps +
      * undo) but does not absorb background touches thanks to
@@ -677,14 +677,9 @@ class CapsuleOverlayService : LifecycleService() {
     }
 
     private fun postCaptureWidthFor(ui: PostCaptureUi): Int = when (ui) {
-        is PostCaptureUi.ChipRow,
+        is PostCaptureUi.ChipRow -> WindowManager.LayoutParams.MATCH_PARENT
         is PostCaptureUi.ReclassifyChipRow -> WindowManager.LayoutParams.MATCH_PARENT
-        is PostCaptureUi.None,
-        is PostCaptureUi.SilentWrapPill,
-        is PostCaptureUi.UndoPill,
-        is PostCaptureUi.RemovedConfirmation,
-        is PostCaptureUi.AlreadyInDiary,
-        is PostCaptureUi.AlreadySaved -> WindowManager.LayoutParams.WRAP_CONTENT
+        else -> WindowManager.LayoutParams.WRAP_CONTENT
     }
 
     private fun hidePostCaptureOverlay() {
