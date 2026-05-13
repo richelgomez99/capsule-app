@@ -1,4 +1,8 @@
+<!-- markdownlint-disable -->
+
 # Feature Specification: Visual Polish Pass — "Quiet Almanac" v1
+
+**Legacy status (2026-05-13)**: Archived input for the roadmap rebaseline. This is not the active `010` Speckit source anymore, and visual polish is superseded by active `015-visual-refit` branch debt. During `docs/product-truth-reset`, preserve this draft under an archive/legacy path and reuse slot `010` for `010-agent-coordinator`.
 
 **Feature Branch**: `010-visual-polish-pass`
 **Created**: 2026-04-21

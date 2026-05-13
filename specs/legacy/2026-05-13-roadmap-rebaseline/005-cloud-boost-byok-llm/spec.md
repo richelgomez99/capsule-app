@@ -1,4 +1,8 @@
+<!-- markdownlint-disable -->
+
 # Cloud Boost — Orbit-Managed LLM + BYOK (v1.1)
+
+**Legacy status (2026-05-13)**: Archived input for the roadmap rebaseline. This is not the active `005` Speckit source anymore. During `docs/product-truth-reset`, preserve this draft under an archive/legacy path and reuse slot `005` for `005-retrieval-and-ask-citations`; carry cloud routing, provider, budget, and consent ideas forward into `008-cloud-controls-storage-budgeting`.
 
 **Status**: DRAFT — targets v1.1
 **Depends on**: spec 002 complete (LlmProvider abstraction from tasks 002/T025a–T025b); spec 006 (Orbit Cloud identity + quota backend for Orbit-managed proxy)

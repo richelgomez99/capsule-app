@@ -1,4 +1,12 @@
+<!-- markdownlint-disable -->
+
 # Tasks: Orbit Actions (v1.1)
+
+## 2026-05-13 Docs Reset Status
+
+This task file is historical implementation input, not the next active branch source. During docs reset, representative code-reality checks found `ActionsSettingsUI.kt` present, but `DigestScheduleUI.kt`, `ActionsSettingsActivity.kt`, `WeeklyDigestWorkerTest.kt`, `DigestProvenanceTest.kt`, `DigestUniquenessConstraintTest.kt`, and `DiaryDigestRenderingTest.kt` missing from `origin/main`. No checkboxes were changed in this pass.
+
+Remaining action-runtime concepts should feed the rebaselined `006-approval-action-runtime` plan. Any future status reconciliation must verify code reality before changing task checkboxes, especially physical-device gates T103-T111 and any cloud/BYOK routing assumptions that predate the local-first/cloud-augmented pivot.
 
 **Input**: Design documents from `/specs/003-orbit-actions/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md

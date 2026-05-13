@@ -1,4 +1,8 @@
+<!-- markdownlint-disable -->
+
 # Orbit v1 Product Requirements: Intent Envelope and Diary
+
+**Product truth reset (2026-05-13)**: This PRD is historical input for the v1 intent-envelope/diary contract. Its older local-only roadmap language is superseded by Constitution v3.2.0, specs 013/014, and [docs/spec-branch-reorganization-plan-2026-05-13.md](../../docs/spec-branch-reorganization-plan-2026-05-13.md). Current product strategy is local-first and cloud-augmented: the device remains the capture source of truth, while cloud inference, storage, retrieval, observability, and later agent/memory layers are allowed through explicit controls, auditability, and the permanent local-mode fallback.
 
 **Product**: Orbit — local-first personal memory layer for mobile
 **Version**: 1.0 (Phase 1)
@@ -342,8 +346,9 @@ shows the Diary, just with less context.
   one day per horizontally swipeable page, showing all envelopes captured
   on that day grouped into threads of related captures.
 - **FR-011**: System MUST generate a plain-language day-header paragraph
-  for each day's Diary page, summarizing the day's captures using on-
-  device AI only.
+  for each day's Diary page, summarizing the day's captures through the
+  active `LlmProvider` route. Local mode uses on-device AI only; cloud mode
+  may route through the audited gateway path defined by specs 013/014.
 - **FR-012**: System MUST display on every envelope card in the Diary a
   context label showing the categorized originating app, the activity
   state at capture, and the capture time.
@@ -355,10 +360,11 @@ shows the Diary, just with less context.
 - **FR-015**: System MUST refuse to fetch non-HTTPS URLs and MUST strip
   cookies, referer headers, and any user-identifying information from
   every outbound network request.
-- **FR-016**: System MUST NEVER transmit captured content, state signals,
-  or any derived inferences (summaries, tags, embeddings) to remote
-  servers. The only permitted outbound network calls are fetches of
-  public URLs the user has explicitly captured.
+- **FR-016**: System MUST NOT transmit captured content, state signals,
+  or derived inferences outside the bounded routes allowed by Constitution
+  v3.2.0: public URL hydration, audited cloud LLM inference, opted-in cloud
+  storage, and user-initiated export. Local mode MUST structurally prevent
+  LLM network egress.
 - **FR-017**: System MUST structurally separate processes with network
   access from processes with access to user content, such that a single
   process cannot both read the corpus and reach the network.
@@ -430,8 +436,8 @@ shows the Diary, just with less context.
   envelopes.
 - **SC-005**: Users rate the day-header paragraph as accurately reflecting
   their day's captures in at least 85% of random samples.
-- **SC-006**: Zero user-content transmissions occur outside of explicitly
-  user-captured public-URL hydrations — verifiable by the audit log.
+- **SC-006**: Zero user-content transmissions occur outside of the bounded
+  routes allowed by Constitution v3.2.0 — verifiable by the audit log.
 - **SC-007**: A first-time user experiences the full capture → diary
   return loop within 5 minutes of first opening the app.
 - **SC-008**: Users locate a specific past capture in the Diary in under
@@ -457,11 +463,13 @@ shows the Diary, just with less context.
   Declining either routes to a reduced read-only mode.
 - The user captures via clipboard (bubble tap) and/or screenshots in v1.
   Share-sheet and voice capture are deferred to Phase 2.
-- All Phase 1 content classification, summarization, and topic tagging
-  runs on-device. No cloud AI is used anywhere in Orbit v1.
-- No user accounts, sync, or remote backup in v1. The user's corpus is
-  entirely on-device and survives only on that device (explicit export
-  is the only portability).
+- Phase 1 content classification, summarization, and topic tagging may run
+  through either local mode or the audited cloud LLM route, depending on the
+  active product flag and user controls. Local mode remains permanently
+  available.
+- User accounts, sync, and remote backup are governed by the cloud controls
+  roadmap. The v1 local corpus remains the source of truth; cloud copies are
+  never authoritative.
 - The project constitution (`.specify/memory/constitution.md`) and its 8
   principles are authoritative. Any conflict between this PRD and the
   constitution is resolved in favor of the constitution.
@@ -477,9 +485,10 @@ shows the Diary, just with less context.
 
 This section summarizes the shape of post-v1 work so that v1
 architectural decisions accommodate it. **Nothing here is v1 scope.**
-The v1 build remains local-only per Principle I and the Phase 1 Scope
-section of the constitution. Full specs for each item below live in the
-numbered spec directories as they are drafted.
+The v1 build remains local-first, not local-only. Full specs for each item
+below live in the numbered spec directories as they are refreshed; old
+`004` through `012` drafts are archived input after the 2026-05-13 roadmap
+rebaseline.
 
 ### Storage scope — what Orbit stores, where
 
