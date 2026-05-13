@@ -7,7 +7,7 @@ Do not rename `WANT_IT` or `INTERESTING`. Add `READ_LATER`, preserve the product
 ## Mapping
 
 | Stored enum | Display label | Action |
-|---|---|---|
+| --- | --- | --- |
 | `WANT_IT` | `Want it` | Preserve. |
 | `REFERENCE` | `Reference` | Preserve. |
 | `READ_LATER` | `Read later` | Add. |
@@ -39,8 +39,11 @@ Supabase:
 
 ```bash
 cd supabase/functions/llm_gateway
-npm test
+npm run typecheck
+npm run test:unit
 ```
+
+Note from branch-debt closeout on 2026-05-13: this package does not define `npm test`; use `npm run typecheck` and `npm run test:unit` as the actual gateway gate.
 
 Search gates:
 
@@ -50,6 +53,14 @@ rg -n "Intent\.READ_LATER|READ_LATER" app/src/main supabase/functions/llm_gatewa
 ```
 
 The first command should return no implementation references. The second should show the intended Android and cloud classifier coverage.
+
+Closeout result from 2026-05-13:
+
+- Stale-label search returned no implementation hits for `REMIND_ME`, `INSPIRATION`, or `intent-set rename`.
+- READ_LATER coverage was present in Android label/surface code and Supabase classifier prompt, allowlist, and tests.
+- Android gate passed.
+- Gateway `typecheck` passed.
+- Gateway `test:unit` passed with 6 test files and 53 tests.
 
 ## Do Not Do
 
